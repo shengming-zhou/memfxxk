@@ -27,10 +27,34 @@ T00 passed 18 tests, including migrations in both directions against PostgreSQL,
 
 - `BoundService.ingest` checks scope and idempotency, allocates the session sequence, inserts the original event, rebuilds the turn, and queues embedding work in one transaction. Batches that touch multiple sessions acquire their transaction locks in a consistent order to reduce deadlocks.
 - Events within a session can have a narrower scope than the session. All events within a turn share a single scope so the derived index follows the source visibility rules. Scope conflicts on visible turns return 409. Sessions and events outside the caller's scope return 404.
-- `memfxxk.text` handles tokenization and PostgreSQL literals. `memfxxk.embedding` provides embedding providers, the cache, and index expressions. T02 should reuse `embedding_expression` and `embedding_model_filter` for vector retrieval.
+- `memfxxk.text` handles tokenization and PostgreSQL literals. `memfxxk.embedding` provides embedding providers, the cache, and index expressions. Hybrid retrieval reuses `embedding_expression` and `embedding_model_filter` for vector retrieval.
 - The worker claims jobs with `FOR UPDATE SKIP LOCKED`. It locks the record and rechecks its generation and the job lease before writing. Turn updates invalidate the old vector in the same transaction. `jobs.drain` runs the same job-handling logic used in production.
 
-T01 passed 45 tests covering concurrent sequence allocation, duplicate events, scope isolation, Chinese text and code identifiers, caching, retries, stale writes, and the HNSW query plan in PostgreSQL. Next is [T02 Hybrid Retrieval](https://github.com/shengming-zhou/memfxxk/blob/main/docs/codex/T02-retrieval.md), which can run alongside T03.
+T01 passed 45 tests covering concurrent sequence allocation, duplicate events, scope isolation, Chinese text and code identifiers, caching, retries, stale writes, and the HNSW query plan in PostgreSQL.
+
+## M1 implementation and checks {#m1-implementation}
+
+- T02–T03 combine lexical, vector, and important-memory candidates. Users can save, mark, link, revise, or deactivate memories directly.
+- T04–T05 expose documents, sessions, and context through synchronous and asynchronous Python clients, the CLI, and MCP. HTTP and evaluation adapters share tool definitions and output limits.
+- T06–T08 provide LongMemEval retrieval and QA, the A01–A13 regression suite, and a developer-agent demo. Run `uv run pytest -m slow` for the larger test corpus latency check.
+
+M1 still requires full LongMemEval_S retrieval, QA with real models, p95 latency on about 250,000 turns, and a week of MCP use with a real coding agent. Those checks gate the start of M2.
+
+## Reproduce the baseline {#run-evaluation}
+
+Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.
+
+```sh
+uv run memfxxk eval longmemeval fetch --dataset oracle
+uv run memfxxk eval longmemeval ingest --dataset oracle
+uv run memfxxk index ensure
+uv run memfxxk eval longmemeval retrieval --dataset oracle --run-name oracle
+uv run memfxxk eval longmemeval qa --dataset oracle --groups G1,G2,G3,G4 --limit 50 --run-name oracle-qa
+uv run memfxxk eval longmemeval judge eval/results/oracle-qa
+uv run memfxxk eval report eval/results/oracle-qa
+```
+
+To run the official judge, pass `judge --official`, point `MEMFXXK_EVAL__OFFICIAL_REPO` to a separate checkout, and configure credentials for the upstream script. Report official and built-in scores separately.
 
 ## Publish the manuals {#publishing}
 

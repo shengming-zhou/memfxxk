@@ -1,0 +1,18 @@
+{
+  "project_one": "releasequality 项目 p1 跑 integration tests",
+  "project_two": "releasequality 项目 p2 内部 smoke secret",
+  "user_shared": "releasequality 用户偏好 columns 用 tabs",
+  "user_private": "cafepreference 用户 1 点 oat latte",
+  "project_shared": "cafepreference 团队共享 weekly meetup",
+  "recall": "redisresumable 部署 Redis 后保留快照",
+  "v1": "deploymentbudget 超时 30 秒 version-one",
+  "v2": "deploymentbudget 超时 60 秒 version-two",
+  "v3": "deploymentbudget 超时 90 秒 version-three",
+  "rank_query": "ci upload timeout",
+  "rank_target": "ci upload timeout 旧日志记录诱因与复现步骤",
+  "pin": "weeklyrelease 周二发布",
+  "failure": "uploadregression 大文件上传 CI 失败",
+  "fix": "按块传输并重试，两次检查通过",
+  "document_v1": "发布前必须跑完整 integration tests",
+  "document_v2": "发布前跑完整 integration tests 和 smoke test"
+}

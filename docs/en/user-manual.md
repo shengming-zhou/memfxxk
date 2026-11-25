@@ -9,17 +9,17 @@ docker compose up -d --wait db
 uv sync --locked
 uv run memfxxk db upgrade
 uv run memfxxk keys create --org demo --role host --name local
-uv run uvicorn memfxxk.api:create_app --factory
+uv run memfxxk serve
 ```
 
 The key creation command displays the plaintext key once. Save it in the caller's secret configuration. The service listens on local port 8000 by default. Interactive API documentation is available at `/docs`.
 
 ## Check the connection {#check-connection}
 
-Set `MEMFXXK_KEY` in the caller's environment and call the health endpoint. This example uses PowerShell.
+Set `MEMFXXK_API_KEY` in the caller's environment and call the health endpoint. This example uses PowerShell.
 
 ```powershell
-$headers = @{ Authorization = "Bearer $env:MEMFXXK_KEY" }
+$headers = @{ Authorization = "Bearer $env:MEMFXXK_API_KEY" }
 Invoke-RestMethod http://localhost:8000/v1/healthz -Headers $headers
 ```
 
@@ -31,7 +31,7 @@ Reuse the same `session_id` throughout a session. A user message, tool call, and
 
 ```powershell
 $headers = @{
-    Authorization = "Bearer $env:MEMFXXK_KEY"
+    Authorization = "Bearer $env:MEMFXXK_API_KEY"
     "X-Memfxxk-User" = "demo-user"
     "X-Memfxxk-Project" = "demo-project"
 }
@@ -66,4 +66,35 @@ uv run memfxxk index ensure
 uv run memfxxk index reembed
 ```
 
-`index ensure` creates the HNSW index for the configured model and dimension and can be run repeatedly. `index reembed` queues jobs for current records and accepts an explicit `--model`. Use a fixed vector dimension per model identifier. The service's `/docs` lists the available event endpoints. Search endpoints are planned for the next milestone.
+`index ensure` creates the HNSW index for the configured model and dimension and can be run repeatedly. `index reembed` queues jobs for current records and accepts an explicit `--model`. Use a fixed vector dimension per model identifier. The service's `/docs` lists the HTTP endpoints.
+
+## Manage memory directly {#manage-memory}
+
+Set `MEMFXXK_API_KEY`, `MEMFXXK_USER`, and `MEMFXXK_PROJECT` in the shell running the CLI. In Bash, set variables with `export MEMFXXK_USER=demo-user`. Use `--user-level` for personal notes that should follow you across projects.
+
+```sh
+uv run memfxxk remember "Run the smoke test before releasing" --important --pin
+uv run memfxxk list --important
+uv run memfxxk search "release smoke test"
+uv run memfxxk show MEMORY_ID --window 1
+uv run memfxxk mark MEMORY_ID important --off
+uv run memfxxk link FAILURE_ID FIX_ID --purpose fixes
+```
+
+`important` affects retrieval ranking. `pinned` adds the memory to the pinned context section. `edit` opens your editor and saves a new version. Use `show --version` to read an earlier version. `forget` deactivates a memory by default. `forget --delete` asks for confirmation before permanently deleting it.
+
+## Documents and context {#documents-and-context}
+
+```sh
+uv run memfxxk doc put project.md --content "Release on Tuesdays"
+uv run memfxxk doc history project.md
+uv run memfxxk context demo-session "How do we release?" --explain
+```
+
+The service loads `persona.md` and `project.md` from the applicable scope. It assembles documents, pinned memories, recent turns, and retrieved evidence within separate budgets. `--explain` shows each section's token usage and why items were included. Run `uv run python examples/demo_dev_agent.py` for a demonstration of importance marks, linked failures and fixes, cross-session recovery, and release-policy revisions.
+
+## Connect an agent {#connect-an-agent}
+
+Start the stdio MCP server with `uv run memfxxk mcp` from the repository directory. Pass the same API key, API address, and user, project, and agent scope in the host's environment. The default tools are `memory_search`, `memory_get`, and `memory_remember`. Set `MEMFXXK_MCP_ENABLE_MANAGE=true` to add `memory_mark` and `memory_link`. Python hosts can also assemble context directly through the synchronous or asynchronous SDK.
+
+[Host integration guide and demo](https://github.com/shengming-zhou/memfxxk/blob/main/docs/usage.md)

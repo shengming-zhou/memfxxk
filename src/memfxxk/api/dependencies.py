@@ -55,3 +55,6 @@ def get_bound_service(
     ctx: Annotated[RequestContext, Depends(get_context)],
 ) -> BoundService:
     return service.for_request(principal, ctx)
+
+
+RequestService = Annotated[BoundService, Depends(get_bound_service)]

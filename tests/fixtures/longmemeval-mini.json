@@ -1,0 +1,37 @@
+[
+  {
+    "question_id": "mini_multi",
+    "question_type": "multi-session",
+    "question": "Which facts contain alpha and zulu?",
+    "answer": "Alpha and zulu.",
+    "question_date": "2023/05/20 (Sat) 02:21",
+    "haystack_session_ids": ["alpha_session", "zulu_session", "future_session"],
+    "haystack_dates": [
+      "2023/05/18 (Thu) 02:21",
+      "2023/05/19 (Fri) 02:21",
+      "2023/05/21 (Sun) 02:21"
+    ],
+    "haystack_sessions": [
+      [
+        {"role": "user", "content": "Remember my first fact"},
+        {"role": "assistant", "content": "Alpha", "has_answer": true}
+      ],
+      [{"role": "user", "content": "Zulu", "has_answer": true}],
+      [{"role": "user", "content": "Which facts contain alpha and zulu?"}]
+    ],
+    "answer_session_ids": ["alpha_session", "zulu_session"]
+  },
+  {
+    "question_id": "mini_abs",
+    "question_type": "single-session-user",
+    "question": "What is my favorite number?",
+    "answer": "I don't know.",
+    "question_date": "2023/05/20 (Sat) 02:21",
+    "haystack_session_ids": ["unrelated"],
+    "haystack_dates": ["2023/05/18 (Thu) 02:21"],
+    "haystack_sessions": [
+      [{"role": "user", "content": "Remember my first fact"}, {"role": "assistant", "content": "Alpha"}]
+    ],
+    "answer_session_ids": []
+  }
+]

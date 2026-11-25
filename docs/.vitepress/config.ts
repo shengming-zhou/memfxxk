@@ -4,7 +4,7 @@ export default defineConfig({
   base: '/memfxxk/',
   title: 'memfxxk',
   cleanUrls: true,
-  srcExclude: ['architecture.md', 'roadmap.md', 'codex/**', 'research/**'],
+  srcExclude: ['architecture.md', 'roadmap.md', 'usage.md', 'codex/**', 'research/**'],
   rewrites: {
     'user-manual.md': 'user-manual/index.md',
     'developer-manual.md': 'developer-manual/index.md',

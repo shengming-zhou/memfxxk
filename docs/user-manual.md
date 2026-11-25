@@ -11,7 +11,7 @@ docker compose up -d --wait db
 uv sync --locked
 uv run memfxxk db upgrade
 uv run memfxxk keys create --org demo --role host --name local
-uv run uvicorn memfxxk.api:create_app --factory
+uv run memfxxk serve
 ```
 
 创建命令只显示一次明文 key。将它保存在调用方的密钥配置中。服务默认监听本机 8000 端口，交互式 API 文档在 `/docs`。
@@ -20,10 +20,10 @@ uv run uvicorn memfxxk.api:create_app --factory
 
 ## 检查连接 {#check-connection}
 
-设置调用方的 `MEMFXXK_KEY` 环境变量，再请求健康接口。以下示例使用 PowerShell。
+设置调用方的 `MEMFXXK_API_KEY` 环境变量，再请求健康接口。以下示例使用 PowerShell。
 
 ```powershell
-$headers = @{ Authorization = "Bearer $env:MEMFXXK_KEY" }
+$headers = @{ Authorization = "Bearer $env:MEMFXXK_API_KEY" }
 Invoke-RestMethod http://localhost:8000/v1/healthz -Headers $headers
 ```
 
@@ -37,7 +37,7 @@ Invoke-RestMethod http://localhost:8000/v1/healthz -Headers $headers
 
 ```powershell
 $headers = @{
-    Authorization = "Bearer $env:MEMFXXK_KEY"
+    Authorization = "Bearer $env:MEMFXXK_API_KEY"
     "X-Memfxxk-User" = "demo-user"
     "X-Memfxxk-Project" = "demo-project"
 }
@@ -74,4 +74,35 @@ uv run memfxxk index ensure
 uv run memfxxk index reembed
 ```
 
-`index ensure` 为当前模型和维度创建 HNSW 索引，可重复执行。`index reembed` 为当前记录登记作业，可用 `--model` 显式指定模型。同一个模型标识应对应固定的向量维度。对外可用的事件接口见服务的 `/docs`，检索接口在后续任务中接入。
+`index ensure` 为当前模型和维度创建 HNSW 索引，可重复执行。`index reembed` 为当前记录登记作业，可用 `--model` 显式指定模型。同一个模型标识应对应固定的向量维度。完整 HTTP 接口见服务的 `/docs`。
+
+## 主动管理记忆 {#manage-memory}
+
+在运行 CLI 的终端设置 `MEMFXXK_API_KEY`、`MEMFXXK_USER` 和 `MEMFXXK_PROJECT`。在 PowerShell 中可用 `$env:MEMFXXK_USER = "demo-user"` 设置环境变量。跨项目的个人笔记可显式使用 `--user-level`。
+
+```sh
+uv run memfxxk remember "发布前先跑 smoke test" --important --pin
+uv run memfxxk list --important
+uv run memfxxk search "发布流程"
+uv run memfxxk show MEMORY_ID --window 1
+uv run memfxxk mark MEMORY_ID important --off
+uv run memfxxk link FAILURE_ID FIX_ID --purpose fixes
+```
+
+`important` 影响检索排序，`pinned` 将记忆加入上下文的固定区。`edit` 打开编辑器并保存新版本，`show --version` 可回读旧版本。`forget` 默认停用，`forget --delete` 永久删除并要求确认。
+
+## 文档与上下文 {#documents-and-context}
+
+```sh
+uv run memfxxk doc put project.md --content "Release on Tuesdays"
+uv run memfxxk doc history project.md
+uv run memfxxk context demo-session "如何发布？" --explain
+```
+
+`persona.md` 和 `project.md` 随作用域加载。上下文按预算组装文档、固定记忆、近期会话和检索证据。`--explain` 显示每段的 token 使用量及选入原因。开发 Agent 演示可用 `uv run python examples/demo_dev_agent.py`，它会验证重要标记、故障与修复的关联、跨会话恢复及发布约定的版本历史。
+
+## 接入 Agent {#connect-an-agent}
+
+用仓库工作目录和与 API 相同的 key 启动 stdio MCP 命令 `uv run memfxxk mcp`。宿主需向该进程传入 API 地址和用户、项目、Agent 作用域。默认工具为 `memory_search`、`memory_get`、`memory_remember`。显式设置 `MEMFXXK_MCP_ENABLE_MANAGE=true` 可增加 `memory_mark`、`memory_link`。Python 宿主可以使用同步或异步 SDK 直接组装上下文。
+
+[宿主接入指南和演示](https://github.com/shengming-zhou/memfxxk/blob/main/docs/usage.md)

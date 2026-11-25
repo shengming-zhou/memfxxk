@@ -1,14 +1,19 @@
+import asyncio
 import secrets
 from enum import StrEnum
 from typing import Annotated
 
 import typer
+import uvicorn
 from alembic import command
 from alembic.config import Config
 
 from memfxxk.auth import hash_key
+from memfxxk.cli.connection import ClientSettings
+from memfxxk.cli.memory import commands as memory_commands
 from memfxxk.config import Settings
 from memfxxk.db import api_keys, create_engine, transaction
+from memfxxk.eval.cli import eval_cli
 from memfxxk.ids import new_id
 from memfxxk.jobs import Worker
 from memfxxk.service import MemoryService
@@ -20,6 +25,37 @@ index_app = typer.Typer(no_args_is_help=True)
 app.add_typer(keys_app, name="keys")
 app.add_typer(db_app, name="db")
 app.add_typer(index_app, name="index")
+app.add_typer(eval_cli, name="eval")
+app.add_typer(memory_commands)
+
+
+@app.callback()
+def main(
+    ctx: typer.Context,
+    user: str | None = None,
+    agent: str | None = None,
+    project: str | None = None,
+) -> None:
+    if ctx.obj is None:
+        overrides = {"user": user, "agent": agent, "project": project}
+        ctx.obj = ClientSettings(
+            **{key: value for key, value in overrides.items() if value is not None}
+        )
+
+
+@app.command()
+def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
+    """Run the API server."""
+    uvicorn.run("memfxxk.api:create_app", factory=True, host=host, port=port)
+
+
+@app.command("mcp")
+def serve_mcp(ctx: typer.Context) -> None:
+    """Expose scoped memory tools over MCP stdio."""
+    from memfxxk.mcp_server import serve_stdio
+
+    with ctx.ensure_object(ClientSettings).connect() as client:
+        asyncio.run(serve_stdio(client, enable_manage=Settings().mcp_enable_manage))
 
 
 class KeyRole(StrEnum):

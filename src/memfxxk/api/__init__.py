@@ -6,7 +6,7 @@ from threading import Thread
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Query, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -14,16 +14,18 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException
 
-from memfxxk.api.dependencies import get_bound_service
+from memfxxk.api.context import router as context_router
+from memfxxk.api.dependencies import RequestService
+from memfxxk.api.memory import router as memory_router
 from memfxxk.config import Settings
 from memfxxk.db import create_engine
+from memfxxk.domain.errors import ServiceError
 from memfxxk.domain.events import Event, IngestEvent, IngestResult
 from memfxxk.ingest import NotFound, TurnScopeConflict
 from memfxxk.jobs import Worker
+from memfxxk.manage import ManagementError
 from memfxxk.scope import ScopeError
-from memfxxk.service import BoundService, MemoryService
-
-RequestService = Annotated[BoundService, Depends(get_bound_service)]
+from memfxxk.service import MemoryService
 
 
 class IngestBatch(BaseModel):
@@ -98,9 +100,17 @@ def create_app(settings: Settings | None = None, *, engine: Engine | None = None
     async def turn_scope_conflict(_request: Request, exc: TurnScopeConflict) -> JSONResponse:
         return _error_response(409, "conflict", str(exc))
 
+    @app.exception_handler(ServiceError)
+    @app.exception_handler(ManagementError)
+    async def service_error(_request: Request, exc: ServiceError | ManagementError) -> JSONResponse:
+        return _error_response(exc.status_code, exc.code, exc.message, details=exc.details)
+
     @app.exception_handler(SQLAlchemyError)
     async def database_error(_request: Request, _exc: SQLAlchemyError) -> JSONResponse:
         return _error_response(503, "database_unavailable", "Database unavailable")
+
+    app.include_router(memory_router)
+    app.include_router(context_router)
 
     @app.get("/v1/healthz")
     def healthz(service: RequestService) -> dict[str, str]:

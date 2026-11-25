@@ -14,4 +14,6 @@ docs/.vitepress/dist/
 .coverage
 .env
 eval/data/
-eval/results/*/raw/
+eval/cache/
+eval/results/*
+!eval/results/m1-smoke/

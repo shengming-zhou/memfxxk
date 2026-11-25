@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field, SecretStr
@@ -44,6 +45,21 @@ class WorkerSettings(BaseModel):
     embedded: bool = True
 
 
+class EvalModelSettings(BaseModel):
+    base_url: str = "http://localhost:8000/v1"
+    model: str = ""
+    api_key: SecretStr | None = None
+    timeout: float = Field(default=60, gt=0)
+    max_retries: int = Field(default=3, ge=0)
+
+
+class EvalSettings(BaseModel):
+    gen: EvalModelSettings = Field(default_factory=EvalModelSettings)
+    judge: EvalModelSettings = Field(default_factory=EvalModelSettings)
+    concurrency: int = Field(default=4, gt=0)
+    official_repo: Path | None = None
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="MEMFXXK_", env_nested_delimiter="__", env_file=".env", extra="ignore"
@@ -56,5 +72,7 @@ class Settings(BaseSettings):
     search: SearchSettings = Field(default_factory=SearchSettings)
     context: ContextSettings = Field(default_factory=ContextSettings)
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
+    eval: EvalSettings = Field(default_factory=EvalSettings)
+    mcp_enable_manage: bool = False
     bundle_retention_days: int = Field(default=30, gt=0)
     allow_host_hard_delete: bool = True
