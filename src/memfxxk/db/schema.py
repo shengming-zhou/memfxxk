@@ -1,0 +1,268 @@
+import sqlalchemy as sa
+from pgvector.sqlalchemy import VECTOR
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR, UUID
+
+metadata = sa.MetaData()
+
+
+def scope_columns() -> tuple[sa.Column[str], ...]:
+    return (
+        sa.Column("org_id", sa.Text, nullable=False),
+        sa.Column("user_id", sa.Text),
+        sa.Column("agent_id", sa.Text),
+        sa.Column("project_id", sa.Text),
+    )
+
+
+def timestamp(name: str) -> sa.Column:
+    return sa.Column(name, sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now())
+
+
+def index_scope(table: sa.Table) -> None:
+    sa.Index(
+        f"ix_{table.name}_scope",
+        table.c.org_id,
+        table.c.project_id,
+        table.c.user_id,
+        table.c.agent_id,
+    )
+
+
+api_keys = sa.Table(
+    "api_keys",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    sa.Column("org_id", sa.Text, nullable=False),
+    sa.Column("key_hash", sa.Text, nullable=False),
+    sa.Column("role", sa.Text, nullable=False),
+    sa.Column("name", sa.Text, nullable=False),
+    timestamp("created_at"),
+    sa.Column("revoked_at", sa.DateTime(timezone=True)),
+    sa.UniqueConstraint("key_hash", name="uq_api_keys_key_hash"),
+    sa.CheckConstraint("role IN ('admin', 'host')", name="ck_api_keys_role"),
+)
+
+sessions = sa.Table(
+    "sessions",
+    metadata,
+    sa.Column("id", sa.Text, nullable=False),
+    *scope_columns(),
+    sa.Column("next_seq", sa.BigInteger, nullable=False, server_default="1"),
+    sa.Column("summary", sa.Text),
+    sa.Column("summary_upto_seq", sa.BigInteger),
+    sa.Column("state", JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")),
+    sa.Column("revision", sa.Integer, nullable=False, server_default="0"),
+    timestamp("created_at"),
+    timestamp("updated_at"),
+    sa.PrimaryKeyConstraint("org_id", "id"),
+)
+index_scope(sessions)
+
+events = sa.Table(
+    "events",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("session_id", sa.Text),
+    sa.Column("session_seq", sa.BigInteger),
+    sa.Column("turn_id", sa.Text),
+    sa.Column("kind", sa.Text, nullable=False),
+    sa.Column("role", sa.Text),
+    sa.Column("content", sa.Text),
+    sa.Column("payload", JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")),
+    sa.Column("source", JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")),
+    sa.Column("actor", JSONB, nullable=False),
+    sa.Column("event_time", sa.DateTime(timezone=True), nullable=False),
+    timestamp("recorded_at"),
+    sa.Column("idempotency_key", sa.Text),
+    sa.Column("redacted", sa.Boolean, nullable=False, server_default=sa.false()),
+    sa.UniqueConstraint("org_id", "idempotency_key", name="uq_events_org_idempotency_key"),
+    sa.UniqueConstraint("org_id", "session_id", "session_seq", name="uq_events_session_seq"),
+    sa.CheckConstraint(
+        "kind IN ('message', 'tool_call', 'tool_result', 'document_import', 'user_op')",
+        name="ck_events_kind",
+    ),
+    sa.CheckConstraint("role IN ('user', 'assistant', 'system', 'tool')", name="ck_events_role"),
+)
+index_scope(events)
+
+records = sa.Table(
+    "records",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    sa.Column("memory_id", UUID, nullable=False),
+    sa.Column("version", sa.Integer, nullable=False),
+    sa.Column("is_current", sa.Boolean, nullable=False, server_default=sa.true()),
+    *scope_columns(),
+    sa.Column("session_id", sa.Text),
+    sa.Column("type", sa.Text, nullable=False),
+    sa.Column("content", sa.Text, nullable=False),
+    sa.Column("title", sa.Text),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False, server_default=sa.text("'{}'")),
+    sa.Column("source_pos", JSONB),
+    sa.Column("origin", sa.Text, nullable=False),
+    sa.Column("confirmed", sa.Boolean, nullable=False, server_default=sa.false()),
+    sa.Column("status", sa.Text, nullable=False, server_default="active"),
+    sa.Column("event_time", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("valid_from", sa.DateTime(timezone=True)),
+    sa.Column("valid_to", sa.DateTime(timezone=True)),
+    timestamp("recorded_at"),
+    sa.Column("lexemes", TSVECTOR, nullable=False, server_default=sa.text("''::tsvector")),
+    sa.Column("generation", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("created_by", JSONB, nullable=False),
+    sa.Column("metadata", JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")),
+    sa.UniqueConstraint("memory_id", "version", name="uq_records_memory_version"),
+    sa.CheckConstraint(
+        "type IN ('turn', 'note', 'fact', 'summary', 'lesson', 'doc_chunk')", name="ck_records_type"
+    ),
+    sa.CheckConstraint(
+        "origin IN ('user_explicit', 'auto_index', 'auto_extract', 'import')",
+        name="ck_records_origin",
+    ),
+    sa.CheckConstraint("status IN ('active', 'inactive')", name="ck_records_status"),
+)
+index_scope(records)
+sa.Index("ix_records_lexemes", records.c.lexemes, postgresql_using="gin")
+sa.Index("ix_records_session_event_time", records.c.session_id, records.c.event_time)
+sa.Index(
+    "uq_records_current_memory",
+    records.c.memory_id,
+    unique=True,
+    postgresql_where=records.c.is_current,
+)
+
+record_embeddings = sa.Table(
+    "record_embeddings",
+    metadata,
+    sa.Column("record_id", UUID, sa.ForeignKey("records.id", ondelete="CASCADE"), primary_key=True),
+    sa.Column("model", sa.Text, primary_key=True),
+    sa.Column("dim", sa.Integer, nullable=False),
+    sa.Column("embedding", VECTOR(), nullable=False),
+    timestamp("created_at"),
+    sa.CheckConstraint("dim > 0", name="ck_record_embeddings_dim"),
+)
+
+embedding_cache = sa.Table(
+    "embedding_cache",
+    metadata,
+    sa.Column("model", sa.Text, primary_key=True),
+    sa.Column("text_sha256", sa.Text, primary_key=True),
+    sa.Column("dim", sa.Integer, nullable=False),
+    sa.Column("embedding", VECTOR(), nullable=False),
+    sa.CheckConstraint("dim > 0", name="ck_embedding_cache_dim"),
+)
+
+memory_marks = sa.Table(
+    "memory_marks",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    sa.Column("memory_id", UUID, nullable=False),
+    sa.Column("mark", sa.Text, nullable=False),
+    *scope_columns(),
+    sa.Column("created_by", JSONB, nullable=False),
+    sa.Column("source_event_id", UUID, nullable=False),
+    timestamp("created_at"),
+    sa.CheckConstraint("mark IN ('important', 'pinned')", name="ck_memory_marks_mark"),
+)
+index_scope(memory_marks)
+sa.Index(
+    "uq_memory_marks_scope",
+    memory_marks.c.memory_id,
+    memory_marks.c.mark,
+    memory_marks.c.org_id,
+    sa.func.coalesce(memory_marks.c.user_id, ""),
+    sa.func.coalesce(memory_marks.c.agent_id, ""),
+    sa.func.coalesce(memory_marks.c.project_id, ""),
+    unique=True,
+)
+
+memory_relations = sa.Table(
+    "memory_relations",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    sa.Column("from_memory_id", UUID, nullable=False),
+    sa.Column("to_memory_id", UUID, nullable=False),
+    sa.Column("purpose", sa.Text, nullable=False),
+    sa.Column("note", sa.Text),
+    sa.Column("org_id", sa.Text, nullable=False),
+    sa.Column("created_by", JSONB, nullable=False),
+    sa.Column("source_event_id", UUID, nullable=False),
+    timestamp("created_at"),
+)
+sa.Index("ix_memory_relations_from", memory_relations.c.org_id, memory_relations.c.from_memory_id)
+sa.Index("ix_memory_relations_to", memory_relations.c.org_id, memory_relations.c.to_memory_id)
+
+documents = sa.Table(
+    "documents",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("path", sa.Text, nullable=False),
+    sa.Column("purpose", sa.Text, nullable=False),
+    sa.Column("load_policy", sa.Text, nullable=False),
+    sa.Column("head_revision", sa.Integer, nullable=False),
+    timestamp("created_at"),
+    timestamp("updated_at"),
+    sa.CheckConstraint("load_policy IN ('always', 'on_demand')", name="ck_documents_load_policy"),
+)
+index_scope(documents)
+sa.Index(
+    "uq_documents_scope_path",
+    documents.c.org_id,
+    sa.func.coalesce(documents.c.user_id, ""),
+    sa.func.coalesce(documents.c.agent_id, ""),
+    sa.func.coalesce(documents.c.project_id, ""),
+    documents.c.path,
+    unique=True,
+)
+
+document_revisions = sa.Table(
+    "document_revisions",
+    metadata,
+    sa.Column(
+        "document_id", UUID, sa.ForeignKey("documents.id", ondelete="CASCADE"), primary_key=True
+    ),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("content", sa.Text, nullable=False),
+    sa.Column("author", JSONB, nullable=False),
+    sa.Column("base_revision", sa.Integer),
+    sa.Column("message", sa.Text),
+    timestamp("created_at"),
+)
+
+jobs = sa.Table(
+    "jobs",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    sa.Column("kind", sa.Text, nullable=False),
+    sa.Column("payload", JSONB, nullable=False),
+    sa.Column("status", sa.Text, nullable=False, server_default="queued"),
+    sa.Column("attempts", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("max_attempts", sa.Integer, nullable=False, server_default="5"),
+    timestamp("run_after"),
+    sa.Column("locked_by", sa.Text),
+    sa.Column("locked_at", sa.DateTime(timezone=True)),
+    sa.Column("last_error", sa.Text),
+    sa.Column("dedupe_key", sa.Text),
+    timestamp("created_at"),
+    timestamp("updated_at"),
+    sa.UniqueConstraint("dedupe_key", name="uq_jobs_dedupe_key"),
+    sa.CheckConstraint(
+        "status IN ('queued', 'running', 'done', 'failed', 'dead')", name="ck_jobs_status"
+    ),
+)
+sa.Index("ix_jobs_status_run_after", jobs.c.status, jobs.c.run_after)
+
+context_bundles = sa.Table(
+    "context_bundles",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("session_id", sa.Text),
+    sa.Column("query_sha256", sa.Text, nullable=False),
+    sa.Column("budget", JSONB, nullable=False),
+    sa.Column("items", JSONB, nullable=False),
+    sa.Column("total_tokens", sa.Integer, nullable=False),
+    timestamp("created_at"),
+)
+index_scope(context_bundles)
