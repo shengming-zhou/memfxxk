@@ -1,0 +1,16 @@
+site_name: memfxxk
+site_description: memfxxk 用户手册与开发手册
+site_url: https://shengming-zhou.github.io/memfxxk/
+repo_url: https://github.com/shengming-zhou/memfxxk
+repo_name: shengming-zhou/memfxxk
+docs_dir: docs
+exclude_docs: |
+  /architecture.md
+  /roadmap.md
+  /codex/
+  /research/
+nav:
+  - 首页: index.md
+  - 用户手册: user-manual.md
+  - 开发手册: developer-manual.md
+strict: true

@@ -1,6 +1,6 @@
 # memfxxk 开发手册
 
-开发任务的依赖见 [路线图](roadmap.md)，接口、作用域与数据契约见 [架构](architecture.md)。运行服务和获取 key 的步骤见 [用户手册](user-manual.md)。
+开发任务的依赖见 [路线图](https://github.com/shengming-zhou/memfxxk/blob/main/docs/roadmap.md)，接口、作用域与数据契约见 [架构](https://github.com/shengming-zhou/memfxxk/blob/main/docs/architecture.md)。运行服务和获取 key 的步骤见 [用户手册](user-manual.md)。
 
 ## 本地开发与测试
 
@@ -30,4 +30,10 @@ T00 已通过 18 项测试，包括真实数据库的迁移升降级、作用域
 - `memfxxk.text` 负责分词和 PostgreSQL 字面量，`memfxxk.embedding` 提供嵌入 Provider、缓存和索引表达式。T02 的向量检索应复用 `embedding_expression` 和 `embedding_model_filter`。
 - Worker 用 `FOR UPDATE SKIP LOCKED` 领取作业。写回前锁定记录并校验 generation 和作业租约。更新 turn 时，旧向量与原文变更在同一事务内失效。生产路径和测试共用 `jobs.drain` 所调用的作业处理逻辑。
 
-T01 验收通过 45 项测试，覆盖并发序号、重复事件、跨作用域隔离、中文和代码标识符分词、缓存、作业重试和过期写回，以及真实 PostgreSQL 的 HNSW 查询计划。下一项是 [T02 混合检索](codex/T02-retrieval.md)，可按路线图与 T03 并行。
+T01 验收通过 45 项测试，覆盖并发序号、重复事件、跨作用域隔离、中文和代码标识符分词、缓存、作业重试和过期写回，以及真实 PostgreSQL 的 HNSW 查询计划。下一项是 [T02 混合检索](https://github.com/shengming-zhou/memfxxk/blob/main/docs/codex/T02-retrieval.md)，可按路线图与 T03 并行。
+
+## 手册发布
+
+主分支上的手册和 MkDocs 配置变更会触发 [Publish manuals](https://github.com/shengming-zhou/memfxxk/actions/workflows/docs.yml)，构建两份手册并部署到 GitHub Pages。也可以在 Actions 中手动运行该流程。
+
+在仓库根目录运行 `uvx --from mkdocs==1.6.1 mkdocs build --strict` 可复验构建。输出在 `site/`。
