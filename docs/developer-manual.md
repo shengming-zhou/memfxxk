@@ -50,7 +50,7 @@ M1 关口还需要全量 LongMemEval_S 的检索、真实模型问答和约 25 �
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。
 
-仓库保留了官方 Oracle 数据的假嵌入检索报告和两题假模型的 QA 烟测。 [M1 评测产物](https://github.com/shengming-zhou/memfxxk/tree/main/eval/results/m1-smoke)
+仓库保留了官方 Oracle 检索、固定 50 题的确定性向量证据横评、六题本地 BGE 语义横评，以及两题假模型的 QA 烟测。 [M1 评测产物](https://github.com/shengming-zhou/memfxxk/tree/main/eval/results/m1-smoke)
 
 ### 固定题集的证据横评 {#evidence-comparison}
 
@@ -74,7 +74,7 @@ MEMFXXK_EMBEDDING__MODEL=BAAI/bge-small-en-v1.5
 MEMFXXK_EMBEDDING__DIM=384
 ```
 
-以上设置同时用于 memfxxk 和 Mem0。若评测库已用其他模型完成导入，先运行 `memfxxk index reembed` 登记当前模型的任务，再用相同的 `ingest --suite` 处理队列。向量覆盖不足时评测会报错。
+以上设置同时用于 memfxxk 和 Mem0，Mem0 在准备语料时复用相同原文的文档向量。若评测库已用其他模型完成导入，先运行 `memfxxk index reembed` 登记当前模型的任务，再用相同的 `ingest --suite` 处理队列。向量覆盖不足时评测会报错。快速语义烟测可以使用 `eval/suites/longmemeval-s-embedding-smoke.json`，包含 50 题清单的前六题，每个题型一题。
 
 ### 模型接口烟测 {#model-api-smoke}
 

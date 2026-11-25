@@ -44,7 +44,7 @@ M1 still requires full LongMemEval_S retrieval, QA with real models, p95 latency
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.
 
-The repository includes a retrieval report on the official Oracle split with fake embeddings and a two-question QA smoke run with fake models. [M1 evaluation reports](https://github.com/shengming-zhou/memfxxk/tree/main/eval/results/m1-smoke)
+The repository includes Oracle retrieval, a frozen 50-question evidence comparison with deterministic vectors, a six-question local BGE comparison, and a two-question QA smoke run with fake models. [M1 evaluation reports](https://github.com/shengming-zhou/memfxxk/tree/main/eval/results/m1-smoke)
 
 ### Compare evidence on a frozen suite {#evidence-comparison}
 
@@ -68,7 +68,7 @@ MEMFXXK_EMBEDDING__MODEL=BAAI/bge-small-en-v1.5
 MEMFXXK_EMBEDDING__DIM=384
 ```
 
-Both memfxxk and Mem0 use these settings. If you already ingested with another model, run `memfxxk index reembed` to enqueue the current model, then drain the jobs with the same `ingest --suite` command. Evaluation fails when vector coverage is incomplete.
+Both memfxxk and Mem0 use these settings. Mem0 reuses the vectors for identical source text when preparing the corpus. If you already ingested with another model, run `memfxxk index reembed` to enqueue the current model, then drain the jobs with the same `ingest --suite` command. Evaluation fails when vector coverage is incomplete. For a quick semantic smoke test, `eval/suites/longmemeval-s-embedding-smoke.json` selects the first six questions, one per type.
 
 ### Model API smoke test {#model-api-smoke}
 

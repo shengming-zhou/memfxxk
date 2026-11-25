@@ -38,7 +38,7 @@ flowchart LR
 
 ## M1 完成定义
 
-已冻结一批 50 道 LongMemEval_S 证据题，覆盖全部六种题型。近期原文、memfxxk 和 Mem0 OSS 按同一题集和截止时间比较。复跑命令见 [开发手册](developer-manual.md#evidence-comparison)。
+已完成固定 50 题的确定性向量证据横评，并在同一题集的前六题上用本地 BGE 完成语义烟测。近期原文、memfxxk 和 Mem0 OSS 使用相同的时间截止点。可查看 [评测结果](../eval/results/m1-smoke/README.md) 和 [复跑命令](developer-manual.md#evidence-comparison)。
 
 1. T00–T08 全部合入，`uv run pytest` 全绿（含 integration/e2e，需 docker 里的 PG）。
 2. **演示场景自动化通过**（T08）：开发 Agent 的一次排障会话入库 → 用户把一条 CI 失败标为重要并关联修复 → 新会话从 session state 恢复进度，遇到相似故障召回这两条（经由关联）→ 用户修改并固定发布约定 → 下一轮自动装载新版本，旧版本仍可按版本号读回。

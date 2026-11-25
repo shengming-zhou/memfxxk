@@ -1,0 +1,32 @@
+{
+  "recent-turns": {
+    "hits": 600,
+    "unmapped": 0,
+    "unmapped_queries": 0,
+    "empty_queries": 0
+  },
+  "memfxxk-lexical": {
+    "hits": 300,
+    "unmapped": 0,
+    "unmapped_queries": 0,
+    "empty_queries": 0
+  },
+  "memfxxk-vector": {
+    "hits": 300,
+    "unmapped": 0,
+    "unmapped_queries": 0,
+    "empty_queries": 0
+  },
+  "memfxxk-hybrid": {
+    "hits": 492,
+    "unmapped": 0,
+    "unmapped_queries": 0,
+    "empty_queries": 0
+  },
+  "mem0-raw": {
+    "hits": 600,
+    "unmapped": 0,
+    "unmapped_queries": 0,
+    "empty_queries": 0
+  }
+}

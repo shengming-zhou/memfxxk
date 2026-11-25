@@ -1,0 +1,726 @@
+{
+  "questions": 50,
+  "abstention": 4,
+  "channels": {
+    "recent-turns": {
+      "overall": {
+        "questions": 46,
+        "scores": {
+          "session_recall_any@5": 0.13043478260869565,
+          "session_recall_all@5": 0.0,
+          "turn_recall_any@5": 0.022222222222222223,
+          "turn_recall_all@5": 0.0,
+          "session_ndcg@5": 0.03896039252771642,
+          "session_recall_any@10": 0.2608695652173913,
+          "session_recall_all@10": 0.06521739130434782,
+          "turn_recall_any@10": 0.044444444444444446,
+          "turn_recall_all@10": 0.0,
+          "session_ndcg@10": 0.07431780228928517,
+          "session_recall_any@20": 0.6086956521739131,
+          "session_recall_all@20": 0.21739130434782608,
+          "turn_recall_any@20": 0.1111111111111111,
+          "turn_recall_all@20": 0.0,
+          "session_ndcg@20": 0.14420212305594352
+        }
+      },
+      "by_type": {
+        "knowledge-update": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.375,
+            "session_recall_all@5": 0.0,
+            "turn_recall_any@5": 0.0,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.11632801454832088,
+            "session_recall_any@10": 0.5,
+            "session_recall_all@10": 0.0,
+            "turn_recall_any@10": 0.125,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.13848292539632684,
+            "session_recall_any@20": 0.875,
+            "session_recall_all@20": 0.0,
+            "turn_recall_any@20": 0.25,
+            "turn_recall_all@20": 0.0,
+            "session_ndcg@20": 0.19272573556580305
+          }
+        },
+        "multi-session": {
+          "questions": 7,
+          "scores": {
+            "session_recall_any@5": 0.2857142857142857,
+            "session_recall_all@5": 0.0,
+            "turn_recall_any@5": 0.14285714285714285,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.07928290621509415,
+            "session_recall_any@10": 0.2857142857142857,
+            "session_recall_all@10": 0.0,
+            "turn_recall_any@10": 0.14285714285714285,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.09787243240519423,
+            "session_recall_any@20": 0.8571428571428571,
+            "session_recall_all@20": 0.0,
+            "turn_recall_any@20": 0.2857142857142857,
+            "turn_recall_all@20": 0.0,
+            "session_ndcg@20": 0.1971537588524154
+          }
+        },
+        "single-session-assistant": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.0,
+            "session_recall_all@5": 0.0,
+            "turn_recall_any@5": 0.0,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.0,
+            "session_recall_any@10": 0.125,
+            "session_recall_all@10": 0.125,
+            "turn_recall_any@10": 0.0,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.041666666666666664,
+            "session_recall_any@20": 0.5,
+            "session_recall_all@20": 0.5,
+            "turn_recall_any@20": 0.0,
+            "turn_recall_all@20": 0.0,
+            "session_ndcg@20": 0.13994704451748535
+          }
+        },
+        "single-session-preference": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.0,
+            "session_recall_all@5": 0.0,
+            "turn_recall_any@5": 0.0,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.0,
+            "session_recall_any@10": 0.125,
+            "session_recall_all@10": 0.125,
+            "turn_recall_any@10": 0.0,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.036133103289735985,
+            "session_recall_any@20": 0.375,
+            "session_recall_all@20": 0.375,
+            "turn_recall_any@20": 0.0,
+            "turn_recall_all@20": 0.0,
+            "session_ndcg@20": 0.09735966161075242
+          }
+        },
+        "single-session-user": {
+          "questions": 7,
+          "scores": {
+            "session_recall_any@5": 0.0,
+            "session_recall_all@5": 0.0,
+            "turn_recall_any@5": 0.0,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.0,
+            "session_recall_any@10": 0.14285714285714285,
+            "session_recall_all@10": 0.14285714285714285,
+            "turn_recall_any@10": 0.0,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.043004285094854454,
+            "session_recall_any@20": 0.42857142857142855,
+            "session_recall_all@20": 0.42857142857142855,
+            "turn_recall_any@20": 0.0,
+            "turn_recall_all@20": 0.0,
+            "session_ndcg@20": 0.11913109787549922
+          }
+        },
+        "temporal-reasoning": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.125,
+            "session_recall_all@5": 0.0,
+            "turn_recall_any@5": 0.0,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.03832169954784115,
+            "session_recall_any@10": 0.375,
+            "session_recall_all@10": 0.0,
+            "turn_recall_any@10": 0.0,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.08777753999811763,
+            "session_recall_any@20": 0.625,
+            "session_recall_all@20": 0.0,
+            "turn_recall_any@20": 0.14285714285714285,
+            "turn_recall_all@20": 0.0,
+            "session_ndcg@20": 0.12238051624070906
+          }
+        }
+      }
+    },
+    "memfxxk-lexical": {
+      "overall": {
+        "questions": 46,
+        "scores": {
+          "session_recall_any@5": 0.5217391304347826,
+          "session_recall_all@5": 0.3695652173913043,
+          "turn_recall_any@5": 0.37777777777777777,
+          "turn_recall_all@5": 0.2222222222222222,
+          "session_ndcg@5": 0.34826699415587653,
+          "session_recall_any@10": 0.782608695652174,
+          "session_recall_all@10": 0.5,
+          "turn_recall_any@10": 0.4222222222222222,
+          "turn_recall_all@10": 0.26666666666666666,
+          "session_ndcg@10": 0.41475813641698017,
+          "session_recall_any@20": 0.8695652173913043,
+          "session_recall_all@20": 0.717391304347826,
+          "turn_recall_any@20": 0.6,
+          "turn_recall_all@20": 0.37777777777777777,
+          "session_ndcg@20": 0.4624327871736847
+        }
+      },
+      "by_type": {
+        "knowledge-update": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.625,
+            "session_recall_all@5": 0.25,
+            "turn_recall_any@5": 0.5,
+            "turn_recall_all@5": 0.125,
+            "session_ndcg@5": 0.3562931131918443,
+            "session_recall_any@10": 0.875,
+            "session_recall_all@10": 0.375,
+            "turn_recall_any@10": 0.5,
+            "turn_recall_all@10": 0.125,
+            "session_ndcg@10": 0.4266153378388952,
+            "session_recall_any@20": 1.0,
+            "session_recall_all@20": 0.875,
+            "turn_recall_any@20": 0.625,
+            "turn_recall_all@20": 0.25,
+            "session_ndcg@20": 0.5252183996224248
+          }
+        },
+        "multi-session": {
+          "questions": 7,
+          "scores": {
+            "session_recall_any@5": 0.42857142857142855,
+            "session_recall_all@5": 0.0,
+            "turn_recall_any@5": 0.14285714285714285,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.20225634982491533,
+            "session_recall_any@10": 0.7142857142857143,
+            "session_recall_all@10": 0.14285714285714285,
+            "turn_recall_any@10": 0.2857142857142857,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.27460980684269837,
+            "session_recall_any@20": 0.8571428571428571,
+            "session_recall_all@20": 0.5714285714285714,
+            "turn_recall_any@20": 0.7142857142857143,
+            "turn_recall_all@20": 0.0,
+            "session_ndcg@20": 0.3625670264581575
+          }
+        },
+        "single-session-assistant": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.875,
+            "session_recall_all@5": 0.875,
+            "turn_recall_any@5": 0.625,
+            "turn_recall_all@5": 0.625,
+            "session_ndcg@5": 0.5724236090563563,
+            "session_recall_any@10": 0.875,
+            "session_recall_all@10": 0.875,
+            "turn_recall_any@10": 0.75,
+            "turn_recall_all@10": 0.75,
+            "session_ndcg@10": 0.5724236090563563,
+            "session_recall_any@20": 0.875,
+            "session_recall_all@20": 0.875,
+            "turn_recall_any@20": 0.875,
+            "turn_recall_all@20": 0.875,
+            "session_ndcg@20": 0.5724236090563563
+          }
+        },
+        "single-session-preference": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.25,
+            "session_recall_all@5": 0.25,
+            "turn_recall_any@5": 0.25,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.17883456975917414,
+            "session_recall_any@10": 0.5,
+            "session_recall_all@10": 0.5,
+            "turn_recall_any@10": 0.25,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.2594935714374129,
+            "session_recall_any@20": 0.75,
+            "session_recall_all@20": 0.75,
+            "turn_recall_any@20": 0.375,
+            "turn_recall_all@20": 0.125,
+            "session_ndcg@20": 0.32610453262047706
+          }
+        },
+        "single-session-user": {
+          "questions": 7,
+          "scores": {
+            "session_recall_any@5": 0.5714285714285714,
+            "session_recall_all@5": 0.5714285714285714,
+            "turn_recall_any@5": 0.42857142857142855,
+            "turn_recall_all@5": 0.42857142857142855,
+            "session_ndcg@5": 0.4472756790816368,
+            "session_recall_any@10": 0.8571428571428571,
+            "session_recall_all@10": 0.8571428571428571,
+            "turn_recall_any@10": 0.42857142857142855,
+            "turn_recall_all@10": 0.42857142857142855,
+            "session_ndcg@10": 0.5332842492713457,
+            "session_recall_any@20": 0.8571428571428571,
+            "session_recall_all@20": 0.8571428571428571,
+            "turn_recall_any@20": 0.5714285714285714,
+            "turn_recall_all@20": 0.5714285714285714,
+            "session_ndcg@20": 0.5332842492713457
+          }
+        },
+        "temporal-reasoning": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.375,
+            "session_recall_all@5": 0.25,
+            "turn_recall_any@5": 0.2857142857142857,
+            "turn_recall_all@5": 0.14285714285714285,
+            "session_ndcg@5": 0.3266433990956823,
+            "session_recall_any@10": 0.875,
+            "session_recall_all@10": 0.25,
+            "turn_recall_any@10": 0.2857142857142857,
+            "turn_recall_all@10": 0.2857142857142857,
+            "session_ndcg@10": 0.4194194669651832,
+            "session_recall_any@20": 0.875,
+            "session_recall_all@20": 0.375,
+            "turn_recall_any@20": 0.42857142857142855,
+            "turn_recall_all@20": 0.42857142857142855,
+            "session_ndcg@20": 0.4513721186861136
+          }
+        }
+      }
+    },
+    "memfxxk-vector": {
+      "overall": {
+        "questions": 46,
+        "scores": {
+          "session_recall_any@5": 0.3695652173913043,
+          "session_recall_all@5": 0.2608695652173913,
+          "turn_recall_any@5": 0.24444444444444444,
+          "turn_recall_all@5": 0.13333333333333333,
+          "session_ndcg@5": 0.2835889040474074,
+          "session_recall_any@10": 0.5217391304347826,
+          "session_recall_all@10": 0.41304347826086957,
+          "turn_recall_any@10": 0.28888888888888886,
+          "turn_recall_all@10": 0.17777777777777778,
+          "session_ndcg@10": 0.3390681094014337,
+          "session_recall_any@20": 0.7608695652173914,
+          "session_recall_all@20": 0.6086956521739131,
+          "turn_recall_any@20": 0.4,
+          "turn_recall_all@20": 0.26666666666666666,
+          "session_ndcg@20": 0.40393350418165885
+        }
+      },
+      "by_type": {
+        "knowledge-update": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.5,
+            "session_recall_all@5": 0.125,
+            "turn_recall_any@5": 0.375,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.279649714096162,
+            "session_recall_any@10": 0.5,
+            "session_recall_all@10": 0.375,
+            "turn_recall_any@10": 0.5,
+            "turn_recall_all@10": 0.125,
+            "session_ndcg@10": 0.32937581424688167,
+            "session_recall_any@20": 0.625,
+            "session_recall_all@20": 0.5,
+            "turn_recall_any@20": 0.5,
+            "turn_recall_all@20": 0.25,
+            "session_ndcg@20": 0.36691670660410347
+          }
+        },
+        "multi-session": {
+          "questions": 7,
+          "scores": {
+            "session_recall_any@5": 0.14285714285714285,
+            "session_recall_all@5": 0.0,
+            "turn_recall_any@5": 0.0,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.0875924561093512,
+            "session_recall_any@10": 0.2857142857142857,
+            "session_recall_all@10": 0.0,
+            "turn_recall_any@10": 0.0,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.11879351851194608,
+            "session_recall_any@20": 0.5714285714285714,
+            "session_recall_all@20": 0.42857142857142855,
+            "turn_recall_any@20": 0.42857142857142855,
+            "turn_recall_all@20": 0.0,
+            "session_ndcg@20": 0.2455100813798892
+          }
+        },
+        "single-session-assistant": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.625,
+            "session_recall_all@5": 0.625,
+            "turn_recall_any@5": 0.375,
+            "turn_recall_all@5": 0.375,
+            "session_ndcg@5": 0.625,
+            "session_recall_any@10": 1.0,
+            "session_recall_all@10": 1.0,
+            "turn_recall_any@10": 0.5,
+            "turn_recall_all@10": 0.5,
+            "session_ndcg@10": 0.7506256746533855,
+            "session_recall_any@20": 1.0,
+            "session_recall_all@20": 1.0,
+            "turn_recall_any@20": 0.625,
+            "turn_recall_all@20": 0.625,
+            "session_ndcg@20": 0.7506256746533855
+          }
+        },
+        "single-session-preference": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.125,
+            "session_recall_all@5": 0.125,
+            "turn_recall_any@5": 0.125,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.0625,
+            "session_recall_any@10": 0.25,
+            "session_recall_all@10": 0.25,
+            "turn_recall_any@10": 0.125,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.10702589838850277,
+            "session_recall_any@20": 0.75,
+            "session_recall_all@20": 0.75,
+            "turn_recall_any@20": 0.125,
+            "turn_recall_all@20": 0.0,
+            "session_ndcg@20": 0.23145834018376396
+          }
+        },
+        "single-session-user": {
+          "questions": 7,
+          "scores": {
+            "session_recall_any@5": 0.42857142857142855,
+            "session_recall_all@5": 0.42857142857142855,
+            "turn_recall_any@5": 0.2857142857142857,
+            "turn_recall_all@5": 0.2857142857142857,
+            "session_ndcg@5": 0.347239508296199,
+            "session_recall_any@10": 0.5714285714285714,
+            "session_recall_all@10": 0.5714285714285714,
+            "turn_recall_any@10": 0.2857142857142857,
+            "turn_recall_all@10": 0.2857142857142857,
+            "session_ndcg@10": 0.39812624931163076,
+            "session_recall_any@20": 0.7142857142857143,
+            "session_recall_all@20": 0.7142857142857143,
+            "turn_recall_any@20": 0.42857142857142855,
+            "turn_recall_all@20": 0.42857142857142855,
+            "session_ndcg@20": 0.43384053502591646
+          }
+        },
+        "temporal-reasoning": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.375,
+            "session_recall_all@5": 0.25,
+            "turn_recall_any@5": 0.2857142857142857,
+            "turn_recall_all@5": 0.14285714285714285,
+            "session_ndcg@5": 0.2830085153215739,
+            "session_recall_any@10": 0.5,
+            "session_recall_all@10": 0.25,
+            "turn_recall_any@10": 0.2857142857142857,
+            "turn_recall_all@10": 0.14285714285714285,
+            "session_ndcg@10": 0.3103094449238444,
+            "session_recall_any@20": 0.875,
+            "session_recall_all@20": 0.25,
+            "turn_recall_any@20": 0.2857142857142857,
+            "turn_recall_all@20": 0.2857142857142857,
+            "session_ndcg@20": 0.37918513824820543
+          }
+        }
+      }
+    },
+    "memfxxk-hybrid": {
+      "overall": {
+        "questions": 46,
+        "scores": {
+          "session_recall_any@5": 0.45652173913043476,
+          "session_recall_all@5": 0.34782608695652173,
+          "turn_recall_any@5": 0.26666666666666666,
+          "turn_recall_all@5": 0.17777777777777778,
+          "session_ndcg@5": 0.35550546852162496,
+          "session_recall_any@10": 0.6956521739130435,
+          "session_recall_all@10": 0.5,
+          "turn_recall_any@10": 0.4444444444444444,
+          "turn_recall_all@10": 0.3111111111111111,
+          "session_ndcg@10": 0.42499143323726013,
+          "session_recall_any@20": 0.8695652173913043,
+          "session_recall_all@20": 0.6304347826086957,
+          "turn_recall_any@20": 0.5111111111111111,
+          "turn_recall_all@20": 0.37777777777777777,
+          "session_ndcg@20": 0.4720574914777563
+        }
+      },
+      "by_type": {
+        "knowledge-update": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.375,
+            "session_recall_all@5": 0.25,
+            "turn_recall_any@5": 0.375,
+            "turn_recall_all@5": 0.125,
+            "session_ndcg@5": 0.3266433990956823,
+            "session_recall_any@10": 0.75,
+            "session_recall_all@10": 0.375,
+            "turn_recall_any@10": 0.5,
+            "turn_recall_all@10": 0.25,
+            "session_ndcg@10": 0.42472610015071965,
+            "session_recall_any@20": 1.0,
+            "session_recall_all@20": 0.5,
+            "turn_recall_any@20": 0.625,
+            "turn_recall_all@20": 0.375,
+            "session_ndcg@20": 0.48123805570513073
+          }
+        },
+        "multi-session": {
+          "questions": 7,
+          "scores": {
+            "session_recall_any@5": 0.2857142857142857,
+            "session_recall_all@5": 0.0,
+            "turn_recall_any@5": 0.0,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.1467967311110437,
+            "session_recall_any@10": 0.42857142857142855,
+            "session_recall_all@10": 0.14285714285714285,
+            "turn_recall_any@10": 0.2857142857142857,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.2103752592132263,
+            "session_recall_any@20": 0.8571428571428571,
+            "session_recall_all@20": 0.5714285714285714,
+            "turn_recall_any@20": 0.2857142857142857,
+            "turn_recall_all@20": 0.0,
+            "session_ndcg@20": 0.341360381669616
+          }
+        },
+        "single-session-assistant": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.75,
+            "session_recall_all@5": 0.75,
+            "turn_recall_any@5": 0.375,
+            "turn_recall_all@5": 0.375,
+            "session_ndcg@5": 0.6788345697591741,
+            "session_recall_any@10": 0.875,
+            "session_recall_all@10": 0.875,
+            "turn_recall_any@10": 0.875,
+            "turn_recall_all@10": 0.875,
+            "session_ndcg@10": 0.7233604681476768,
+            "session_recall_any@20": 1.0,
+            "session_recall_all@20": 1.0,
+            "turn_recall_any@20": 0.875,
+            "turn_recall_all@20": 0.875,
+            "session_ndcg@20": 0.7539417859124552
+          }
+        },
+        "single-session-preference": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.125,
+            "session_recall_all@5": 0.125,
+            "turn_recall_any@5": 0.125,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.125,
+            "session_recall_any@10": 0.625,
+            "session_recall_all@10": 0.625,
+            "turn_recall_any@10": 0.25,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.2798616290126164,
+            "session_recall_any@20": 0.75,
+            "session_recall_all@20": 0.75,
+            "turn_recall_any@20": 0.375,
+            "turn_recall_all@20": 0.125,
+            "session_ndcg@20": 0.3136413983160314
+          }
+        },
+        "single-session-user": {
+          "questions": 7,
+          "scores": {
+            "session_recall_any@5": 0.7142857142857143,
+            "session_recall_all@5": 0.7142857142857143,
+            "turn_recall_any@5": 0.42857142857142855,
+            "turn_recall_all@5": 0.42857142857142855,
+            "session_ndcg@5": 0.4863764811486487,
+            "session_recall_any@10": 0.7142857142857143,
+            "session_recall_all@10": 0.7142857142857143,
+            "turn_recall_any@10": 0.42857142857142855,
+            "turn_recall_all@10": 0.42857142857142855,
+            "session_ndcg@10": 0.4863764811486487,
+            "session_recall_any@20": 0.7142857142857143,
+            "session_recall_all@20": 0.7142857142857143,
+            "turn_recall_any@20": 0.42857142857142855,
+            "turn_recall_all@20": 0.42857142857142855,
+            "session_ndcg@20": 0.4863764811486487
+          }
+        },
+        "temporal-reasoning": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.5,
+            "session_recall_all@5": 0.25,
+            "turn_recall_any@5": 0.2857142857142857,
+            "turn_recall_all@5": 0.14285714285714285,
+            "session_ndcg@5": 0.35965191441725614,
+            "session_recall_any@10": 0.75,
+            "session_recall_all@10": 0.25,
+            "turn_recall_any@10": 0.2857142857142857,
+            "turn_recall_all@10": 0.2857142857142857,
+            "session_ndcg@10": 0.4060947709865922,
+            "session_recall_any@20": 0.875,
+            "session_recall_all@20": 0.25,
+            "turn_recall_any@20": 0.42857142857142855,
+            "turn_recall_all@20": 0.42857142857142855,
+            "session_ndcg@20": 0.4412395810974996
+          }
+        }
+      }
+    },
+    "mem0-raw": {
+      "overall": {
+        "questions": 46,
+        "scores": {
+          "session_recall_any@5": 0.3695652173913043,
+          "session_recall_all@5": 0.2608695652173913,
+          "turn_recall_any@5": 0.24444444444444444,
+          "turn_recall_all@5": 0.13333333333333333,
+          "session_ndcg@5": 0.2835889040474074,
+          "session_recall_any@10": 0.5217391304347826,
+          "session_recall_all@10": 0.41304347826086957,
+          "turn_recall_any@10": 0.28888888888888886,
+          "turn_recall_all@10": 0.17777777777777778,
+          "session_ndcg@10": 0.3390681094014337,
+          "session_recall_any@20": 0.7608695652173914,
+          "session_recall_all@20": 0.6086956521739131,
+          "turn_recall_any@20": 0.4,
+          "turn_recall_all@20": 0.26666666666666666,
+          "session_ndcg@20": 0.40393350418165885
+        }
+      },
+      "by_type": {
+        "knowledge-update": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.5,
+            "session_recall_all@5": 0.125,
+            "turn_recall_any@5": 0.375,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.279649714096162,
+            "session_recall_any@10": 0.5,
+            "session_recall_all@10": 0.375,
+            "turn_recall_any@10": 0.5,
+            "turn_recall_all@10": 0.125,
+            "session_ndcg@10": 0.32937581424688167,
+            "session_recall_any@20": 0.625,
+            "session_recall_all@20": 0.5,
+            "turn_recall_any@20": 0.5,
+            "turn_recall_all@20": 0.25,
+            "session_ndcg@20": 0.36691670660410347
+          }
+        },
+        "multi-session": {
+          "questions": 7,
+          "scores": {
+            "session_recall_any@5": 0.14285714285714285,
+            "session_recall_all@5": 0.0,
+            "turn_recall_any@5": 0.0,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.0875924561093512,
+            "session_recall_any@10": 0.2857142857142857,
+            "session_recall_all@10": 0.0,
+            "turn_recall_any@10": 0.0,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.11879351851194608,
+            "session_recall_any@20": 0.5714285714285714,
+            "session_recall_all@20": 0.42857142857142855,
+            "turn_recall_any@20": 0.42857142857142855,
+            "turn_recall_all@20": 0.0,
+            "session_ndcg@20": 0.2455100813798892
+          }
+        },
+        "single-session-assistant": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.625,
+            "session_recall_all@5": 0.625,
+            "turn_recall_any@5": 0.375,
+            "turn_recall_all@5": 0.375,
+            "session_ndcg@5": 0.625,
+            "session_recall_any@10": 1.0,
+            "session_recall_all@10": 1.0,
+            "turn_recall_any@10": 0.5,
+            "turn_recall_all@10": 0.5,
+            "session_ndcg@10": 0.7506256746533855,
+            "session_recall_any@20": 1.0,
+            "session_recall_all@20": 1.0,
+            "turn_recall_any@20": 0.625,
+            "turn_recall_all@20": 0.625,
+            "session_ndcg@20": 0.7506256746533855
+          }
+        },
+        "single-session-preference": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.125,
+            "session_recall_all@5": 0.125,
+            "turn_recall_any@5": 0.125,
+            "turn_recall_all@5": 0.0,
+            "session_ndcg@5": 0.0625,
+            "session_recall_any@10": 0.25,
+            "session_recall_all@10": 0.25,
+            "turn_recall_any@10": 0.125,
+            "turn_recall_all@10": 0.0,
+            "session_ndcg@10": 0.10702589838850277,
+            "session_recall_any@20": 0.75,
+            "session_recall_all@20": 0.75,
+            "turn_recall_any@20": 0.125,
+            "turn_recall_all@20": 0.0,
+            "session_ndcg@20": 0.23145834018376396
+          }
+        },
+        "single-session-user": {
+          "questions": 7,
+          "scores": {
+            "session_recall_any@5": 0.42857142857142855,
+            "session_recall_all@5": 0.42857142857142855,
+            "turn_recall_any@5": 0.2857142857142857,
+            "turn_recall_all@5": 0.2857142857142857,
+            "session_ndcg@5": 0.347239508296199,
+            "session_recall_any@10": 0.5714285714285714,
+            "session_recall_all@10": 0.5714285714285714,
+            "turn_recall_any@10": 0.2857142857142857,
+            "turn_recall_all@10": 0.2857142857142857,
+            "session_ndcg@10": 0.39812624931163076,
+            "session_recall_any@20": 0.7142857142857143,
+            "session_recall_all@20": 0.7142857142857143,
+            "turn_recall_any@20": 0.42857142857142855,
+            "turn_recall_all@20": 0.42857142857142855,
+            "session_ndcg@20": 0.43384053502591646
+          }
+        },
+        "temporal-reasoning": {
+          "questions": 8,
+          "scores": {
+            "session_recall_any@5": 0.375,
+            "session_recall_all@5": 0.25,
+            "turn_recall_any@5": 0.2857142857142857,
+            "turn_recall_all@5": 0.14285714285714285,
+            "session_ndcg@5": 0.2830085153215739,
+            "session_recall_any@10": 0.5,
+            "session_recall_all@10": 0.25,
+            "turn_recall_any@10": 0.2857142857142857,
+            "turn_recall_all@10": 0.14285714285714285,
+            "session_ndcg@10": 0.3103094449238444,
+            "session_recall_any@20": 0.875,
+            "session_recall_all@20": 0.25,
+            "turn_recall_any@20": 0.2857142857142857,
+            "turn_recall_all@20": 0.2857142857142857,
+            "session_ndcg@20": 0.37918513824820543
+          }
+        }
+      }
+    }
+  }
+}

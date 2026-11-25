@@ -1,0 +1,63 @@
+{
+  "benchmark": "longmemeval",
+  "kind": "evidence",
+  "dataset": "s",
+  "dataset_sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+  "question_ids": [
+    "45dc21b6",
+    "edced276",
+    "1568498a",
+    "1c0ddc50",
+    "ccb36322",
+    "gpt4_85da3956"
+  ],
+  "git_commit": "636a8e283b6225f980b5a9674a92bc8246d4b015",
+  "run_name": "m1-bge-six",
+  "candidate_turns": 100,
+  "eligible_turns": 1496,
+  "k_list": [
+    5,
+    10,
+    20
+  ],
+  "memfxxk_channels": [
+    "lexical",
+    "vector",
+    "hybrid"
+  ],
+  "memfxxk_search": {
+    "n_lexical": 50,
+    "n_vector": 50,
+    "m_important": 10,
+    "hnsw_ef_search": 100,
+    "rrf_k": 60,
+    "lexical_weight": 1.0,
+    "vector_weight": 1.0,
+    "important_boost": 1.5,
+    "important_min_sim": 0.35,
+    "max_related": 3
+  },
+  "memfxxk_embedding": {
+    "provider": "openai_compatible",
+    "model": "BAAI/bge-small-en-v1.5",
+    "dim": 384
+  },
+  "external_backends": {
+    "mem0-raw": {
+      "version": "2.2.1",
+      "vector_store": "qdrant-local-in-memory",
+      "qdrant_client_version": "1.20.0",
+      "mode": "raw-turn",
+      "infer": false,
+      "rerank": false,
+      "keyword_search": false,
+      "entity_extraction": false,
+      "telemetry": false,
+      "threshold": 0.0,
+      "embedding_model": "BAAI/bge-small-en-v1.5",
+      "embedding_dimensions": 384,
+      "reuse_document_embeddings": true
+    }
+  },
+  "duration_seconds": 9.464059100020677
+}
