@@ -1,0 +1,310 @@
+{
+  "G1": {
+    "completed": 6,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 95.33333333333333,
+      "p50": 94.0,
+      "p95": 104.25
+    },
+    "output_tokens": {
+      "mean": 39,
+      "p50": 19.0,
+      "p95": 117.25
+    },
+    "network_input_tokens": {
+      "mean": 95.33333333333333,
+      "p50": 94.0,
+      "p95": 104.25
+    },
+    "network_output_tokens": {
+      "mean": 39,
+      "p50": 19.0,
+      "p95": 117.25
+    },
+    "elapsed_ms": {
+      "mean": 999.7398332537463,
+      "p50": 862.1900998987257,
+      "p95": 1550.4465497797355
+    },
+    "retrieval_ms": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    }
+  },
+  "recent-turns": {
+    "completed": 6,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 1494,
+      "p50": 1495.5,
+      "p95": 1499.75
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 1589.3333333333333,
+      "p50": 1588.5,
+      "p95": 1600.75
+    },
+    "output_tokens": {
+      "mean": 31.5,
+      "p50": 13.0,
+      "p95": 95.75
+    },
+    "network_input_tokens": {
+      "mean": 1589.3333333333333,
+      "p50": 1588.5,
+      "p95": 1600.75
+    },
+    "network_output_tokens": {
+      "mean": 31.5,
+      "p50": 13.0,
+      "p95": 95.75
+    },
+    "elapsed_ms": {
+      "mean": 996.6858834183464,
+      "p50": 902.3531002458185,
+      "p95": 1515.8832251327112
+    },
+    "retrieval_ms": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    }
+  },
+  "memfxxk-lexical": {
+    "completed": 6,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 1492.6666666666667,
+      "p50": 1495.0,
+      "p95": 1497.75
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 1588,
+      "p50": 1588.5,
+      "p95": 1590.75
+    },
+    "output_tokens": {
+      "mean": 46.333333333333336,
+      "p50": 22.0,
+      "p95": 129.75
+    },
+    "network_input_tokens": {
+      "mean": 1588,
+      "p50": 1588.5,
+      "p95": 1590.75
+    },
+    "network_output_tokens": {
+      "mean": 46.333333333333336,
+      "p50": 22.0,
+      "p95": 129.75
+    },
+    "elapsed_ms": {
+      "mean": 815.2639000521352,
+      "p50": 718.2837501168251,
+      "p95": 1257.2185499593616
+    },
+    "retrieval_ms": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    }
+  },
+  "memfxxk-vector": {
+    "completed": 6,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 1496.6666666666667,
+      "p50": 1497.0,
+      "p95": 1499.75
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 1592,
+      "p50": 1590.0,
+      "p95": 1601.75
+    },
+    "output_tokens": {
+      "mean": 44.5,
+      "p50": 35.0,
+      "p95": 91.25
+    },
+    "network_input_tokens": {
+      "mean": 1592,
+      "p50": 1590.0,
+      "p95": 1601.75
+    },
+    "network_output_tokens": {
+      "mean": 44.5,
+      "p50": 35.0,
+      "p95": 91.25
+    },
+    "elapsed_ms": {
+      "mean": 852.5651999128362,
+      "p50": 758.9680498931557,
+      "p95": 1179.5633997535333
+    },
+    "retrieval_ms": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    }
+  },
+  "memfxxk-hybrid": {
+    "completed": 6,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 1495.3333333333333,
+      "p50": 1499.5,
+      "p95": 1500.0
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 1590.6666666666667,
+      "p50": 1593.0,
+      "p95": 1604.25
+    },
+    "output_tokens": {
+      "mean": 43,
+      "p50": 20.5,
+      "p95": 115.5
+    },
+    "network_input_tokens": {
+      "mean": 1590.6666666666667,
+      "p50": 1593.0,
+      "p95": 1604.25
+    },
+    "network_output_tokens": {
+      "mean": 43,
+      "p50": 20.5,
+      "p95": 115.5
+    },
+    "elapsed_ms": {
+      "mean": 819.8288167671611,
+      "p50": 683.9585502166301,
+      "p95": 1266.0389500670135
+    },
+    "retrieval_ms": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    }
+  },
+  "mem0-raw": {
+    "completed": 6,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 1496.6666666666667,
+      "p50": 1497.0,
+      "p95": 1499.75
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 1592,
+      "p50": 1590.0,
+      "p95": 1601.75
+    },
+    "output_tokens": {
+      "mean": 44.5,
+      "p50": 35.0,
+      "p95": 91.25
+    },
+    "network_input_tokens": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "network_output_tokens": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "elapsed_ms": {
+      "mean": 10.348933360849818,
+      "p50": 10.246050078421831,
+      "p95": 13.62867490388453
+    },
+    "retrieval_ms": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    }
+  },
+  "G4": {
+    "completed": 6,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "tool_call_count": {
+      "mean": 1.1666666666666667,
+      "p50": 1.0,
+      "p95": 2.5
+    },
+    "input_tokens": {
+      "mean": 2352.3333333333335,
+      "p50": 1864.5,
+      "p95": 4902.25
+    },
+    "output_tokens": {
+      "mean": 101,
+      "p50": 75.5,
+      "p95": 174.75
+    },
+    "network_input_tokens": {
+      "mean": 2352.3333333333335,
+      "p50": 1864.5,
+      "p95": 4902.25
+    },
+    "network_output_tokens": {
+      "mean": 101,
+      "p50": 75.5,
+      "p95": 174.75
+    },
+    "elapsed_ms": {
+      "mean": 2166.558050084859,
+      "p50": 1870.3127999324352,
+      "p95": 3109.828325221315
+    },
+    "retrieval_ms": {
+      "mean": 57.75366676971316,
+      "p50": 48.75870025716722,
+      "p95": 126.08337495476007
+    }
+  }
+}

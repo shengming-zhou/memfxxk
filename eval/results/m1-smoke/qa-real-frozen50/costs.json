@@ -1,0 +1,178 @@
+{
+  "G1": {
+    "completed": 50,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 96.2,
+      "p50": 94.0,
+      "p95": 112.1
+    },
+    "output_tokens": {
+      "mean": 34.14,
+      "p50": 19.0,
+      "p95": 138.74999999999994
+    },
+    "network_input_tokens": {
+      "mean": 84.76,
+      "p50": 92.0,
+      "p95": 112.1
+    },
+    "network_output_tokens": {
+      "mean": 29.46,
+      "p50": 14.0,
+      "p95": 116.44999999999995
+    },
+    "elapsed_ms": {
+      "mean": 780.6172640249133,
+      "p50": 755.360099952668,
+      "p95": 1666.1983801284798
+    },
+    "retrieval_ms": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    }
+  },
+  "recent-turns": {
+    "completed": 50,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 1491.44,
+      "p50": 1493.5,
+      "p95": 1500.0
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 1587.64,
+      "p50": 1587.0,
+      "p95": 1608.95
+    },
+    "output_tokens": {
+      "mean": 18.18,
+      "p50": 14.0,
+      "p95": 31.549999999999997
+    },
+    "network_input_tokens": {
+      "mean": 1396.92,
+      "p50": 1586.0,
+      "p95": 1608.95
+    },
+    "network_output_tokens": {
+      "mean": 14.4,
+      "p50": 14.0,
+      "p95": 29.19999999999999
+    },
+    "elapsed_ms": {
+      "mean": 666.3154479674995,
+      "p50": 687.0181998237967,
+      "p95": 887.6547348452731
+    },
+    "retrieval_ms": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    }
+  },
+  "memfxxk-hybrid": {
+    "completed": 50,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 1491.8,
+      "p50": 1493.5,
+      "p95": 1500.0
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 1588,
+      "p50": 1586.5,
+      "p95": 1607.55
+    },
+    "output_tokens": {
+      "mean": 22.24,
+      "p50": 19.0,
+      "p95": 38.099999999999994
+    },
+    "network_input_tokens": {
+      "mean": 1588,
+      "p50": 1586.5,
+      "p95": 1607.55
+    },
+    "network_output_tokens": {
+      "mean": 22.24,
+      "p50": 19.0,
+      "p95": 38.099999999999994
+    },
+    "elapsed_ms": {
+      "mean": 808.3143840078264,
+      "p50": 765.6880000140518,
+      "p95": 1019.6458399994295
+    },
+    "retrieval_ms": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    }
+  },
+  "mem0-raw": {
+    "completed": 50,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 1492.46,
+      "p50": 1494.5,
+      "p95": 1500.0
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 1588.66,
+      "p50": 1588.0,
+      "p95": 1608.1
+    },
+    "output_tokens": {
+      "mean": 22.46,
+      "p50": 15.5,
+      "p95": 39.55
+    },
+    "network_input_tokens": {
+      "mean": 1588.66,
+      "p50": 1588.0,
+      "p95": 1608.1
+    },
+    "network_output_tokens": {
+      "mean": 22.46,
+      "p50": 15.5,
+      "p95": 39.55
+    },
+    "elapsed_ms": {
+      "mean": 812.0941999834031,
+      "p50": 789.5437499973923,
+      "p95": 1090.0867099640889
+    },
+    "retrieval_ms": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    }
+  }
+}

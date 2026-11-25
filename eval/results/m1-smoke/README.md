@@ -6,6 +6,7 @@ These aggregate reports use PostgreSQL 17 and pgvector. Each run records its cod
 - [QA smoke run](qa/metrics.md) uses the two-question test fixture, including one abstention. G1–G4 each completed two questions. The fake judge returned positive grades by design. [Cost counters](qa/costs.json) record 0, 28.5, 38.5, and 0 mean injected tokens and 0, 0, 0, and 3 mean tool calls in G1–G4 order.
 - [Frozen S evidence comparison](evidence-hash/metrics.md) uses 50 questions and 11,851 eligible turns. The vector channels share deterministic hash vectors. [Manifest](evidence-hash/manifest.json) · [Latency](evidence-hash/latency.json)
 - [Local semantic smoke](evidence-bge-six/metrics.md) uses the first six frozen questions, one per question type. Both backends share 384-dimensional BGE embeddings. [Manifest](evidence-bge-six/manifest.json) · [Latency](evidence-bge-six/latency.json)
+- [Live model QA](qa-real.md) compares the four frozen 50-question controls with `gpt-5.4-mini` and checks context assembly and tool use on six BGE questions.
 
 ## Interpreting the evidence runs
 

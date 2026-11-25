@@ -40,6 +40,8 @@ flowchart LR
 
 已完成固定 50 题的确定性向量证据横评，并在同一题集的前六题上用本地 BGE 完成语义烟测。近期原文、memfxxk 和 Mem0 OSS 使用相同的时间截止点。可查看 [评测结果](../eval/results/m1-smoke/README.md) 和 [复跑命令](developer-manual.md#evidence-comparison)。
 
+首轮真实模型问答已覆盖固定 50 题的四组对照，以及六道 BGE 题的上下文装载与工具调用。详见 [真实问答报告](../eval/results/m1-smoke/qa-real.md)。
+
 1. T00–T08 全部合入，`uv run pytest` 全绿（含 integration/e2e，需 docker 里的 PG）。
 2. **演示场景自动化通过**（T08）：开发 Agent 的一次排障会话入库 → 用户把一条 CI 失败标为重要并关联修复 → 新会话从 session state 恢复进度，遇到相似故障召回这两条（经由关联）→ 用户修改并固定发布约定 → 下一轮自动装载新版本，旧版本仍可按版本号读回。
 3. **手动 dogfood**：通过 MCP 把 memfxxk 接到一个真实开发 Agent（Claude Code 或 Codex）上用一周，记录问题清单。

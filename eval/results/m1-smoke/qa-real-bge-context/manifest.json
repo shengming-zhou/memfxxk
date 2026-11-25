@@ -1,0 +1,55 @@
+{
+  "kind": "qa",
+  "dataset": "s",
+  "dataset_path": "eval/data/longmemeval/longmemeval_s_cleaned.json",
+  "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+  "git_commit": "e611777a55370ab18ef02440bea66ae5bd6789a6",
+  "generator": "gpt-5.4-mini",
+  "answer_prompt": "answer-v1.txt",
+  "options": {
+    "groups": [
+      "G3"
+    ],
+    "k": 8,
+    "evidence_budget": 1500,
+    "channels": "hybrid",
+    "max_tool_calls": 6,
+    "max_context_tokens": 120000,
+    "concurrency": 4,
+    "max_answer_tokens": 384
+  },
+  "limit": null,
+  "question_ids": [
+    "45dc21b6",
+    "edced276",
+    "1568498a",
+    "1c0ddc50",
+    "ccb36322",
+    "gpt4_85da3956"
+  ],
+  "embedding": {
+    "provider": "openai_compatible",
+    "model": "BAAI/bge-small-en-v1.5",
+    "dim": 384,
+    "batch_size": 64,
+    "timeout": 30.0,
+    "max_retries": 3,
+    "max_input_tokens": 8000
+  },
+  "search": {
+    "n_lexical": 50,
+    "n_vector": 50,
+    "m_important": 10,
+    "hnsw_ef_search": 100,
+    "rrf_k": 60,
+    "lexical_weight": 1.0,
+    "vector_weight": 1.0,
+    "important_boost": 1.5,
+    "important_min_sim": 0.35,
+    "max_related": 3
+  },
+  "token_counter": "tiktoken",
+  "judge": "builtin(gpt-5.4-mini)",
+  "judge_prompt": "judge-v1.txt",
+  "judge_source_commit": "9e0b455f4ef0e2ab8f2e582289761153549043fc"
+}
