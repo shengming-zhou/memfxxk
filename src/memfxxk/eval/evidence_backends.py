@@ -117,9 +117,18 @@ def _open_mem0(work_dir: Path, embedding: EmbeddingProvider) -> tuple[Memory, Qd
 class Mem0EvidenceBackend:
     """Index raw, timestamp-scoped turns through Mem0 OSS add/search."""
 
-    def __init__(self, embedding: EmbeddingProvider, work_dir: Path) -> None:
+    def __init__(
+        self,
+        embedding: EmbeddingProvider,
+        work_dir: Path,
+        *,
+        document_embedding: EmbeddingProvider | None = None,
+    ) -> None:
         self._memory, self._client = _open_mem0(work_dir, embedding)
         self._embedder = _SharedEmbedder(embedding)
+        self._document_embedding = (
+            document_embedding if document_embedding is not None else embedding
+        )
         self._memory.embedding_model = self._embedder
         self._memory.llm = _DisabledChat()
         self._prepared: set[str] = set()
@@ -136,6 +145,7 @@ class Mem0EvidenceBackend:
             "threshold": 0.0,
             "embedding_model": embedding.model,
             "embedding_dimensions": embedding.dim,
+            "reuse_document_embeddings": document_embedding is not None,
         }
 
     def __enter__(self) -> Self:
@@ -160,7 +170,7 @@ class Mem0EvidenceBackend:
         for batch in batched(eligible, 64):
             texts = [render_evidence_turn(turn) for turn in batch]
             unique_texts = list(dict.fromkeys(texts))
-            vectors = self._embedder.embedding.embed(unique_texts)
+            vectors = self._document_embedding.embed(unique_texts)
             self._embedder.pending.update(zip(unique_texts, vectors, strict=True))
             try:
                 for turn, text in zip(batch, texts, strict=True):

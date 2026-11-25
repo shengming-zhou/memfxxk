@@ -9,7 +9,7 @@ import typer
 
 from memfxxk.config import Settings
 from memfxxk.db import create_engine
-from memfxxk.embedding import make_embedding_provider
+from memfxxk.embedding import CachedEmbedder, make_embedding_provider
 from memfxxk.service import MemoryService
 
 from .llm import ChatClient
@@ -169,8 +169,13 @@ def evidence_command(
                 from .evidence_backends import Mem0EvidenceBackend
 
                 scratch = stack.enter_context(TemporaryDirectory(prefix="memfxxk-evidence-"))
+                embedding = make_embedding_provider(service.settings)
                 external["mem0-raw"] = stack.enter_context(
-                    Mem0EvidenceBackend(make_embedding_provider(service.settings), Path(scratch))
+                    Mem0EvidenceBackend(
+                        embedding,
+                        Path(scratch),
+                        document_embedding=CachedEmbedder(service.engine, embedding),
+                    )
                 )
             path = run_evidence(
                 service,
