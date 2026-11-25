@@ -80,6 +80,19 @@ MEMFXXK_EMBEDDING__DIM=384
 
 `uv run pytest tests/unit/test_t07_llm.py` 使用本地 HTTP 模拟验证 OpenAI 兼容请求和工具续轮。真实运行时用 `MEMFXXK_EVAL__GEN__BASE_URL` 配置 API 前缀（例如以 `/v1` 结尾），配合 `MEMFXXK_EVAL__GEN__MODEL` 和 `MEMFXXK_EVAL__GEN__API_KEY`。评分模型使用相同名称结构的 `MEMFXXK_EVAL__JUDGE__*` 配置。
 
+### 用固定证据比较答题 {#replay-evidence-qa}
+
+保留 `evidence` 生成的完整本地目录，再把同一份题集和该目录交给 QA。程序按保存的排序读取截止时间内的原文 turn，用相同格式、Top-K 和 token 预算提供给答题模型。保留原始证据报告用于检索延时，QA 报告记录从装配已有证据到答题的延时。自主工具调用组 G4 单独计时。
+
+```sh
+uv run --locked memfxxk eval longmemeval qa \
+  --suite eval/suites/longmemeval-s-smoke.json \
+  --evidence-run eval/results/ACTUAL-EVIDENCE-RUN \
+  --groups G1,recent-turns,memfxxk-hybrid,mem0-raw \
+  --k 8 --evidence-budget 1500 --max-answer-tokens 384 --run-name qa-smoke
+uv run --locked memfxxk eval longmemeval judge eval/results/qa-smoke
+```
+
 ### 检索与问答命令 {#retrieval-and-qa-commands}
 
 ```sh

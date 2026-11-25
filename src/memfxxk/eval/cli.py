@@ -19,6 +19,7 @@ from .longmemeval.ingestion import ingest_dataset
 from .longmemeval.judging import judge_results
 from .longmemeval.metrics import markdown_metrics
 from .longmemeval.qa import QAOptions, run_qa
+from .longmemeval.qa_evidence import EVIDENCE_GROUPS, load_evidence_run
 from .longmemeval.retrieval import (
     CHANNELS,
     RESULTS_DIRECTORY,
@@ -201,35 +202,55 @@ def qa_command(
     channels: str = "hybrid",
     max_tool_calls: Annotated[int, typer.Option(min=0)] = 6,
     max_context_tokens: Annotated[int, typer.Option(min=1)] = 120_000,
+    max_answer_tokens: Annotated[int | None, typer.Option(min=1)] = None,
     no_cache: bool = False,
     run_name: str = "longmemeval-qa",
     data_dir: Path = DATA_DIRECTORY,
     results_dir: Path = RESULTS_DIRECTORY,
+    suite: Annotated[Path | None, typer.Option(exists=True, dir_okay=False)] = None,
+    evidence_run: Annotated[Path | None, typer.Option(exists=True, file_okay=False)] = None,
 ) -> None:
     """Generate answers for the selected LongMemEval QA groups."""
     if not run_name or Path(run_name).name != run_name or run_name in (".", ".."):
         raise typer.BadParameter("Choose a directory name", param_hint="--run-name")
     try:
+        data_file = data_dir / DATA_FILES[dataset]
+        plan = load_suite(suite, dataset, data_file) if suite else None
+        if evidence_run is not None and plan is None:
+            raise ValueError("Provide --suite with --evidence-run")
+        groups_list = _csv(groups)
+        evidence = (
+            load_evidence_run(
+                evidence_run,
+                plan,
+                tuple(group for group in groups_list if group in EVIDENCE_GROUPS),
+            )
+            if evidence_run is not None and plan is not None
+            else None
+        )
         with _service() as service:
             options = QAOptions(
-                groups=_csv(groups),
+                groups=groups_list,
                 k=k,
                 evidence_budget=evidence_budget,
                 channels=cast(Channel, channels),
                 max_tool_calls=max_tool_calls,
                 max_context_tokens=max_context_tokens,
                 concurrency=service.settings.eval.concurrency,
+                max_answer_tokens=max_answer_tokens,
             )
             cache_dir = None if no_cache else Path("eval/cache/llm")
             with ChatClient(service.settings.eval.gen, cache_dir=cache_dir) as generator:
                 path = run_qa(
                     service,
-                    data_dir / DATA_FILES[dataset],
+                    data_file,
                     dataset,
                     results_dir / run_name,
                     generator,
                     options,
                     limit=limit,
+                    question_ids=plan.question_ids if plan is not None else (),
+                    evidence_run=evidence,
                 )
     except (FileNotFoundError, FileExistsError, ValueError) as error:
         raise typer.BadParameter(str(error)) from error

@@ -5,11 +5,15 @@ from pathlib import Path
 import pytest
 
 from memfxxk.eval.llm import ChatMessage, ChatResult
-from memfxxk.eval.longmemeval.dataset import iter_questions, iter_turns
+from memfxxk.eval.longmemeval.dataset import file_sha256, iter_questions, iter_turns
+from memfxxk.eval.longmemeval.evidence import run_evidence
 from memfxxk.eval.longmemeval.ingestion import ingest_dataset
 from memfxxk.eval.longmemeval.judging import judge_results
 from memfxxk.eval.longmemeval.qa import QAOptions, run_qa
+from memfxxk.eval.longmemeval.qa_evidence import inject_evidence, load_evidence_run
+from memfxxk.eval.longmemeval.suite import QuestionSuite
 from memfxxk.service import MemoryService
+from memfxxk.text import SimpleCounter
 
 pytestmark = pytest.mark.integration
 FIXTURE = Path(__file__).parents[1] / "fixtures/longmemeval-mini.json"
@@ -133,3 +137,44 @@ def test_t07_full_history_skips_long_input(service: MemoryService, tmp_path: Pat
     assert lines(out / "per_question.jsonl")[0]["status"] == "skipped_too_long"
     assert lines(out / "hypotheses.G2.jsonl") == []
     assert generator.requests == []
+
+
+def test_qa_replays_frozen_evidence_with_same_format_and_budget(
+    service: MemoryService, tmp_path: Path
+) -> None:
+    current, other = iter_questions(FIXTURE)
+    ids = (other.question_id, current.question_id)
+    suite = QuestionSuite(dataset="s", dataset_sha256=file_sha256(FIXTURE), question_ids=ids)
+    ingest_dataset(service, FIXTURE, "s", question_ids=ids)
+    evidence_path = run_evidence(
+        service, FIXTURE, suite, tmp_path, "replay", {}, channels=("lexical",)
+    )
+    groups = ("recent-turns", "memfxxk-lexical")
+    evidence = load_evidence_run(evidence_path, suite, groups)
+    with pytest.raises(ValueError, match="missing question"):
+        load_evidence_run(evidence_path, suite, ("mem0-raw",))
+    reversed_suite = suite.model_copy(update={"question_ids": tuple(reversed(ids))})
+    with pytest.raises(ValueError, match="match the frozen question suite"):
+        load_evidence_run(evidence_path, reversed_suite, groups)
+
+    generator = FakeGenerator()
+    options = QAOptions(groups=groups, evidence_budget=36, concurrency=1)
+    out = run_qa(
+        service,
+        FIXTURE,
+        "s",
+        tmp_path / "qa",
+        generator,
+        options,
+        question_ids=ids,
+        evidence_run=evidence,
+    )
+    observations = lines(out / "per_question.jsonl")
+    assert [row["question_id"] for row in observations[::2]] == list(ids)
+    assert any(row["answer_session_retrieved"] for row in observations)
+    assert all(row["injected_tokens"] <= 36 for row in observations)
+    for messages in generator.requests:
+        assert "future_session" not in messages[0]["content"]
+        assert '<turn date="' in messages[0]["content"]
+    with pytest.raises(ValueError, match="out-of-scope turn"):
+        inject_evidence(current, (generator.future_id,), k=8, budget=36, counter=SimpleCounter())

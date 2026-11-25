@@ -21,6 +21,7 @@ from memfxxk.tools import ServiceBackend, dispatch, to_openai_tools
 from .dataset import Dataset, Question, file_sha256, iter_turns, parse_date
 from .ingestion import select_questions
 from .metrics import percentile
+from .qa_evidence import EVIDENCE_GROUPS, EvidenceRun, inject_evidence
 from .retrieval import CHANNELS, Channel, _commit, _write_json
 from .storage import EVAL_PRINCIPAL, eval_context
 
@@ -28,7 +29,13 @@ if TYPE_CHECKING:
     from memfxxk.service import BoundService, MemoryService
 
 ANSWER_PROMPT = "answer-v1.txt"
-GROUPS = {"G1": "no_memory", "G2": "full_history", "G3": "retrieval_inject", "G4": "agentic_search"}
+GROUPS = {
+    "G1": "no_memory",
+    "G2": "full_history",
+    "G3": "retrieval_inject",
+    "G4": "agentic_search",
+    **{group: group for group in EVIDENCE_GROUPS},
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +47,7 @@ class QAOptions:
     max_tool_calls: int = 6
     max_context_tokens: int = 120_000
     concurrency: int = 4
+    max_answer_tokens: int | None = None
 
     def __post_init__(self) -> None:
         if (
@@ -47,13 +55,15 @@ class QAOptions:
             or len(set(self.groups)) != len(self.groups)
             or any(group not in GROUPS for group in self.groups)
         ):
-            raise ValueError("Choose distinct groups from G1, G2, G3, G4")
+            raise ValueError(f"Choose distinct groups from {', '.join(GROUPS)}")
         if self.channels not in CHANNELS:
             raise ValueError("Channels must be lexical, vector or hybrid")
         if not 1 <= self.k <= 100 or self.concurrency < 1 or self.max_context_tokens < 1:
             raise ValueError("k must be 1–100 and token and concurrency limits must be positive")
         if min(self.evidence_budget, self.max_tool_calls) < 0:
             raise ValueError("Evidence and tool budgets cannot be negative")
+        if self.max_answer_tokens is not None and self.max_answer_tokens < 1:
+            raise ValueError("The answer token limit must be positive")
 
 
 def read_prompt(name: str) -> str:
@@ -143,6 +153,7 @@ def _agentic_answer(
     messages: list[ChatMessage],
     backend: EvaluationBackend,
     max_calls: int,
+    max_tokens: int | None = None,
 ) -> tuple[str, list[ChatResult], list[dict[str, Any]], bool]:
     tools = [
         tool
@@ -152,7 +163,7 @@ def _agentic_answer(
     calls: list[ChatResult] = []
     actions: list[dict[str, Any]] = []
     while len(actions) < max_calls:
-        result = generator.complete(messages.copy(), tools=tools)
+        result = generator.complete(messages.copy(), tools=tools, max_tokens=max_tokens)
         calls.append(result)
         requested = result.message.get("tool_calls") or []
         if not requested:
@@ -180,7 +191,7 @@ def _agentic_answer(
                     value = "Invalid tool request"
             messages.append({"role": "tool", "tool_call_id": tool["id"], "content": value})
     messages.append({"role": "user", "content": "The tool budget has ended. Answer now."})
-    result = generator.complete(messages.copy())
+    result = generator.complete(messages.copy(), max_tokens=max_tokens)
     calls.append(result)
     return _answer(result), calls, actions, True
 
@@ -191,6 +202,7 @@ def _generate(
     service: BoundService,
     options: QAOptions,
     generator: ChatModel,
+    evidence_ids: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     started = perf_counter()
     counter = make_token_counter(service.settings.token_counter)
@@ -207,7 +219,17 @@ def _generate(
         "answer_session_retrieved": False,
     }
     history = ""
-    if group == "G2":
+    if evidence_ids is not None:
+        injected = inject_evidence(
+            question, evidence_ids, options.k, options.evidence_budget, counter
+        )
+        history = injected.text
+        row["injected_tokens"] = counter.count(history)
+        row["injected_turn_ids"] = injected.turn_ids
+        row["answer_session_retrieved"] = bool(
+            injected.sessions.intersection(question.answer_session_ids)
+        )
+    elif group == "G2":
         history = _full_history(question)
         row["injected_tokens"] = counter.count(history)
     elif group == "G3":
@@ -248,7 +270,7 @@ def _generate(
     if group == "G4":
         backend = EvaluationBackend(service, question, options)
         hypothesis, calls, actions, limited = _agentic_answer(
-            generator, messages, backend, options.max_tool_calls
+            generator, messages, backend, options.max_tool_calls, options.max_answer_tokens
         )
         row["tool_calls"] = actions
         row["tool_limit_reached"] = limited
@@ -257,7 +279,7 @@ def _generate(
             backend.retrieved.intersection(question.answer_session_ids)
         )
     else:
-        calls = [generator.complete(messages)]
+        calls = [generator.complete(messages, max_tokens=options.max_answer_tokens)]
         hypothesis = _answer(calls[0])
     row.update(
         hypothesis=hypothesis,
@@ -322,8 +344,20 @@ def run_qa(
     options: QAOptions,
     *,
     limit: int | None = None,
+    question_ids: tuple[str, ...] = (),
+    evidence_run: EvidenceRun | None = None,
 ) -> Path:
     digest = file_sha256(path)
+    replays = set(options.groups).intersection(EVIDENCE_GROUPS)
+    if replays and evidence_run is None:
+        raise ValueError("The selected evidence groups require an evidence run")
+    if evidence_run is not None and (
+        evidence_run.suite.dataset != dataset
+        or evidence_run.suite.dataset_sha256 != digest
+        or evidence_run.suite.question_ids != question_ids
+    ):
+        raise ValueError("Evidence run must match the QA dataset and questions")
+    questions = select_questions(path, limit, question_ids=question_ids)
 
     def generate_question(question: Question) -> list[dict[str, Any]]:
         bound = service.for_request(EVAL_PRINCIPAL, eval_context(question.question_id))
@@ -333,7 +367,19 @@ def run_qa(
             raise ValueError(
                 f"Question {question.question_id} has not been ingested for this dataset"
             )
-        return [_generate(group, question, bound, options, generator) for group in options.groups]
+        return [
+            _generate(
+                group,
+                question,
+                bound,
+                options,
+                generator,
+                evidence_run.rankings[question.question_id, group]
+                if evidence_run is not None and group in replays
+                else None,
+            )
+            for group in options.groups
+        ]
 
     results_dir.mkdir(parents=True, exist_ok=False)
     manifest = {
@@ -346,13 +392,15 @@ def run_qa(
         "answer_prompt": ANSWER_PROMPT,
         "options": asdict(options),
         "limit": limit,
+        "question_ids": question_ids,
         "embedding": service.settings.embedding.model_dump(mode="json", exclude={"api_key"}),
         "search": service.settings.search.model_dump(mode="json"),
         "token_counter": service.settings.token_counter,
     }
+    if evidence_run is not None:
+        manifest["evidence_source"] = evidence_run.source_manifest
     _write_json(results_dir / "manifest.json", manifest)
     rows = []
-    questions = select_questions(path, limit)
     with ThreadPoolExecutor(max_workers=options.concurrency) as pool:
         for batch in batched(questions, options.concurrency):
             for output in pool.map(generate_question, batch):

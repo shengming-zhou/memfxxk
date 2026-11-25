@@ -74,6 +74,19 @@ Both memfxxk and Mem0 use these settings. Mem0 reuses the vectors for identical 
 
 `uv run pytest tests/unit/test_t07_llm.py` uses a local HTTP mock to check OpenAI-compatible requests and tool-call continuation. A live run uses `MEMFXXK_EVAL__GEN__BASE_URL` for the API prefix (for example, a URL ending in `/v1`), `MEMFXXK_EVAL__GEN__MODEL`, and `MEMFXXK_EVAL__GEN__API_KEY`. The judge uses the matching `MEMFXXK_EVAL__JUDGE__*` settings.
 
+### Compare answers with frozen evidence {#replay-evidence-qa}
+
+Keep the complete local directory produced by `evidence`, and pass it and the matching suite to QA. Replay reads source turns up to each question's cutoff and uses the same format, top-k limit, and token budget across ranked backends. The evidence report has retrieval latency. The QA report measures context assembly from saved rankings and answer generation. The G4 tool-calling group measures live retrieval during its own run.
+
+```sh
+uv run --locked memfxxk eval longmemeval qa \
+  --suite eval/suites/longmemeval-s-smoke.json \
+  --evidence-run eval/results/ACTUAL-EVIDENCE-RUN \
+  --groups G1,recent-turns,memfxxk-hybrid,mem0-raw \
+  --k 8 --evidence-budget 1500 --max-answer-tokens 384 --run-name qa-smoke
+uv run --locked memfxxk eval longmemeval judge eval/results/qa-smoke
+```
+
 ### Retrieval and QA commands {#retrieval-and-qa-commands}
 
 ```sh
