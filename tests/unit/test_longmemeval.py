@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime
 from math import log2
 from pathlib import Path
@@ -66,3 +67,18 @@ def test_ranking_metrics_deduplicate_sessions_and_discount_rank() -> None:
     assert metrics["turn_recall_all@3"] == 0.0
     assert metrics["turn_recall_all@4"] == 1.0
     assert metrics["session_ndcg@3"] == pytest.approx((1 / log2(3) + 0.5) / (1 + 1 / log2(3)))
+
+
+def test_repeated_official_session_id_preserves_both_occurrences(tmp_path: Path) -> None:
+    question = next(iter_questions(FIXTURE)).model_dump()
+    question["haystack_session_ids"].append(question["haystack_session_ids"][0])
+    question["haystack_dates"].append("2023/05/20 (Sat) 02:21")
+    question["haystack_sessions"].append(question["haystack_sessions"][0])
+    data = tmp_path / "questions.json"
+    data.write_text(json.dumps([question]), encoding="utf-8")
+
+    first, *_, duplicate = iter_turns(next(iter_questions(data)))
+    assert duplicate.official_session_id == first.official_session_id
+    assert duplicate.session_id != first.session_id
+    assert duplicate.memory_id != first.memory_id
+    assert duplicate.event_time == datetime(2023, 5, 20, 2, 21, tzinfo=UTC)

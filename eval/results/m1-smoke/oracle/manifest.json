@@ -1,0 +1,45 @@
+{
+  "benchmark": "longmemeval",
+  "kind": "retrieval",
+  "dataset": "oracle",
+  "dataset_file": "longmemeval_oracle.json",
+  "dataset_sha256": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c",
+  "run_name": "oracle-fake",
+  "git_commit": "d6a86b7d76313449217e964e3282bdbce0e16564",
+  "limit": null,
+  "question_types": [],
+  "channels": [
+    "lexical",
+    "vector",
+    "hybrid"
+  ],
+  "k_list": [
+    5,
+    10,
+    20
+  ],
+  "search_k": 100,
+  "embedding": {
+    "provider": "fake",
+    "model": "fake-oracle-v1",
+    "dim": 128
+  },
+  "tokenizer": {
+    "implementation_sha256": "33329fd2af67d9ce38a42e4ff6b10687e33064f3461025f364b380980eee6dfa",
+    "jieba": "0.42.1"
+  },
+  "search": {
+    "n_lexical": 50,
+    "n_vector": 50,
+    "m_important": 10,
+    "hnsw_ef_search": 100,
+    "rrf_k": 60,
+    "lexical_weight": 1.0,
+    "vector_weight": 1.0,
+    "important_boost": 1.5,
+    "important_min_sim": 0.35,
+    "max_related": 3
+  },
+  "record_count": 5484,
+  "duration_seconds": 22.711149599868804
+}

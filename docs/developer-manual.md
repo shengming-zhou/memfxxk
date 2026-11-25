@@ -50,6 +50,8 @@ M1 关口还需要全量 LongMemEval_S 的检索、真实模型问答和约 25 �
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。
 
+仓库保留了官方 Oracle 数据的假嵌入检索报告和两题假模型的 QA 烟测。 [M1 评测产物](https://github.com/shengming-zhou/memfxxk/tree/main/eval/results/m1-smoke)
+
 ```sh
 uv run memfxxk eval longmemeval fetch --dataset oracle
 uv run memfxxk eval longmemeval ingest --dataset oracle

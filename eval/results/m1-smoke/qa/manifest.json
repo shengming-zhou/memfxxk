@@ -1,0 +1,50 @@
+{
+  "kind": "qa",
+  "dataset": "s",
+  "dataset_path": "tests/fixtures/longmemeval-mini.json",
+  "sha256": "d0009deafe66388eb759acc6bbcf1b674c1aa68c97079b1c024dc8535175d9c6",
+  "git_commit": "d6a86b7d76313449217e964e3282bdbce0e16564",
+  "generator": "fake-generator",
+  "answer_prompt": "answer-v1.txt",
+  "options": {
+    "groups": [
+      "G1",
+      "G2",
+      "G3",
+      "G4"
+    ],
+    "k": 8,
+    "evidence_budget": 1500,
+    "channels": "lexical",
+    "max_tool_calls": 3,
+    "max_context_tokens": 120000,
+    "concurrency": 1
+  },
+  "limit": null,
+  "embedding": {
+    "provider": "fake",
+    "base_url": "http://localhost:8000/v1",
+    "model": "bge-m3",
+    "dim": 1024,
+    "batch_size": 64,
+    "timeout": 30.0,
+    "max_retries": 3,
+    "max_input_tokens": 8000
+  },
+  "search": {
+    "n_lexical": 50,
+    "n_vector": 50,
+    "m_important": 10,
+    "hnsw_ef_search": 100,
+    "rrf_k": 60,
+    "lexical_weight": 1.0,
+    "vector_weight": 1.0,
+    "important_boost": 1.5,
+    "important_min_sim": 0.35,
+    "max_related": 3
+  },
+  "token_counter": "simple",
+  "judge": "builtin(fake-judge)",
+  "judge_prompt": "judge-v1.txt",
+  "judge_source_commit": "9e0b455f4ef0e2ab8f2e582289761153549043fc"
+}

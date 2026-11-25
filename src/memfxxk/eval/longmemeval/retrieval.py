@@ -123,7 +123,14 @@ def run_retrieval(
                 raise ValueError(
                     f"Question {question.question_id} has not been ingested for this dataset"
                 )
-            targets = {str(turn.memory_id) for turn in iter_turns(question) if turn.has_answer}
+            targets = set()
+            session_labels = {}
+            for turn in iter_turns(question):
+                session_labels[turn.session_id] = (
+                    f"{question.question_id}:{turn.official_session_id}"
+                )
+                if turn.has_answer:
+                    targets.add(str(turn.memory_id))
             answer_sessions = {
                 f"{question.question_id}:{session}" for session in question.answer_session_ids
             }
@@ -139,7 +146,11 @@ def run_retrieval(
                     )
                 )
                 ranked_sessions = list(
-                    dict.fromkeys(hit.session_id for hit in response.hits if hit.session_id)
+                    dict.fromkeys(
+                        session_labels[hit.session_id]
+                        for hit in response.hits
+                        if hit.session_id in session_labels
+                    )
                 )
                 rank = [str(hit.memory_id) for hit in response.hits]
                 values = score_ranking(

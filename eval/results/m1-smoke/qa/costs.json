@@ -1,0 +1,178 @@
+{
+  "G1": {
+    "completed": 2,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 15,
+      "p50": 15.0,
+      "p95": 15.0
+    },
+    "output_tokens": {
+      "mean": 3,
+      "p50": 3.0,
+      "p95": 3.0
+    },
+    "network_input_tokens": {
+      "mean": 15,
+      "p50": 15.0,
+      "p95": 15.0
+    },
+    "network_output_tokens": {
+      "mean": 3,
+      "p50": 3.0,
+      "p95": 3.0
+    },
+    "elapsed_ms": {
+      "mean": 0.3771998453885317,
+      "p50": 0.3771998453885317,
+      "p95": 0.4348000744357705
+    },
+    "retrieval_ms": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    }
+  },
+  "G2": {
+    "completed": 2,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 28.5,
+      "p50": 28.5,
+      "p95": 39.75
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 15,
+      "p50": 15.0,
+      "p95": 15.0
+    },
+    "output_tokens": {
+      "mean": 3,
+      "p50": 3.0,
+      "p95": 3.0
+    },
+    "network_input_tokens": {
+      "mean": 15,
+      "p50": 15.0,
+      "p95": 15.0
+    },
+    "network_output_tokens": {
+      "mean": 3,
+      "p50": 3.0,
+      "p95": 3.0
+    },
+    "elapsed_ms": {
+      "mean": 0.37070014514029026,
+      "p50": 0.37070014514029026,
+      "p95": 0.452060136012733
+    },
+    "retrieval_ms": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    }
+  },
+  "G3": {
+    "completed": 2,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 38.5,
+      "p50": 38.5,
+      "p95": 42.55
+    },
+    "tool_call_count": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "mean": 15,
+      "p50": 15.0,
+      "p95": 15.0
+    },
+    "output_tokens": {
+      "mean": 3,
+      "p50": 3.0,
+      "p95": 3.0
+    },
+    "network_input_tokens": {
+      "mean": 15,
+      "p50": 15.0,
+      "p95": 15.0
+    },
+    "network_output_tokens": {
+      "mean": 3,
+      "p50": 3.0,
+      "p95": 3.0
+    },
+    "elapsed_ms": {
+      "mean": 33.389999996870756,
+      "p50": 33.389999996870756,
+      "p95": 44.94374985806644
+    },
+    "retrieval_ms": {
+      "mean": 23.632700089365244,
+      "p50": 23.632700089365244,
+      "p95": 34.96766006574035
+    }
+  },
+  "G4": {
+    "completed": 2,
+    "skipped": 0,
+    "injected_tokens": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "tool_call_count": {
+      "mean": 3,
+      "p50": 3.0,
+      "p95": 3.0
+    },
+    "input_tokens": {
+      "mean": 48,
+      "p50": 48.0,
+      "p95": 48.0
+    },
+    "output_tokens": {
+      "mean": 12,
+      "p50": 12.0,
+      "p95": 12.0
+    },
+    "network_input_tokens": {
+      "mean": 48,
+      "p50": 48.0,
+      "p95": 48.0
+    },
+    "network_output_tokens": {
+      "mean": 12,
+      "p50": 12.0,
+      "p95": 12.0
+    },
+    "elapsed_ms": {
+      "mean": 17.868699738755822,
+      "p50": 17.868699738755822,
+      "p95": 24.718149821273983
+    },
+    "retrieval_ms": {
+      "mean": 8.708649780601263,
+      "p50": 8.708649780601263,
+      "p95": 9.46496482938528
+    }
+  }
+}

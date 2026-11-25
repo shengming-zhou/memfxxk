@@ -17,3 +17,4 @@ eval/data/
 eval/cache/
 eval/results/*
 !eval/results/m1-smoke/
+eval/results/m1-smoke/**/raw/

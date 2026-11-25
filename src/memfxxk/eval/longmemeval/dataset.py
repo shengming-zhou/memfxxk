@@ -50,8 +50,6 @@ class Question(BaseModel):
             == len(self.haystack_sessions)
         ):
             raise ValueError("Haystack session IDs, dates and histories must have the same length")
-        if len(set(self.haystack_session_ids)) != len(self.haystack_session_ids):
-            raise ValueError("Haystack session IDs must be unique within a question")
         return self
 
     @property
@@ -105,13 +103,25 @@ def pair_turns(messages: list[Message]) -> Iterator[tuple[Message, ...]]:
 
 
 def iter_turns(question: Question) -> Iterator[Turn]:
-    for session, date, messages in zip(
-        question.haystack_session_ids,
-        question.haystack_dates,
-        question.haystack_sessions,
-        strict=True,
+    used_ids: set[str] = set()
+    original_ids = {
+        f"{question.question_id}:{session}" for session in question.haystack_session_ids
+    }
+    for position, (session, date, messages) in enumerate(
+        zip(
+            question.haystack_session_ids,
+            question.haystack_dates,
+            question.haystack_sessions,
+            strict=True,
+        )
     ):
         session_id = f"{question.question_id}:{session}"
+        if session_id in used_ids:
+            # Official histories can repeat a session at a different timestamp.
+            session_id = f"{question.question_id}:occurrence:{position}"
+            while session_id in original_ids:
+                session_id += ":"
+        used_ids.add(session_id)
         event_time = parse_date(date)
         for index, turn in enumerate(pair_turns(messages)):
             yield Turn(session_id, session, index, event_time, turn)

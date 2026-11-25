@@ -44,6 +44,8 @@ M1 still requires full LongMemEval_S retrieval, QA with real models, p95 latency
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.
 
+The repository includes a retrieval report on the official Oracle split with fake embeddings and a two-question QA smoke run with fake models. [M1 evaluation reports](https://github.com/shengming-zhou/memfxxk/tree/main/eval/results/m1-smoke)
+
 ```sh
 uv run memfxxk eval longmemeval fetch --dataset oracle
 uv run memfxxk eval longmemeval ingest --dataset oracle
