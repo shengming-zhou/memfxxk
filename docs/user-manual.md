@@ -106,3 +106,7 @@ uv run memfxxk context demo-session "如何发布？" --explain
 用仓库工作目录和与 API 相同的 key 启动 stdio MCP 命令 `uv run memfxxk mcp`。宿主需向该进程传入 API 地址和用户、项目、Agent 作用域。默认工具为 `memory_search`、`memory_get`、`memory_remember`。显式设置 `MEMFXXK_MCP_ENABLE_MANAGE=true` 可增加 `memory_mark`、`memory_link`。Python 宿主可以使用同步或异步 SDK 直接组装上下文。
 
 [宿主接入指南和演示](https://github.com/shengming-zhou/memfxxk/blob/main/docs/usage.md)
+
+## 查看证据评测 {#evidence-evaluation}
+
+证据评测检查记忆库能否找回支持答案的历史，并记录查询延时。要复跑，可在独立的评测数据库使用固定的 LongMemEval_S 题集。这一步无需配置聊天模型。 [开发手册的评测步骤](https://shengming-zhou.github.io/memfxxk/developer-manual/#evidence-comparison)

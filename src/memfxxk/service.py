@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -163,6 +164,11 @@ class BoundService:
         from memfxxk.eval.longmemeval.storage import has_question
 
         return has_question(self, dataset, sha256)
+
+    def eval_evidence_coverage(self, cutoff: datetime) -> tuple[int, int]:
+        from memfxxk.eval.longmemeval.storage import evidence_coverage
+
+        return evidence_coverage(self, cutoff)
 
     def eval_reset(self) -> int:
         from memfxxk.eval.longmemeval.storage import reset_eval

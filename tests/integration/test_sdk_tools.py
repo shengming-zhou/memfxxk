@@ -122,7 +122,14 @@ class _AppTransport(httpx.BaseTransport):
         self.api_client = api_client
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
-        response = self.api_client.send(request)
+        forwarded = self.api_client.build_request(
+            request.method,
+            str(request.url),
+            content=request.read(),
+        )
+        forwarded.headers.clear()
+        forwarded.headers.update(request.headers.raw)
+        response = self.api_client.send(forwarded)
         return httpx.Response(
             response.status_code, headers=response.headers, content=response.content
         )

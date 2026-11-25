@@ -38,6 +38,8 @@ flowchart LR
 
 ## M1 完成定义
 
+已冻结一批 50 道 LongMemEval_S 证据题，覆盖全部六种题型。近期原文、memfxxk 和 Mem0 OSS 按同一题集和截止时间比较。复跑命令见 [开发手册](developer-manual.md#evidence-comparison)。
+
 1. T00–T08 全部合入，`uv run pytest` 全绿（含 integration/e2e，需 docker 里的 PG）。
 2. **演示场景自动化通过**（T08）：开发 Agent 的一次排障会话入库 → 用户把一条 CI 失败标为重要并关联修复 → 新会话从 session state 恢复进度，遇到相似故障召回这两条（经由关联）→ 用户修改并固定发布约定 → 下一轮自动装载新版本，旧版本仍可按版本号读回。
 3. **手动 dogfood**：通过 MCP 把 memfxxk 接到一个真实开发 Agent（Claude Code 或 Codex）上用一周，记录问题清单。
@@ -45,7 +47,7 @@ flowchart LR
    - LongMemEval_S 检索：lexical / vector / hybrid 的 session 级与 turn 级 Recall@{5,10,20}，按问题类型分列。
    - LongMemEval_S 问答：G1（无历史）、G3（hybrid 注入，固定预算）、G4（Agent 自主搜索，固定调用上限）准确率；G2（全历史）在 oracle 子集或上下文足够时补跑。
    - 每组的注入 token、工具调用数、模型 token、延时。
-5. **性能**：在 LongMemEval_S 全量入库规模（约 25 万 turn 记录）上，search 不含查询嵌入的 DB+融合耗时 p95 ≤ 100ms。
+5. **性能**：完整 LongMemEval_S 上记录 search 延时。规模压测目标为约 25 万 turn，search 不含查询嵌入的 DB+融合耗时 p95 ≤ 100ms。固定 SHA 的 S 清洗版实测解析为 124,366 个 turn。
 
 ## M1 之后的评测闸门
 

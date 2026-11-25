@@ -52,6 +52,36 @@ M1 关口还需要全量 LongMemEval_S 的检索、真实模型问答和约 25 �
 
 仓库保留了官方 Oracle 数据的假嵌入检索报告和两题假模型的 QA 烟测。 [M1 评测产物](https://github.com/shengming-zhou/memfxxk/tree/main/eval/results/m1-smoke)
 
+### 固定题集的证据横评 {#evidence-comparison}
+
+在独立评测库完成迁移后，按固定清单导入 LongMemEval_S 的 50 道题。命令校验数据 SHA-256，再按清单顺序处理。最近 turn、memfxxk 的关键词/向量/混合检索和可选的 Mem0 OSS 使用同一时间截止点。
+
+```sh
+uv run --locked memfxxk eval longmemeval fetch --dataset s
+uv run --locked memfxxk eval longmemeval ingest --dataset s --suite eval/suites/longmemeval-s-smoke.json
+uv run --locked memfxxk index ensure
+uv run --locked --with mem0ai==2.2.1 memfxxk eval longmemeval evidence --suite eval/suites/longmemeval-s-smoke.json --mem0
+```
+
+证据评测记录 session 和 turn 的 Recall@5/10/20，查询 p50/p95/p99，及无结果和无法映射的数量。弃答题进入延时统计。与原文不可映射的返回在来源指标中标为缺失。Mem0 以原始 turn 和 `infer=False` 运行，实验覆盖原文检索。该阶段无需配置生成或评分端点。
+
+真实语义向量可由本地 CPU 服务生成。用 `uv run --locked --with fastembed==0.7.4 python eval/serve_embeddings.py` 启动服务，模型权重缓存后可加 `--offline`。在运行导入和评测的另一个终端设置：
+
+```dotenv
+MEMFXXK_EMBEDDING__PROVIDER=openai_compatible
+MEMFXXK_EMBEDDING__BASE_URL=http://127.0.0.1:8011/v1
+MEMFXXK_EMBEDDING__MODEL=BAAI/bge-small-en-v1.5
+MEMFXXK_EMBEDDING__DIM=384
+```
+
+以上设置同时用于 memfxxk 和 Mem0。若评测库已用其他模型完成导入，先运行 `memfxxk index reembed` 登记当前模型的任务，再用相同的 `ingest --suite` 处理队列。向量覆盖不足时评测会报错。
+
+### 模型接口烟测 {#model-api-smoke}
+
+`uv run pytest tests/unit/test_t07_llm.py` 使用本地 HTTP 模拟验证 OpenAI 兼容请求和工具续轮。真实运行时用 `MEMFXXK_EVAL__GEN__BASE_URL` 配置 API 前缀（例如以 `/v1` 结尾），配合 `MEMFXXK_EVAL__GEN__MODEL` 和 `MEMFXXK_EVAL__GEN__API_KEY`。评分模型使用相同名称结构的 `MEMFXXK_EVAL__JUDGE__*` 配置。
+
+### 检索与问答命令 {#retrieval-and-qa-commands}
+
 ```sh
 uv run memfxxk eval longmemeval fetch --dataset oracle
 uv run memfxxk eval longmemeval ingest --dataset oracle

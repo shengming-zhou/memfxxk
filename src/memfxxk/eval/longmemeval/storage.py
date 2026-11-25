@@ -1,9 +1,19 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.engine import Connection
 
-from memfxxk.db import context_bundles, events, jobs, records, sessions, transaction
+from memfxxk.db import (
+    context_bundles,
+    events,
+    jobs,
+    record_embeddings,
+    records,
+    sessions,
+    transaction,
+)
 from memfxxk.domain import Actor, Principal, RequestContext
 from memfxxk.domain.events import IngestEvent
 from memfxxk.ingest import ingest
@@ -58,6 +68,34 @@ def has_question(bound: BoundService, dataset: Dataset, sha256: str) -> bool:
             .where(events.c.idempotency_key == f"longmemeval:completed:{question_id}")
         )
     return payload == expected
+
+
+def evidence_coverage(bound: BoundService, cutoff: datetime) -> tuple[int, int]:
+    question_id = bound.ctx.project_id
+    if question_id is None:
+        raise ScopeError("Select a LongMemEval question to check evidence coverage")
+    _require_scope(bound, question_id)
+    embedding = bound.settings.embedding
+    vectors = records.outerjoin(
+        record_embeddings,
+        (records.c.id == record_embeddings.c.record_id)
+        & (record_embeddings.c.model == embedding.model)
+        & (record_embeddings.c.dim == embedding.dim),
+    )
+    with bound.engine.connect() as connection:
+        records_count, vectors_count = connection.execute(
+            select(func.count(), func.count(record_embeddings.c.record_id))
+            .select_from(vectors)
+            .where(
+                visible_filter(records, bound.ctx),
+                records.c.project_id == question_id,
+                records.c.event_time <= cutoff,
+                records.c.type == "turn",
+                records.c.status == "active",
+                records.c.is_current,
+            )
+        ).one()
+    return records_count, vectors_count
 
 
 def ingest_question(bound: BoundService, question: Question, dataset: Dataset, sha256: str) -> bool:

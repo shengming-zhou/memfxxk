@@ -1,17 +1,20 @@
 import json
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Annotated, cast
 
 import typer
 
 from memfxxk.config import Settings
 from memfxxk.db import create_engine
+from memfxxk.embedding import make_embedding_provider
 from memfxxk.service import MemoryService
 
 from .llm import ChatClient
 from .longmemeval.dataset import DATA_DIRECTORY, DATA_FILES, Dataset, fetch_datasets
+from .longmemeval.evidence import run_evidence
 from .longmemeval.ingestion import ingest_dataset
 from .longmemeval.judging import judge_results
 from .longmemeval.metrics import markdown_metrics
@@ -23,6 +26,7 @@ from .longmemeval.retrieval import (
     RetrievalOptions,
     run_retrieval,
 )
+from .longmemeval.suite import load_suite
 
 eval_cli = typer.Typer(help="Evaluate memory performance.")
 longmemeval_cli = typer.Typer(help="Run the LongMemEval benchmark.")
@@ -60,16 +64,20 @@ def ingest_command(
     question_types: str = "",
     reset: bool = False,
     data_dir: Path = DATA_DIRECTORY,
+    suite: Annotated[Path | None, typer.Option(exists=True, dir_okay=False)] = None,
 ) -> None:
     """Ingest question histories and drain their embedding jobs."""
     try:
+        data_file = data_dir / DATA_FILES[dataset]
+        ids = load_suite(suite, dataset, data_file).question_ids if suite else ()
         with _service() as service:
             summary = ingest_dataset(
                 service,
-                data_dir / DATA_FILES[dataset],
+                data_file,
                 dataset,
                 limit=limit,
                 question_types=_csv(question_types),
+                question_ids=ids,
                 reset=reset,
             )
     except (FileNotFoundError, ValueError) as error:
@@ -127,7 +135,7 @@ def report_command(
             report = (run_dir / "metrics.md").read_text(encoding="utf-8")
             qa_reports.append(f"## {run_dir.name}\n\n{report}")
             continue
-        if manifest.get("kind") != "retrieval":
+        if manifest.get("kind") not in {"retrieval", "evidence"}:
             raise typer.BadParameter(f"Unrecognized evaluation run: {run_dir}")
         metrics = json.loads((run_dir / "metrics.json").read_text(encoding="utf-8"))
         runs.append((run_dir.name, metrics, tuple(manifest["k_list"])))
@@ -135,6 +143,47 @@ def report_command(
         typer.echo(markdown_metrics(runs), nl=False)
     for report in qa_reports:
         typer.echo(f"\n{report}", nl=False)
+
+
+@longmemeval_cli.command("evidence")
+def evidence_command(
+    suite: Annotated[Path, typer.Option(exists=True, dir_okay=False)],
+    dataset: Annotated[Dataset, typer.Option()] = "s",
+    mem0: bool = False,
+    channels: str = "lexical,vector,hybrid",
+    run_name: str = "longmemeval-evidence",
+    data_dir: Path = DATA_DIRECTORY,
+    results_dir: Path = RESULTS_DIRECTORY,
+) -> None:
+    """Compare evidence on a frozen suite without generation or judging."""
+    channel_list = _csv(channels)
+    if not channel_list or any(channel not in CHANNELS for channel in channel_list):
+        raise typer.BadParameter("Choose lexical, vector or hybrid", param_hint="--channels")
+    data_file = data_dir / DATA_FILES[dataset]
+    try:
+        plan = load_suite(suite, dataset, data_file)
+        with ExitStack() as stack:
+            service = stack.enter_context(_service())
+            external = {}
+            if mem0:
+                from .evidence_backends import Mem0EvidenceBackend
+
+                scratch = stack.enter_context(TemporaryDirectory(prefix="memfxxk-evidence-"))
+                external["mem0-raw"] = stack.enter_context(
+                    Mem0EvidenceBackend(make_embedding_provider(service.settings), Path(scratch))
+                )
+            path = run_evidence(
+                service,
+                data_file,
+                plan,
+                results_dir,
+                run_name,
+                external,
+                channels=cast(tuple[Channel, ...], channel_list),
+            )
+    except (FileNotFoundError, ImportError, RuntimeError, ValueError) as error:
+        raise typer.BadParameter(str(error)) from error
+    typer.echo(path)
 
 
 @longmemeval_cli.command("qa")

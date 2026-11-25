@@ -98,3 +98,7 @@ The service loads `persona.md` and `project.md` from the applicable scope. It as
 Start the stdio MCP server with `uv run memfxxk mcp` from the repository directory. Pass the same API key, API address, and user, project, and agent scope in the host's environment. The default tools are `memory_search`, `memory_get`, and `memory_remember`. Set `MEMFXXK_MCP_ENABLE_MANAGE=true` to add `memory_mark` and `memory_link`. Python hosts can also assemble context directly through the synchronous or asynchronous SDK.
 
 [Host integration guide and demo](https://github.com/shengming-zhou/memfxxk/blob/main/docs/usage.md)
+
+## Check evidence evaluation {#evidence-evaluation}
+
+Evidence evaluation measures whether a memory backend retrieves the history that supports an answer and tracks query latency. Reproduce it with the frozen LongMemEval_S suite in a dedicated evaluation database. This step requires no chat model. [Evaluation steps in the developer manual](https://shengming-zhou.github.io/memfxxk/en/developer-manual/#evidence-comparison)

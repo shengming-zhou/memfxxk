@@ -50,8 +50,26 @@ class CountingEmbedder(CachedEmbedder):
 
 
 def select_questions(
-    path: Path, limit: int | None = None, question_types: tuple[str, ...] = ()
+    path: Path,
+    limit: int | None = None,
+    question_types: tuple[str, ...] = (),
+    *,
+    question_ids: tuple[str, ...] = (),
 ) -> Iterator[Question]:
+    if question_ids:
+        if question_types or limit is not None:
+            raise ValueError("A question suite cannot be combined with limit or question types")
+        pending = set(question_ids)
+        selected = {}
+        for question in iter_questions(path):
+            if question.question_id in pending:
+                selected[question.question_id] = question
+                pending.remove(question.question_id)
+                if not pending:
+                    break
+        if pending:
+            raise ValueError(f"Suite contains unknown question IDs: {', '.join(sorted(pending))}")
+        return (selected[question_id] for question_id in question_ids)
     questions = (
         question
         for question in iter_questions(path)
@@ -67,13 +85,15 @@ def ingest_dataset(
     *,
     limit: int | None = None,
     question_types: tuple[str, ...] = (),
+    question_ids: tuple[str, ...] = (),
     reset: bool = False,
 ) -> IngestSummary:
     digest = file_sha256(path)
+    questions = select_questions(path, limit, question_types, question_ids=question_ids)
     if reset:
         service.for_request(EVAL_PRINCIPAL, eval_context()).eval_reset()
     inserted = skipped = 0
-    for question in select_questions(path, limit, question_types):
+    for question in questions:
         bound = service.for_request(EVAL_PRINCIPAL, eval_context(question.question_id))
         if bound.eval_ingest(question, dataset, digest):
             inserted += 1

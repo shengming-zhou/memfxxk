@@ -13,7 +13,7 @@ from typer.testing import CliRunner
 from memfxxk.cli import app
 from memfxxk.client import Conflict, MemfxxkClient, NotFound
 from memfxxk.db import events, record_embeddings, records
-from memfxxk.domain.context import BuildContextRequest, ContextBundle, ContextSection
+from memfxxk.domain.context import BuildContextRequest, ContextBundle, ContextSection, SearchFilters
 from memfxxk.domain.documents import PutDocumentRequest
 from memfxxk.domain.manage import LinkRequest, ListRequest, PatchRequest, RememberRequest
 from memfxxk.domain.retrieval import SearchRequest
@@ -217,6 +217,47 @@ def test_a08_related_fix_is_scoped_and_unlinkable(
         assert accessible.related == []
     sdk.unlink(link.relation_id)
     assert sdk.search(request).hits[0].related == []
+
+
+def test_corrected_fix_keeps_pin_and_link_in_later_session(
+    sdk: MemfxxkClient, checkpoint: Callable[[], None]
+) -> None:
+    sdk.ingest_turn("initial", "Investigate a release failure", "Draft fix documented")
+    failure = _remember(sdk, "releasetrace rollback under load", scope_drop={"project_id"})
+    original = "Retry after 20 seconds"
+    corrected = "Retry after 45 seconds"
+    fix = _remember(sdk, original, pinned=True)
+    sdk.link(LinkRequest(from_memory_id=failure, to_memory_id=fix, purpose="fixes"))
+    sdk.patch_memory(fix, PatchRequest(base_version=1, content=corrected))
+    checkpoint()
+
+    with sdk.with_ctx() as reopened:
+        reopened.ingest_turn("follow-up", "Check the current fix", "Verify before release")
+        request = BuildContextRequest(
+            session_id="follow-up",
+            query="releasetrace",
+            sections=["pinned", "evidence"],
+            search_filters=SearchFilters(channels=["lexical"]),
+        )
+        bundle = reopened.build_context(request)
+        pin = _section(bundle, "pinned").items[0]
+        assert (pin.ref_id, pin.version) == (str(fix), 2)
+        assert _section(bundle, "evidence").items[0].related == [fix]
+        assert corrected in bundle.rendered and original not in bundle.rendered
+        assert reopened.get_memory(fix, version=1).content == original
+
+        with reopened.with_ctx(project_id="p2") as other:
+            other_request = request.model_copy(update={"session_id": None})
+            other_bundle = other.build_context(other_request)
+            assert _ids(_section(other_bundle, "evidence")) == {str(failure)}
+            assert _section(other_bundle, "evidence").items[0].related == []
+            assert _section(other_bundle, "pinned").items == []
+
+        reopened.forget(fix, "deactivate")
+        after = reopened.build_context(request)
+        assert _section(after, "pinned").items == []
+        assert _section(after, "evidence").items[0].related == []
+        assert corrected not in after.rendered
 
 
 def test_a09_document_revision_conflict_and_context_reload(
