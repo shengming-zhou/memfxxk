@@ -41,6 +41,14 @@ uv run memfxxk --help
 - 时间一律 `timestamptz` / 带时区 `datetime`（UTC）。
 - 依赖新增要克制；需要新依赖时在交付说明里写明用途。
 
+## Git 提交署名
+
+Codex 参与完成并创建的提交沿用仓库作者身份。在提交说明正文之后空一行，附上共同作者署名。
+
+```text
+Co-authored-by: Codex <codex@openai.com>
+```
+
 ## 交付说明格式
 
 每个任务结束时在回复中给出：做了什么、偏离委托书的地方及原因、已知问题、如何验证（命令）、建议的下一步。
