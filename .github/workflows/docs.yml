@@ -5,7 +5,10 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/docs.yml'
-      - 'mkdocs.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'docs/.vitepress/**'
+      - 'docs/en/**'
       - 'docs/index.md'
       - 'docs/user-manual.md'
       - 'docs/developer-manual.md'
@@ -26,16 +29,17 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-node@v6
         with:
-          python-version: '3.12'
-      - name: Build MkDocs site
+          node-version: '24'
+          cache: npm
+      - name: Build VitePress site
         run: |
-          python -m pip install mkdocs==1.6.1
-          python -m mkdocs build --strict
+          npm ci
+          npm run docs:build
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: site
+          path: docs/.vitepress/dist
 
   deploy:
     name: Deploy to GitHub Pages

@@ -8,7 +8,7 @@ memfxxk 是独立于 Agent 框架的记忆服务：保存原文与时间，提�
 - 当前任务的委托书：`docs/codex/Txx-*.md`。
 - 背景调研：[docs/research/agent-memory-landscape.md](docs/research/agent-memory-landscape.md)（只读，不要修改）。
 
-交付时同步维护 [用户手册](docs/user-manual.md) 和 [开发手册](docs/developer-manual.md)。用户手册记录当前可用功能、配置和用法，开发手册记录实现约定、验证命令和已知问题。
+交付时同步维护 [用户手册](docs/user-manual.md) 和 [开发手册](docs/developer-manual.md)，以及 `docs/en/` 下对应的英文版。用户手册记录当前可用功能、配置和用法，开发手册记录实现约定、验证命令和已知问题。中英手册共用章节锚点，文档站用 `npm ci` 和 `npm run docs:build` 验证。
 
 ## 命令
 
