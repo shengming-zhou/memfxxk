@@ -99,6 +99,20 @@ Start the stdio MCP server with `uv run memfxxk mcp` from the repository directo
 
 [Host integration guide and demo](https://github.com/shengming-zhou/memfxxk/blob/main/docs/usage.md)
 
+## Long sessions and graph search {#long-sessions-and-graph}
+
+The harness decides when to load memory, compact history, and invoke the model. Reserve room for system instructions, tool definitions, the current input, and the response before setting `max_tokens` on `POST /v1/context/build`. If the harness already includes a contiguous suffix of raw messages, set `host_history_from_seq` to its first sequence number.
+
+Compaction has two steps. Send the session, current revision, last closed sequence to cover, and summary limit to `POST /v1/context/compactions`. After checking the draft, send its `draft_id` to `POST /v1/context/compactions/commit`. The summary keeps references to the original event IDs. The repository includes a reference loop at `examples/host_loop.py`.
+
+Use `PATCH /v1/memories/{id}` to set `priority` from 1 to 5 and add `tags`. Pin short, durable rules and store long references as `on_demand` documents. Saving a revision indexes its Markdown sections and returns heading and revision metadata when those sections match a search. Existing documents remain available by path and gain searchable sections on their next save.
+
+Pass `graph_hops: 1` or `2` to search, or put it in `search_filters` when building context. Search starts with keyword and vector matches and follows links or shared entities on reviewed facts. Inspect `graph_path` to see the chain of evidence.
+
+Set `evidence_mode` to `excerpt` when the evidence budget is tight. The bundle uses relevant search snippets and still gives you the memory ID and version for reading the full entry.
+
+When background fact extraction is enabled, list pending proposals with `GET /v1/fact-proposals`. Review a proposal at `POST /v1/fact-proposals/{id}/review` using `{"accept": true}` or `{"accept": false}`. For fact searches, `as_of_valid` asks what was effective at a given time and `as_of_recorded` limits what the system could have known by then.
+
 ## Check evidence evaluation {#evidence-evaluation}
 
 Evidence evaluation measures whether a memory backend retrieves the history that supports an answer and tracks query latency. Reproduce it with the frozen LongMemEval_S suite in a dedicated evaluation database. This step requires no chat model. [Evaluation steps in the developer manual](https://shengming-zhou.github.io/memfxxk/en/developer-manual/#evidence-comparison)

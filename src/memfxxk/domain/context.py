@@ -17,6 +17,10 @@ class SearchFilters(BaseModel):
     time_to: AwareDatetime | None = None
     session_id: str | None = None
     channels: list[SearchChannel] | None = None
+    graph_hops: int = Field(default=0, ge=0, le=2)
+    tags: list[str] = Field(default_factory=list, max_length=32)
+    as_of_valid: AwareDatetime | None = None
+    as_of_recorded: AwareDatetime | None = None
 
     @model_validator(mode="after")
     def ordered_dates(self) -> Self:
@@ -35,6 +39,9 @@ class BuildContextRequest(BaseModel):
     session_id: str | None = None
     query: str | None = None
     budget: dict[SectionName, Annotated[int, Field(ge=0)]] | None = None
+    max_tokens: int | None = Field(default=None, ge=0)
+    host_history_from_seq: int | None = Field(default=None, gt=0)
+    evidence_mode: Literal["full", "excerpt"] = "full"
     auto_recall: bool = True
     k: int = Field(default=8, ge=1, le=100)
     search_filters: SearchFilters = Field(default_factory=SearchFilters)
@@ -42,6 +49,39 @@ class BuildContextRequest(BaseModel):
     sections: list[SectionName] = Field(
         default_factory=lambda: ["documents", "pinned", "working", "evidence"]
     )
+
+
+class PrepareCompaction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(min_length=1)
+    revision: int = Field(ge=0)
+    through_seq: int = Field(gt=0)
+    target_tokens: int = Field(gt=0, le=16_384)
+
+
+class CompactionDraft(BaseModel):
+    draft_id: UUID
+    session_id: str
+    from_seq: int
+    through_seq: int
+    base_revision: int
+    summary: str
+    tokens: int
+    source_event_ids: list[UUID]
+
+
+class CommitCompaction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    draft_id: UUID
+
+
+class CommittedCompaction(BaseModel):
+    memory_id: UUID
+    version: int
+    session_revision: int
+    through_seq: int
 
 
 class ContextReference(BaseModel):

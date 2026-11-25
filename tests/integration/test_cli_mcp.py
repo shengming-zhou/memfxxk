@@ -39,6 +39,7 @@ def test_cli_and_mcp_over_http(api_client: TestClient, monkeypatch: pytest.Monke
         try:
             _check_cli(env)
             asyncio.run(_check_mcp(env))
+            asyncio.run(_check_mcp_host(env))
         finally:
             server.should_exit = True
             thread.join(timeout=10)
@@ -104,3 +105,71 @@ async def _check_mcp(env: dict[str, str]) -> None:
         assert not result.isError
         assert isinstance(result.content[0], TextContent)
         assert memory_id in result.content[0].text
+
+
+async def _check_mcp_host(env: dict[str, str]) -> None:
+    params = StdioServerParameters(
+        command=sys.executable,
+        args=["-c", "from memfxxk.cli import app; app()", "mcp"],
+        env={**env, "MEMFXXK_MCP_ENABLE_HOST": "true", "MEMFXXK_MCP_ENABLE_MANAGE": "true"},
+    )
+    async with stdio_client(params) as (receive, send), ClientSession(receive, send) as session:
+        await session.initialize()
+        assert "memory-use-v1" in {prompt.name for prompt in (await session.list_prompts()).prompts}
+
+        async def call(name, args):
+            result = await session.call_tool(name, args)
+            assert not result.isError, result
+            assert result.structuredContent is not None
+            return result.structuredContent
+
+        session_id = "mcp-host-session"
+        sent = await call(
+            "events_append",
+            {
+                "events": [
+                    {
+                        "kind": "message",
+                        "role": "user",
+                        "content": "Remember the amber key",
+                        "session_id": session_id,
+                        "turn_id": "t1",
+                    },
+                    {
+                        "kind": "message",
+                        "role": "assistant",
+                        "content": "Recorded",
+                        "session_id": session_id,
+                        "turn_id": "t1",
+                    },
+                ]
+            },
+        )
+        assert sent["results"][-1]["session_seq"] == 2
+        state = await call("session_state", {"session_id": session_id})
+        assert state["summary_upto_seq"] is None
+        draft = await call(
+            "context_prepare_compaction",
+            {
+                "session_id": session_id,
+                "revision": state["revision"],
+                "through_seq": 2,
+                "target_tokens": 100,
+            },
+        )
+        receipt = await call("context_commit_compaction", {"draft_id": draft["draft_id"]})
+        assert receipt == await call("context_commit_compaction", {"draft_id": draft["draft_id"]})
+        response = await call(
+            "context_build",
+            {
+                "session_id": session_id,
+                "max_tokens": 120,
+                "sections": ["working"],
+            },
+        )
+        assert response["total_tokens"] <= 120
+        assert "amber key" in response["rendered"]
+        stored = await call(
+            "session_events", {"session_id": session_id, "from_seq": 1, "to_seq": 1}
+        )
+        assert stored["events"][0]["id"] == draft["source_event_ids"][0]

@@ -44,7 +44,24 @@ T01 验收通过 45 项测试，覆盖并发序号、重复事件、跨作用域
 - T04–T05 将文档、会话和上下文通过同步及异步 Python SDK、CLI 和 MCP 暴露给宿主。HTTP 和评测适配器复用同一工具定义与输出限制。
 - T06–T08 提供 LongMemEval 检索与问答评测、A01–A13 回归和开发 Agent 演示。运行 `uv run pytest -m slow` 检查较大测试语料的检索延时。
 
-M1 关口还需要全量 LongMemEval_S 的检索、真实模型问答和约 25 万条 turn 上的 p95，以及用真实开发 Agent 接入 MCP 一周的记录。完成这些验收后再启动 M2。
+M1 关口还需要全量 LongMemEval_S 的检索、真实模型问答和约 25 万条 turn 上的 p95，以及用真实开发 Agent 接入 MCP 一周的记录。M2 原型与这些验收并行推进。
+
+## M2 的接入与验证 {#m2-harness-and-verification}
+
+- 升级数据库用 `uv run alembic upgrade head`。服务按 `max_tokens` 限制完整记忆文本，同时保留各区限额。参考 Harness 在 HTTP 请求前另算整轮输入和回复余量，在每次工具返回后重算。
+- MCP 默认提供模型侧记忆工具。给宿主进程设置 `MEMFXXK_MCP_ENABLE_HOST=true` 后，可直接调用 `events_append`、`session_state`、`session_events`、`context_build` 和两步压缩工具。仅把宿主工具接给 Harness。管理侧可配置 `MEMFXXK_MCP_ENABLE_MANAGE=true`，并使用 `memory-use-v1` 提示词。
+- 不配置模型时，压缩按重要度和最近性保留原文片段。可通过 `MEMFXXK_M2__MODEL__BASE_URL`、`MEMFXXK_M2__MODEL__MODEL` 和 `MEMFXXK_M2__MODEL__API_KEY` 接模型做摘要。开启 `MEMFXXK_M2__EXTRACT_FACTS=true` 后，worker 从已结束轮次提议事实并核对原文、作业租约和记录代次。事实经过审核才生效。草案保留时间默认 24 小时。
+- 检索返回分阶段延时，context 返回使用量和被舍弃的引用，worker 日志记录事实提取用量。回放、删除、作用域和图对照可用以下命令复验。图方法与实验边界见 [图检索试验](/decisions/0001-m2-graph-pilot)。
+
+```bash
+uv run pytest -s tests/integration/test_m2_memory.py tests/integration/test_m2_benchmark.py tests/integration/test_cli_mcp.py
+```
+
+512 token 的 LongMemEval S 回放使用四道知识更新题和四道时间推理题，每题原文约 9.8–10.3 万 token，按简单计数器估算。纯截尾和本地滚动摘要都保留了 0/8 题的完整标注消息。用关键词和 hash 向量按问题检索后，前八条候选覆盖 4/8 题。组装后，完整条目和查询相关片段都保留了 3/8 题的至少一条标注消息。回放关闭了模型答题，统计的是证据保留。 [LongMemEval](https://github.com/xiaowu0162/LongMemEval)
+
+```bash
+uv run pytest -s -m slow tests/integration/test_m2_long_replay.py
+```
 
 ## 重跑基线 {#run-evaluation}
 

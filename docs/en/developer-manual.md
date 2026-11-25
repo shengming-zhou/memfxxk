@@ -38,7 +38,24 @@ T01 passed 45 tests covering concurrent sequence allocation, duplicate events, s
 - T04–T05 expose documents, sessions, and context through synchronous and asynchronous Python clients, the CLI, and MCP. HTTP and evaluation adapters share tool definitions and output limits.
 - T06–T08 provide LongMemEval retrieval and QA, the A01–A13 regression suite, and a developer-agent demo. Run `uv run pytest -m slow` for the larger test corpus latency check.
 
-M1 still requires full LongMemEval_S retrieval, QA with real models, p95 latency on about 250,000 turns, and a week of MCP use with a real coding agent. Those checks gate the start of M2.
+M1 still requires full LongMemEval_S retrieval, QA with real models, p95 latency on about 250,000 turns, and a week of MCP use with a real coding agent. The M2 prototype proceeds alongside those checks.
+
+## M2 integration and verification {#m2-harness-and-verification}
+
+- Upgrade the database with `uv run alembic upgrade head`. Context building enforces `max_tokens` on the complete memory bundle and retains individual section caps. The reference harness counts the whole input and reserves output space before calling the model, then counts again after tool results.
+- MCP exposes the model's memory tools by default. Set `MEMFXXK_MCP_ENABLE_HOST=true` for the harness process to call `events_append`, `session_state`, `session_events`, `context_build`, and the two compaction tools. Give this tool set to the harness. Enable management with `MEMFXXK_MCP_ENABLE_MANAGE=true` and use the `memory-use-v1` prompt.
+- Without a configured model, compaction keeps original excerpts based on importance and recency. To use a model, set `MEMFXXK_M2__MODEL__BASE_URL`, `MEMFXXK_M2__MODEL__MODEL`, and `MEMFXXK_M2__MODEL__API_KEY`. With `MEMFXXK_M2__EXTRACT_FACTS=true`, the worker proposes facts from closed turns and checks source events, its job lease, and the record generation. Facts take effect after review. Drafts expire after 24 hours by default.
+- Search returns per-stage latency and context returns token use and dropped references. Worker logs include fact extraction token use. Run the command below for replay, scope, deletion, and paired graph checks. The [graph pilot decision](/decisions/0001-m2-graph-pilot) records the methods and limits.
+
+```bash
+uv run pytest -s tests/integration/test_m2_memory.py tests/integration/test_m2_benchmark.py tests/integration/test_cli_mcp.py
+```
+
+The 512-token LongMemEval S replay used four knowledge-update and four temporal-reasoning questions, with around 98,000–103,000 source tokens per question by the simple counter. The raw tail and rolling summary preserved a complete annotated message for 0/8 questions. Keyword and hash-vector retrieval found annotated evidence in the top eight for 4/8 questions. After packing, full entries and query-focused excerpts each preserved at least one complete annotated message for 3/8 questions. The replay measured evidence retention with model answering disabled. [LongMemEval](https://github.com/xiaowu0162/LongMemEval)
+
+```bash
+uv run pytest -s -m slow tests/integration/test_m2_long_replay.py
+```
 
 ## Reproduce the baseline {#run-evaluation}
 

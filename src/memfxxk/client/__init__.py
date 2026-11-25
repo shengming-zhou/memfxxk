@@ -23,9 +23,18 @@ from memfxxk.client._shared import (
     turn_events,
 )
 from memfxxk.domain import Actor
-from memfxxk.domain.context import BuildContextRequest, BundleMetadata, ContextBundle
+from memfxxk.domain.context import (
+    BuildContextRequest,
+    BundleMetadata,
+    CommitCompaction,
+    CommittedCompaction,
+    CompactionDraft,
+    ContextBundle,
+    PrepareCompaction,
+)
 from memfxxk.domain.documents import Document, DocumentInfo, DocumentRevision, PutDocumentRequest
 from memfxxk.domain.events import Event, IngestEvent, IngestResult
+from memfxxk.domain.facts import FactProposal, FactReview
 from memfxxk.domain.manage import (
     ForgetMode,
     ForgetRequest,
@@ -242,6 +251,28 @@ class MemfxxkClient(ClientContext):
             turn_events(session_id, user, assistant, tool_events, turn_id, event_time)
         )
 
+    def prepare_compaction(self, request: PrepareCompaction) -> CompactionDraft:
+        return self._request("POST", "context/compactions", CompactionDraft, body=request)
+
+    def list_fact_proposals(self, limit: int = 50) -> list[FactProposal]:
+        return self._request("GET", "fact-proposals", list[FactProposal], params={"limit": limit})
+
+    def review_fact(self, proposal_id: UUID | str, *, accept: bool) -> FactProposal:
+        return self._request(
+            "POST",
+            f"fact-proposals/{segment(proposal_id)}/review",
+            FactProposal,
+            body=FactReview(accept=accept),
+        )
+
+    def commit_compaction(self, draft_id: UUID) -> CommittedCompaction:
+        return self._request(
+            "POST",
+            "context/compactions/commit",
+            CommittedCompaction,
+            body=CommitCompaction(draft_id=draft_id),
+        )
+
     def tools(
         self,
     ) -> tuple[list[dict[str, object]], Callable[[str, dict[str, object]], str]]:
@@ -433,6 +464,30 @@ class AsyncMemfxxkClient(ClientContext):
     ) -> list[IngestResult]:
         return await self.ingest(
             turn_events(session_id, user, assistant, tool_events, turn_id, event_time)
+        )
+
+    async def prepare_compaction(self, request: PrepareCompaction) -> CompactionDraft:
+        return await self._request("POST", "context/compactions", CompactionDraft, body=request)
+
+    async def list_fact_proposals(self, limit: int = 50) -> list[FactProposal]:
+        return await self._request(
+            "GET", "fact-proposals", list[FactProposal], params={"limit": limit}
+        )
+
+    async def review_fact(self, proposal_id: UUID | str, *, accept: bool) -> FactProposal:
+        return await self._request(
+            "POST",
+            f"fact-proposals/{segment(proposal_id)}/review",
+            FactProposal,
+            body=FactReview(accept=accept),
+        )
+
+    async def commit_compaction(self, draft_id: UUID) -> CommittedCompaction:
+        return await self._request(
+            "POST",
+            "context/compactions/commit",
+            CommittedCompaction,
+            body=CommitCompaction(draft_id=draft_id),
         )
 
     def tools(

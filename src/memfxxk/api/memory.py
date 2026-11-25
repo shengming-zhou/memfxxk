@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Query, Response
 
 from memfxxk.api.dependencies import RequestService
+from memfxxk.domain.facts import FactProposal, FactReview
 from memfxxk.domain.manage import (
     ForgetRequest,
     ForgetResult,
@@ -18,6 +19,18 @@ from memfxxk.domain.manage import (
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 
 router = APIRouter(prefix="/v1")
+
+
+@router.get("/fact-proposals")
+def list_fact_proposals(
+    service: RequestService, limit: Annotated[int, Query(ge=1, le=100)] = 50
+) -> list[FactProposal]:
+    return service.list_fact_proposals(limit)
+
+
+@router.post("/fact-proposals/{proposal_id}/review")
+def review_fact(proposal_id: UUID, request: FactReview, service: RequestService) -> FactProposal:
+    return service.review_fact(proposal_id, request.accept)
 
 
 @router.post("/search", response_model_exclude_none=True)

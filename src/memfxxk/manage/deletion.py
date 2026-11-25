@@ -7,8 +7,11 @@ from sqlalchemy import Connection, and_, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 
 from memfxxk.db import (
+    compactions,
     events,
+    fact_proposals,
     memory_marks,
+    memory_preferences,
     memory_relations,
     record_embeddings,
     records,
@@ -38,6 +41,19 @@ def _purge_memories(conn: Connection, ctx: RequestContext, memory_ids: set[UUID]
     # These IDs are derived from the already authorized record or event. Delete all versions
     # and dependent rows under the same tenant, including marks in another project.
     record_filter = and_(records.c.org_id == ctx.org_id, records.c.memory_id.in_(memory_ids))
+    summary_sessions = select(records.c.session_id).where(
+        record_filter,
+        records.c.type == "summary",
+        records.c.is_current,
+    )
+    conn.execute(
+        sessions.update()
+        .where(
+            sessions.c.org_id == ctx.org_id,
+            sessions.c.id.in_(summary_sessions),
+        )
+        .values(summary=None, summary_upto_seq=None, revision=sessions.c.revision + 1)
+    )
     record_ids = conn.scalars(
         select(records.c.id).where(record_filter).order_by(records.c.id).with_for_update()
     ).all()
@@ -47,6 +63,12 @@ def _purge_memories(conn: Connection, ctx: RequestContext, memory_ids: set[UUID]
         .where(record_embeddings.c.record_id.in_(record_ids))
     )
     conn.execute(records.delete().where(record_filter))
+    for derived in (memory_preferences, fact_proposals, compactions):
+        conn.execute(
+            derived.delete().where(
+                derived.c.org_id == ctx.org_id, derived.c.memory_id.in_(memory_ids)
+            )
+        )
     marks = conn.execute(
         memory_marks.delete().where(
             memory_marks.c.org_id == ctx.org_id, memory_marks.c.memory_id.in_(memory_ids)
@@ -146,6 +168,12 @@ def forget_event(service: BoundService, event_id: UUID) -> ForgetResult:
             )
         )
         result = _purge_memories(conn, ctx, memory_ids)
+        for derived in (fact_proposals, compactions):
+            conn.execute(
+                derived.delete().where(
+                    derived.c.org_id == ctx.org_id, derived.c.source_event_ids.contains([event_id])
+                )
+            )
         conn.execute(events.delete().where(target))
         write_audit(conn, ctx, "forget_event", event_id, {}, result.model_dump())
     return result

@@ -4,9 +4,10 @@ from hashlib import sha256
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import Connection, case, func, select, tuple_
+from sqlalchemy import ColumnElement, Connection, case, func, select, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import RowMapping
+from sqlalchemy.sql.selectable import ScalarSelect
 
 from memfxxk.db import document_revisions, documents, events, transaction
 from memfxxk.domain import RequestContext, Scope
@@ -28,6 +29,16 @@ if TYPE_CHECKING:
 _DIMENSIONS = (documents.c.project_id, documents.c.agent_id, documents.c.user_id)
 _SPECIFICITY = sum(case((column.is_not(None), 1), else_=0) for column in _DIMENSIONS)
 _PRECEDENCE = (_SPECIFICITY.desc(), *(column.is_not(None).desc() for column in _DIMENSIONS))
+
+
+def resolved_document_id(ctx: Scope, path: ColumnElement[str]) -> ScalarSelect[UUID]:
+    return (
+        select(documents.c.id)
+        .where(documents.c.path == path, visible_filter(documents, ctx))
+        .order_by(*_PRECEDENCE)
+        .limit(1)
+        .scalar_subquery()
+    )
 
 
 def _document_info(row: RowMapping) -> DocumentInfo:
@@ -206,7 +217,21 @@ def put_document(service: BoundService, path: str, request: PutDocumentRequest) 
             .mappings()
             .one()
         )
-        _audit(connection, service, scope, "put_document", updated, request.content)
+        source_id = _audit(connection, service, scope, "put_document", updated, request.content)
+        from memfxxk.m2.doc_chunks import replace_chunks
+
+        replace_chunks(
+            connection,
+            service.ctx,
+            scope,
+            document_id=updated["id"],
+            path=path,
+            revision=head + 1,
+            text=request.content,
+            source_id=source_id,
+            recorded_at=stored["created_at"],
+            on_demand=updated["load_policy"] == "on_demand",
+        )
         return _as_document(updated, stored)
 
 
@@ -217,12 +242,13 @@ def _audit(
     op: str,
     row: RowMapping,
     content: str | None = None,
-) -> None:
+) -> UUID:
     payload = {"op": op, "path": row["path"], "revision": row["head_revision"]}
     if content is not None:
         payload["content_sha256"] = sha256(content.encode()).hexdigest()
-    connection.execute(
-        events.insert().values(
+    return connection.execute(
+        events.insert()
+        .values(
             id=new_id(),
             **scope.model_dump(),
             kind="user_op",
@@ -230,14 +256,25 @@ def _audit(
             actor=service.ctx.actor.model_dump(),
             event_time=func.now(),
         )
-    )
+        .returning(events.c.id)
+    ).scalar_one()
 
 
 def delete_document(service: BoundService, path: str) -> None:
+    from memfxxk.db import records
+    from memfxxk.m2.doc_chunks import chunk_filter
+    from memfxxk.manage.deletion import _purge_memories
+
     with transaction(service.engine) as connection:
         row = _resolve(connection, service.ctx, document_path(path), lock=True)
         if service.principal.role != "admin" and not service.settings.allow_host_hard_delete:
             raise ServiceError(403, "forbidden", "Hard deletion is disabled for hosts")
+        chunk_ids = set(
+            connection.scalars(
+                select(records.c.memory_id).where(*chunk_filter(service.ctx, row["id"]))
+            )
+        )
+        _purge_memories(connection, service.ctx, chunk_ids)
         connection.execute(
             documents.delete().where(
                 documents.c.id == row["id"], visible_filter(documents, service.ctx)

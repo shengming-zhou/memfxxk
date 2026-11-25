@@ -107,6 +107,20 @@ uv run memfxxk context demo-session "如何发布？" --explain
 
 [宿主接入指南和演示](https://github.com/shengming-zhou/memfxxk/blob/main/docs/usage.md)
 
+## 长会话与图检索 {#long-sessions-and-graph}
+
+Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先给系统提示、工具定义、当前输入和输出预留空间，再向 `POST /v1/context/build` 传 `max_tokens`。若 Harness 已带上了从某个会话序号开始的连续原文，可传 `host_history_from_seq` 避免重复装载。
+
+压缩走两步。先通过 `POST /v1/context/compactions` 提交会话、当前修订、已经结束的轮次截止序号和摘要上限。检查草案后，用 `POST /v1/context/compactions/commit` 提交 `draft_id`。之后还能用摘要里引用的事件 ID 回查原文。仓库里的参考程序是 `examples/host_loop.py`。
+
+重要度可通过 `PATCH /v1/memories/{id}` 设置 `priority` 1 到 5，并设置 `tags`。实用做法是把短而稳定的规则固定，把长世界观存成 `on_demand` 文档。写入新修订时会按 Markdown 标题切块，搜索结果会给出章节和修订。已有文档可先按路径读取，并在下次保存时生成可检索的章节。
+
+图检索需要在搜索里传 `graph_hops: 1` 或 `2`，上下文装载则放在 `search_filters`。它先查关键词和向量，再查候选记忆的关联或已审核事实的共享实体。结果包含 `graph_path`，可逐条核对这条路径。
+
+如果证据预算很紧，可以把 `evidence_mode` 设为 `excerpt`。上下文会优先把搜索得到的相关片段放进去，通过原记忆的 ID 和版本仍能回查全文。
+
+开启后台事实提取后，可以用 `GET /v1/fact-proposals` 查看提议，通过 `POST /v1/fact-proposals/{id}/review` 传 `{"accept": true}` 或 `{"accept": false}`。查询事实时，`as_of_valid` 指要问的生效日期，`as_of_recorded` 指当时系统掌握信息的截止时间。
+
 ## 查看证据评测 {#evidence-evaluation}
 
 证据评测检查记忆库能否找回支持答案的历史，并记录查询延时。要复跑，可在独立的评测数据库使用固定的 LongMemEval_S 题集。这一步无需配置聊天模型。 [开发手册的评测步骤](https://shengming-zhou.github.io/memfxxk/developer-manual/#evidence-comparison)

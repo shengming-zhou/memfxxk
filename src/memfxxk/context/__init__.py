@@ -9,7 +9,7 @@ from html import escape
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import Connection, and_, select
+from sqlalchemy import Connection, and_, select, tuple_
 from sqlalchemy.engine import RowMapping
 
 from memfxxk.db import context_bundles, events, memory_marks, records, transaction
@@ -66,7 +66,13 @@ def _join(entries: list[tuple[_Candidate, str]], *, reverse_events: bool = False
 
 
 def _pack(
-    name: SectionName, budget: int, candidates: list[_Candidate], counter: TokenCounter
+    name: SectionName,
+    budget: int,
+    candidates: list[_Candidate],
+    counter: TokenCounter,
+    *,
+    prefix: str = "",
+    max_tokens: int | None = None,
 ) -> ContextSection:
     entries: list[tuple[_Candidate, str]] = []
     items: list[ContextReference] = []
@@ -79,9 +85,11 @@ def _pack(
             continue
 
         def fits(rendered: str) -> bool:
-            return (
-                counter.count(_join([*entries, (candidate, rendered)], reverse_events=reverse))
-                <= budget
+            section = _join([*entries, (candidate, rendered)], reverse_events=reverse)
+            return counter.count(section) <= budget and (
+                max_tokens is None
+                or counter.count("\n\n".join(item for item in (prefix, section) if item))
+                <= max_tokens
             )
 
         text = candidate.wrap(candidate.content)
@@ -105,7 +113,7 @@ def _pack(
             candidate.ref.model_copy(
                 update={
                     "tokens": counter.count(text),
-                    "truncated": truncated,
+                    "truncated": candidate.ref.truncated or truncated,
                 }
             )
         )
@@ -208,6 +216,7 @@ def _memory(
     *,
     score: float | None = None,
     related: list[UUID] | None = None,
+    excerpt: str | None = None,
 ) -> _Candidate:
     links = related or []
     return _Candidate(
@@ -218,9 +227,10 @@ def _memory(
             reason=reason,
             score=score,
             related=links,
+            truncated=excerpt is not None and excerpt != row["content"],
         ),
         heading,
-        row["content"],
+        row["content"] if excerpt is None else excerpt,
         partial(_wrap_memory, row, links),
         f"[truncated: use memory_get {row['memory_id']}]",
     )
@@ -261,8 +271,14 @@ def _wrap_summary(content: str) -> str:
 
 
 def _working(
-    connection: Connection, service: BoundService, session_id: str, budget: int
+    connection: Connection,
+    service: BoundService,
+    session_id: str,
+    budget: int,
+    host_history_from_seq: int | None = None,
 ) -> tuple[list[_Candidate], dict[str, int]]:
+    from memfxxk.m2.compaction import _current
+
     state = read_session(connection, service.ctx, session_id)
     heading = "## Session"
     candidates: list[_Candidate] = []
@@ -275,12 +291,24 @@ def _working(
                 _wrap_summary,
             )
         )
+    summary = _current(connection, service, session_id) if state.summary_upto_seq else None
+    cutoff = state.summary_upto_seq or 0
+    cutoff_filter = events.c.session_seq > cutoff
+    if summary is not None and not state.summary and summary["source_pos"]["seq_to"] == cutoff:
+        candidates.append(_memory(summary, heading, "rolling_summary"))
+        cutoff_filter = events.c.id.not_in(summary["source_event_ids"])
+    elif not state.summary:
+        cutoff_filter = events.c.session_seq > 0
+    host_filter = (
+        events.c.session_seq < host_history_from_seq if host_history_from_seq is not None else True
+    )
     rows = connection.execute(
         select(events)
         .where(
             events.c.session_id == session_id,
             ~events.c.redacted,
-            events.c.session_seq > (state.summary_upto_seq or 0),
+            cutoff_filter,
+            host_filter,
             visible_filter(events, service.ctx),
         )
         .order_by(events.c.session_seq.desc())
@@ -312,8 +340,9 @@ def _evidence(
     response = service.search(SearchRequest(query=request.query or "", k=request.k, **filters))
     rows = connection.execute(
         select(records).where(
-            records.c.memory_id.in_([hit.memory_id for hit in response.hits]),
-            records.c.is_current,
+            tuple_(records.c.memory_id, records.c.version).in_(
+                [(hit.memory_id, hit.version) for hit in response.hits]
+            ),
             records.c.status == "active",
             visible_filter(records, service.ctx),
         )
@@ -326,13 +355,26 @@ def _evidence(
             continue
         pos = row["source_pos"] or {}
         if (
+            request.host_history_from_seq is not None
+            and row["type"] == "turn"
+            and row["session_id"] == request.session_id
+            and pos.get("seq_to", 0) >= request.host_history_from_seq
+        ):
+            continue
+        if (
             working is not None
             and row["type"] == "turn"
             and row["session_id"] == request.session_id
             and working[0] <= pos.get("seq_from", 0) <= pos.get("seq_to", 0) <= working[1]
         ):
             continue
-        reason = f"retrieved(rank={rank}, important={str(hit.score.important).lower()})"
+        reason = (
+            f"graph(path={','.join(map(str, hit.graph_path))})"
+            if hit.graph_path
+            else f"retrieved(rank={rank}, important={str(hit.score.important).lower()})"
+        )
+        if request.evidence_mode == "excerpt":
+            reason += ":excerpt"
         candidates.append(
             _memory(
                 row,
@@ -340,6 +382,7 @@ def _evidence(
                 reason,
                 score=hit.score.final,
                 related=[item.memory_id for item in hit.related],
+                excerpt=hit.snippet if request.evidence_mode == "excerpt" else None,
             )
         )
     return candidates, response.timings_ms
@@ -354,30 +397,49 @@ def build_context(service: BoundService, request: BuildContextRequest) -> Contex
     pinned: set[str] = set()
     working_range: tuple[int, int] | None = None
     retrieval_timings = None
+
+    def pack(name: SectionName, candidates: list[_Candidate]) -> ContextSection:
+        prefix = "\n\n".join(section.rendered for section in sections if section.rendered)
+        section = _pack(
+            name,
+            budget[name],
+            candidates,
+            counter,
+            prefix=prefix,
+            max_tokens=request.max_tokens,
+        )
+        sections.append(section)
+        return section
+
     with transaction(service.engine) as connection:
         if "documents" in selected:
             docs = _documents(connection, service, request.include_on_demand_index)
-            sections.append(_pack("documents", budget["documents"], docs, counter))
+            pack("documents", docs)
         if "pinned" in selected:
-            section = _pack("pinned", budget["pinned"], _pinned(connection, service), counter)
-            sections.append(section)
+            section = pack("pinned", _pinned(connection, service))
             pinned = {item.ref_id for item in section.items}
         if "working" in selected:
             recent, sequences = (
-                _working(connection, service, request.session_id, budget["working"])
+                _working(
+                    connection,
+                    service,
+                    request.session_id,
+                    budget["working"],
+                    request.host_history_from_seq,
+                )
                 if request.session_id is not None
                 else ([], {})
             )
-            section = _pack("working", budget["working"], recent, counter)
-            sections.append(section)
+            section = pack("working", recent)
             included = [sequences[item.ref_id] for item in section.items if item.kind == "event"]
+            pinned.update(item.ref_id for item in section.items if item.kind == "memory")
             if included:
                 working_range = (min(included), max(included))
         if "evidence" in selected and request.auto_recall and request.query:
             evidence, retrieval_timings = _evidence(
                 connection, service, request, pinned, working_range
             )
-            sections.append(_pack("evidence", budget["evidence"], evidence, counter))
+            pack("evidence", evidence)
         rendered = "\n\n".join(section.rendered for section in sections if section.rendered)
         bundle = ContextBundle(
             bundle_id=new_id(),
@@ -392,7 +454,7 @@ def build_context(service: BoundService, request: BuildContextRequest) -> Contex
                 **service.ctx.model_dump(exclude={"actor"}),
                 session_id=request.session_id,
                 query_sha256=sha256((request.query or "").encode()).hexdigest(),
-                budget=budget,
+                budget={**budget, "max_tokens": request.max_tokens},
                 items=[
                     section.model_dump(mode="json", exclude={"rendered"}) for section in sections
                 ],

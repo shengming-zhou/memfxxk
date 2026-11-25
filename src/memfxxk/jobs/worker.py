@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 
-from memfxxk.db import context_bundles, jobs, record_embeddings, records, transaction
+from memfxxk.db import compactions, context_bundles, jobs, record_embeddings, records, transaction
 from memfxxk.ids import new_id
 
 from .queue import Job, claim, complete, fail, owned_claim
@@ -93,6 +93,7 @@ class Worker:
         self.engine = service.engine
         self.worker_id = worker_id or str(new_id())
         self.bundle_retention = timedelta(days=service.settings.bundle_retention_days)
+        self.draft_retention = timedelta(hours=service.settings.m2.draft_retention_hours)
         from memfxxk.embedding import CachedEmbedder, make_embedding_provider
 
         if embedder is None:
@@ -111,6 +112,16 @@ class Worker:
                 embed_records(self.engine, target, group)
 
         self.handlers: dict[str, Callable[[list[Job]], None]] = {"embed_record": handle_embed}
+        if service.settings.m2.extract_facts:
+            from memfxxk.eval.llm import ChatClient
+            from memfxxk.m2.facts import extract
+
+            def handle_facts(batch: list[Job]) -> None:
+                with ChatClient(service.settings.m2.model, cache_dir=None) as model:
+                    for job in batch:
+                        extract(service, job, model)
+
+            self.register("extract_facts", handle_facts)
 
     def register(self, kind: str, handler: Callable[[list[Job]], None]) -> None:
         self.handlers[kind] = handler
@@ -155,6 +166,12 @@ class Worker:
             connection.execute(
                 context_bundles.delete().where(
                     context_bundles.c.created_at < func.now() - self.bundle_retention
+                )
+            )
+            connection.execute(
+                compactions.delete().where(
+                    compactions.c.committed_revision.is_(None),
+                    compactions.c.created_at < func.now() - self.draft_retention,
                 )
             )
 

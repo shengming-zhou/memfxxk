@@ -57,7 +57,17 @@ class PatchRequest(BaseModel):
     title: str | None = None
     important: bool | None = None
     pinned: bool | None = None
+    priority: int | None = Field(default=None, ge=1, le=5)
+    tags: list[str] | None = Field(default=None, max_length=32)
     mark_scope_drop: set[str] = Field(default_factory=set)
+
+    @model_validator(mode="after")
+    def normalize_tags(self) -> "PatchRequest":
+        if self.tags is not None:
+            self.tags = sorted({tag.strip().casefold() for tag in self.tags})
+            if any(not 1 <= len(tag) <= 64 for tag in self.tags):
+                raise ValueError("Tags must contain 1 to 64 characters")
+        return self
 
 
 class LinkRequest(BaseModel):

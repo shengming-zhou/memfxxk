@@ -233,6 +233,9 @@ def patch_memory(service: BoundService, memory_id: UUID, request: PatchRequest) 
         assert audit_id is not None
         _set_mark(conn, ctx, mark_scope, memory_id, "important", request.important, audit_id)
         _set_mark(conn, ctx, mark_scope, memory_id, "pinned", request.pinned, audit_id)
+        from memfxxk.m2.preferences import write_preferences
+
+        write_preferences(conn, mark_scope, memory_id, request)
     return result
 
 

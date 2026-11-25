@@ -54,8 +54,15 @@ def serve_mcp(ctx: typer.Context) -> None:
     """Expose scoped memory tools over MCP stdio."""
     from memfxxk.mcp_server import serve_stdio
 
+    settings = Settings()
     with ctx.ensure_object(ClientSettings).connect() as client:
-        asyncio.run(serve_stdio(client, enable_manage=Settings().mcp_enable_manage))
+        asyncio.run(
+            serve_stdio(
+                client,
+                enable_manage=settings.mcp_enable_manage,
+                enable_host=settings.mcp_enable_host,
+            )
+        )
 
 
 class KeyRole(StrEnum):

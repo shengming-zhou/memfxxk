@@ -38,3 +38,7 @@ T00 → T01 → (T02 ∥ T03) → T04 → T05 → (T07 ∥ T08)
 | [T06-retrieval-eval.md](T06-retrieval-eval.md) | LongMemEval 检索评测 |
 | [T07-qa-eval.md](T07-qa-eval.md) | LongMemEval 问答对照组 |
 | [T08-acceptance-demo.md](T08-acceptance-demo.md) | 验收套件与演示场景 |
+
+## M2 接续
+
+M2 已接通宿主生命周期、摘要、事实提议和图检索试验。接下来用冻结数据对照组验证检索和压缩效果。任务依赖和验收条件见 [M2 实施计划](../roadmap.md#m2-实施计划)。

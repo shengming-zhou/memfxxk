@@ -30,6 +30,10 @@ class _SearchArgs(BaseModel):
     time_from: AwareDatetime | None = None
     time_to: AwareDatetime | None = None
     session_id: str | None = None
+    tags: list[str] = Field(default_factory=list, max_length=32)
+    graph_hops: int = Field(default=0, ge=0, le=2)
+    as_of_valid: AwareDatetime | None = None
+    as_of_recorded: AwareDatetime | None = None
 
 
 class _GetArgs(BaseModel):
@@ -226,6 +230,8 @@ def _format(result: ToolResult, max_item_chars: int) -> str:
             if hit.related:
                 links = ", ".join(f"id={link.memory_id}({link.purpose})" for link in hit.related)
                 text += f"\n    related: {links}"
+            if hit.graph_path:
+                text += "\n    graph path: " + " -> ".join(map(str, hit.graph_path))
             items.append(_clip(text, max_item_chars))
         return "\n".join(
             [

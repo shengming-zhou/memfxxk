@@ -9,12 +9,14 @@ from memfxxk.db import memory_marks
 from memfxxk.db import records as record_table
 from memfxxk.domain.retrieval import (
     MemoryResponse,
+    ScoreDetails,
     SearchHit,
     SearchRequest,
     SearchResponse,
     SearchTimings,
 )
 from memfxxk.embedding import CachedEmbedder, EmbeddingProvider, make_embedding_provider
+from memfxxk.m2.preferences import preferences_for
 from memfxxk.retrieval.channels import (
     Candidate,
     LexicalIndex,
@@ -24,6 +26,7 @@ from memfxxk.retrieval.channels import (
     search_filters,
 )
 from memfxxk.retrieval.fusion import NoopReranker, Reranker, fuse
+from memfxxk.retrieval.graph import graph_neighbors
 from memfxxk.retrieval.records import marks_for, read_memory, reference, related_for, snippet
 from memfxxk.scope import visible_filter
 from memfxxk.text import MixedTokenizer
@@ -156,7 +159,15 @@ def _build_hits(
 
     settings = service.settings.search
     scores = fuse(fresh(lexical), fresh(vector), fresh(important), settings)
-    marks = marks_for(connection, service.ctx, [rows[key]["memory_id"] for key in scores])
+    memory_ids = [rows[key]["memory_id"] for key in scores]
+    marks = marks_for(connection, service.ctx, memory_ids)
+    preferences = preferences_for(connection, service.ctx, memory_ids)
+    for key, score in scores.items():
+        priority, _ = preferences.get(rows[key]["memory_id"], (None, []))
+        if priority is not None:
+            multiplier = 1 + 0.15 * (priority - 3)
+            score.boost *= multiplier
+            score.final *= multiplier
     matches = (
         re.compile("|".join(map(re.escape, dict.fromkeys(tokens))), re.IGNORECASE)
         if tokens
@@ -168,18 +179,57 @@ def _build_hits(
         row = rows[key]
         content = row["content"]
         excerpt = snippet(content, matches)
+        priority, tags = preferences.get(row["memory_id"], (None, []))
         hits.append(
             SearchHit(
                 **reference(row).model_dump(),
                 snippet=excerpt,
                 content_truncated=excerpt != content,
                 marks=marks.get(row["memory_id"], []),
+                priority=priority,
+                tags=tags,
                 score=scores[key],
             )
         )
     by_memory_id = {hit.memory_id: key for hit, key in zip(hits, ranked, strict=True)}
     selected = reranker.rerank(request, hits)[: request.k]
     timings.fuse = _milliseconds(stage)
+    stage = perf_counter()
+    if request.graph_hops and request.k > 1 and selected:
+        keep = selected[: max(1, request.k // 2)]
+        neighbors = graph_neighbors(
+            connection,
+            service.ctx,
+            request,
+            [rows[by_memory_id[hit.memory_id]] for hit in keep],
+            filters,
+        )
+        graph_ids = [row["memory_id"] for row, _ in neighbors]
+        graph_marks = marks_for(connection, service.ctx, graph_ids)
+        graph_preferences = preferences_for(connection, service.ctx, graph_ids)
+        expanded = []
+        for row, path in neighbors:
+            memory_id = row["memory_id"]
+            rows[row["id"]] = row
+            by_memory_id[memory_id] = row["id"]
+            excerpt = snippet(row["content"], matches)
+            priority, tags = graph_preferences.get(memory_id, (None, []))
+            expanded.append(
+                SearchHit(
+                    **reference(row).model_dump(),
+                    snippet=excerpt,
+                    content_truncated=excerpt != row["content"],
+                    marks=graph_marks.get(memory_id, []),
+                    graph_path=path,
+                    priority=priority,
+                    tags=tags,
+                    score=ScoreDetails(rrf=0, boost=1, final=0),
+                )
+            )
+        remaining_ids = set(graph_ids)
+        backfill = [hit for hit in selected[len(keep) :] if hit.memory_id not in remaining_ids]
+        selected = [*keep, *expanded, *backfill][: request.k]
+        timings.graph = _milliseconds(stage)
     stage = perf_counter()
     if request.expand_relations and selected:
         related = related_for(
@@ -195,13 +245,22 @@ def _build_hits(
     if not selected:
         return []
 
+    verify = {
+        by_memory_id[memory_id]
+        for hit in selected
+        for memory_id in [hit.memory_id, *hit.graph_path]
+    }
     remaining = connection.execute(
         select(record_table.c.id, record_table.c.generation).where(
-            record_table.c.id.in_([by_memory_id[hit.memory_id] for hit in selected]), *filters
+            record_table.c.id.in_(verify), *filters
         ),
     )
     fresh_ids = {key for key, generation in remaining if rows[key]["generation"] == generation}
-    return [hit for hit in selected if by_memory_id[hit.memory_id] in fresh_ids]
+    return [
+        hit
+        for hit in selected
+        if all(by_memory_id[item] in fresh_ids for item in [hit.memory_id, *hit.graph_path])
+    ]
 
 
 def get_memory(
@@ -213,4 +272,8 @@ def get_memory(
     if window < 0:
         raise ValueError("window must be nonnegative")
     with service.engine.connect() as connection:
-        return read_memory(connection, service.ctx, memory_id, version, window)
+        result = read_memory(connection, service.ctx, memory_id, version, window)
+        result.priority, result.tags = preferences_for(connection, service.ctx, [memory_id]).get(
+            memory_id, (None, [])
+        )
+        return result

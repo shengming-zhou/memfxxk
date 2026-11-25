@@ -3,7 +3,15 @@ from uuid import UUID
 from fastapi import APIRouter, Response
 
 from memfxxk.api.dependencies import RequestService
-from memfxxk.domain.context import BuildContextRequest, BundleMetadata, ContextBundle
+from memfxxk.domain.context import (
+    BuildContextRequest,
+    BundleMetadata,
+    CommitCompaction,
+    CommittedCompaction,
+    CompactionDraft,
+    ContextBundle,
+    PrepareCompaction,
+)
 from memfxxk.domain.documents import Document, DocumentInfo, DocumentRevision, PutDocumentRequest
 from memfxxk.domain.sessions import PutSessionState, SessionState
 
@@ -54,6 +62,16 @@ def put_state(session_id: str, request: PutSessionState, service: RequestService
 @router.post("/context/build")
 def build_context(request: BuildContextRequest, service: RequestService) -> ContextBundle:
     return service.build_context(request)
+
+
+@router.post("/context/compactions")
+def prepare_compaction(request: PrepareCompaction, service: RequestService) -> CompactionDraft:
+    return service.prepare_compaction(request)
+
+
+@router.post("/context/compactions/commit")
+def commit_compaction(request: CommitCompaction, service: RequestService) -> CommittedCompaction:
+    return service.commit_compaction(request.draft_id)
 
 
 @router.get("/context/bundles/{bundle_id}", response_model_exclude_defaults=True)

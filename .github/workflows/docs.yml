@@ -8,6 +8,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'docs/.vitepress/**'
+      - 'docs/decisions/**'
       - 'docs/en/**'
       - 'docs/index.md'
       - 'docs/user-manual.md'

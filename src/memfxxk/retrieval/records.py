@@ -7,14 +7,16 @@ from sqlalchemy import (
     Connection,
     RowMapping,
     Select,
+    and_,
     cast,
     func,
     literal,
+    or_,
     select,
     union_all,
 )
 
-from memfxxk.db import memory_marks, memory_relations, records
+from memfxxk.db import events, memory_marks, memory_relations, records
 from memfxxk.domain import Scope
 from memfxxk.domain.retrieval import (
     MemoryMark,
@@ -52,6 +54,8 @@ def reference(row: RowMapping) -> MemoryReference:
         title=row["title"],
         event_time=row["event_time"],
         recorded_at=row["recorded_at"],
+        valid_from=row["valid_from"],
+        valid_to=row["valid_to"],
         scope=Scope.model_validate(row),
         session_id=row["session_id"],
         source_pos=row["source_pos"],
@@ -113,7 +117,11 @@ def related_for(
                 relation.created_at,
                 relation.id.label("relation_id"),
             )
-            .select_from(memory_relations.join(target, target.c.memory_id == endpoint))
+            .select_from(
+                memory_relations.join(target, target.c.memory_id == endpoint).outerjoin(
+                    events, events.c.id == relation.source_event_id
+                )
+            )
             .where(
                 relation.org_id == ctx.org_id,
                 source.in_(memory_ids),
@@ -121,6 +129,10 @@ def related_for(
                 target.c.is_current,
                 target.c.status == "active",
                 visible_filter(target, ctx),
+                or_(
+                    events.c.id.is_(None),
+                    and_(visible_filter(events, ctx), ~events.c.redacted),
+                ),
             )
         )
 

@@ -21,6 +21,10 @@ class SearchRequest(BaseModel):
     session_id: str | None = None
     include_inactive: bool = False
     expand_relations: bool = True
+    graph_hops: int = Field(default=0, ge=0, le=2)
+    tags: list[str] = Field(default_factory=list, max_length=32)
+    as_of_valid: AwareDatetime | None = None
+    as_of_recorded: AwareDatetime | None = None
     channels: list[SearchChannel] = Field(
         default_factory=lambda: ["lexical", "vector", "important"]
     )
@@ -63,6 +67,8 @@ class MemoryReference(BaseModel):
     title: str | None = None
     event_time: AwareDatetime
     recorded_at: AwareDatetime
+    valid_from: AwareDatetime | None = None
+    valid_to: AwareDatetime | None = None
     scope: Scope
     session_id: str | None = None
     source_pos: dict[str, object] | None = None
@@ -73,6 +79,9 @@ class SearchHit(MemoryReference):
     content_truncated: bool
     marks: list[MemoryMark]
     related: list[RelatedMemory] = Field(default_factory=list)
+    graph_path: list[UUID] = Field(default_factory=list)
+    priority: int | None = None
+    tags: list[str] = Field(default_factory=list)
     score: ScoreDetails
 
 
@@ -83,6 +92,7 @@ class SearchTimings(BaseModel):
     important: float = 0
     fuse: float = 0
     expand: float = 0
+    graph: float = 0
     total: float = 0
 
 
@@ -116,3 +126,5 @@ class MemoryResponse(MemoryNeighbor):
     relations: list[RelatedMemory]
     versions: list[MemoryVersion]
     neighbors: MemoryNeighbors
+    priority: int | None = None
+    tags: list[str] = Field(default_factory=list)

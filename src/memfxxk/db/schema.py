@@ -266,3 +266,65 @@ context_bundles = sa.Table(
     timestamp("created_at"),
 )
 index_scope(context_bundles)
+
+compactions = sa.Table(
+    "compactions",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("session_id", sa.Text, nullable=False),
+    sa.Column("base_revision", sa.Integer, nullable=False),
+    sa.Column("from_seq", sa.BigInteger, nullable=False),
+    sa.Column("through_seq", sa.BigInteger, nullable=False),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
+    sa.Column("summary", sa.Text),
+    sa.Column("tokens", sa.Integer, nullable=False),
+    sa.Column("memory_id", UUID),
+    sa.Column("committed_version", sa.Integer),
+    sa.Column("committed_revision", sa.Integer),
+    timestamp("created_at"),
+)
+index_scope(compactions)
+sa.Index("ix_compactions_sources", compactions.c.source_event_ids, postgresql_using="gin")
+sa.Index("ix_records_sources", records.c.source_event_ids, postgresql_using="gin")
+
+memory_preferences = sa.Table(
+    "memory_preferences",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("memory_id", UUID, nullable=False),
+    sa.Column("priority", sa.Integer),
+    sa.Column("tags", ARRAY(sa.Text), nullable=False, server_default=sa.text("'{}'")),
+    sa.CheckConstraint("priority BETWEEN 1 AND 5", name="ck_memory_preferences_priority"),
+)
+index_scope(memory_preferences)
+sa.Index("ix_memory_preferences_memory", memory_preferences.c.memory_id)
+sa.Index(
+    "uq_memory_preferences_scope",
+    memory_preferences.c.memory_id,
+    memory_preferences.c.org_id,
+    sa.func.coalesce(memory_preferences.c.user_id, ""),
+    sa.func.coalesce(memory_preferences.c.agent_id, ""),
+    sa.func.coalesce(memory_preferences.c.project_id, ""),
+    unique=True,
+)
+
+fact_proposals = sa.Table(
+    "fact_proposals",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
+    sa.Column("fact", JSONB, nullable=False),
+    sa.Column("status", sa.Text, nullable=False, server_default="pending"),
+    sa.Column("memory_id", UUID),
+    sa.Column("memory_version", sa.Integer),
+    timestamp("created_at"),
+    sa.CheckConstraint(
+        "status IN ('pending', 'accepted', 'rejected')", name="ck_fact_proposals_status"
+    ),
+)
+index_scope(fact_proposals)
+sa.Index("ix_fact_proposals_memory", fact_proposals.c.memory_id)
+sa.Index("ix_fact_proposals_sources", fact_proposals.c.source_event_ids, postgresql_using="gin")

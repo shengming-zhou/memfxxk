@@ -9,9 +9,17 @@ from memfxxk import context, documents, ingest, manage, retrieval, sessions
 from memfxxk.config import Settings
 from memfxxk.db import records, transaction
 from memfxxk.domain import Principal, RequestContext
-from memfxxk.domain.context import BuildContextRequest, BundleMetadata, ContextBundle
+from memfxxk.domain.context import (
+    BuildContextRequest,
+    BundleMetadata,
+    CommittedCompaction,
+    CompactionDraft,
+    ContextBundle,
+    PrepareCompaction,
+)
 from memfxxk.domain.documents import Document, DocumentInfo, DocumentRevision, PutDocumentRequest
 from memfxxk.domain.events import Event, IngestEvent, IngestResult
+from memfxxk.domain.facts import FactProposal
 from memfxxk.domain.manage import (
     ForgetMode,
     ForgetResult,
@@ -81,7 +89,22 @@ class BoundService:
 
     def ingest(self, batch: list[IngestEvent]) -> list[IngestResult]:
         with transaction(self.engine) as connection:
-            return ingest.ingest(connection, self.ctx, batch)
+            results = ingest.ingest(connection, self.ctx, batch)
+            if self.settings.m2.extract_facts:
+                from memfxxk.m2.facts import enqueue_closed_turns
+
+                enqueue_closed_turns(connection, self.ctx, batch, results)
+            return results
+
+    def list_fact_proposals(self, limit: int = 50) -> list[FactProposal]:
+        from memfxxk.m2.facts import list_pending
+
+        return list_pending(self, limit)
+
+    def review_fact(self, proposal_id: UUID, accept: bool) -> FactProposal:
+        from memfxxk.m2.facts import review
+
+        return review(self, proposal_id, accept)
 
     def get_event(self, event_id: UUID) -> Event:
         with self.engine.connect() as connection:
@@ -151,6 +174,16 @@ class BoundService:
 
     def build_context(self, request: BuildContextRequest) -> ContextBundle:
         return context.build_context(self, request)
+
+    def prepare_compaction(self, request: PrepareCompaction) -> CompactionDraft:
+        from memfxxk.m2.compaction import prepare
+
+        return prepare(self, request)
+
+    def commit_compaction(self, draft_id: UUID) -> CommittedCompaction:
+        from memfxxk.m2.compaction import commit
+
+        return commit(self, draft_id)
 
     def get_bundle(self, bundle_id: UUID) -> BundleMetadata:
         return context.get_bundle(self, bundle_id)

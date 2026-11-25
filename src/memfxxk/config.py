@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -60,6 +60,18 @@ class EvalSettings(BaseModel):
     official_repo: Path | None = None
 
 
+class M2Settings(BaseModel):
+    model: EvalModelSettings = Field(default_factory=EvalModelSettings)
+    extract_facts: bool = False
+    draft_retention_hours: int = Field(default=24, gt=0)
+
+    @model_validator(mode="after")
+    def model_required_for_extraction(self) -> "M2Settings":
+        if self.extract_facts and not self.model.model.strip():
+            raise ValueError("Fact extraction requires MEMFXXK_M2__MODEL__MODEL")
+        return self
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="MEMFXXK_", env_nested_delimiter="__", env_file=".env", extra="ignore"
@@ -73,6 +85,8 @@ class Settings(BaseSettings):
     context: ContextSettings = Field(default_factory=ContextSettings)
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     eval: EvalSettings = Field(default_factory=EvalSettings)
+    m2: M2Settings = Field(default_factory=M2Settings)
+    mcp_enable_host: bool = False
     mcp_enable_manage: bool = False
     bundle_retention_days: int = Field(default=30, gt=0)
     allow_host_hard_delete: bool = True
