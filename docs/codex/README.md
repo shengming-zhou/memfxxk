@@ -45,6 +45,7 @@ T00 → T01 → (T02 ∥ T03) → T04 → T05 → (T07 ∥ T08)
 | [T13-graph-evidence-budget.md](T13-graph-evidence-budget.md) | 可选图证据额度与预算回收 |
 | [T14-qdrant.md](T14-qdrant.md) | Qdrant 向量镜像与故障回退 |
 | [T15-model-gateway.md](T15-model-gateway.md) | OpenAI 兼容文本入口 |
+| [T16-llm-memory-strategies.md](T16-llm-memory-strategies.md) | LLM 加工层与各家记忆策略的完整实现（分 P0–P9 阶段交付） |
 
 ## M2 接续
 
