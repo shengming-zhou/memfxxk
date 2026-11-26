@@ -15,6 +15,7 @@ from memfxxk.domain.manage import (
     MemoryVersion,
     PatchRequest,
     RememberRequest,
+    SaveLessonRequest,
 )
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 
@@ -51,6 +52,11 @@ def get_memory(
 @router.post("/memories")
 def remember(request: RememberRequest, service: RequestService) -> MemoryVersion:
     return service.remember(request)
+
+
+@router.post("/lessons")
+def save_lesson(request: SaveLessonRequest, service: RequestService) -> MemoryVersion:
+    return service.save_lesson(request)
 
 
 @router.patch("/memories/{memory_id}")

@@ -38,6 +38,13 @@ T00 → T01 → (T02 ∥ T03) → T04 → T05 → (T07 ∥ T08)
 | [T06-retrieval-eval.md](T06-retrieval-eval.md) | LongMemEval 检索评测 |
 | [T07-qa-eval.md](T07-qa-eval.md) | LongMemEval 问答对照组 |
 | [T08-acceptance-demo.md](T08-acceptance-demo.md) | 验收套件与演示场景 |
+| [T09-procedural-memory.md](T09-procedural-memory.md) | 保存和复用带执行证据的经验 |
+| [T10-markdown-workspace.md](T10-markdown-workspace.md) | Markdown 文档和经验的工作区迁移 |
+| [T11-project-credentials.md](T11-project-credentials.md) | 团队项目凭据与撤销 |
+| [T12-mcp-harness.md](T12-mcp-harness.md) | 通用 MCP Harness 接入 |
+| [T13-graph-evidence-budget.md](T13-graph-evidence-budget.md) | 可选图证据额度与预算回收 |
+| [T14-qdrant.md](T14-qdrant.md) | Qdrant 向量镜像与故障回退 |
+| [T15-model-gateway.md](T15-model-gateway.md) | OpenAI 兼容文本入口 |
 
 ## M2 接续
 

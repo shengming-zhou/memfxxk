@@ -40,6 +40,13 @@ class BuildContextRequest(BaseModel):
     query: str | None = None
     budget: dict[SectionName, Annotated[int, Field(ge=0)]] | None = None
     max_tokens: int | None = Field(default=None, ge=0)
+    graph_evidence_tokens: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Reserve up to this many evidence tokens for graph hits when graph_hops is enabled."
+        ),
+    )
     host_history_from_seq: int | None = Field(default=None, gt=0)
     evidence_mode: Literal["full", "excerpt"] = "full"
     auto_recall: bool = True

@@ -46,9 +46,15 @@ from memfxxk.domain.manage import (
     MemoryVersion,
     PatchRequest,
     RememberRequest,
+    SaveLessonRequest,
 )
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 from memfxxk.domain.sessions import PutSessionState, SessionState
+from memfxxk.domain.workspace import (
+    ImportWorkspaceRequest,
+    WorkspaceImportResult,
+    WorkspaceSnapshot,
+)
 from memfxxk.tools import AsyncHttpBackend, HttpBackend, dispatch, dispatch_async, to_openai_tools
 
 __all__ = [
@@ -173,6 +179,9 @@ class MemfxxkClient(ClientContext):
     def remember(self, request: RememberRequest) -> MemoryVersion:
         return self._request("POST", "memories", MemoryVersion, body=request)
 
+    def save_lesson(self, request: SaveLessonRequest) -> MemoryVersion:
+        return self._request("POST", "lessons", MemoryVersion, body=request)
+
     def patch_memory(self, memory_id: UUID | str, request: PatchRequest) -> MemoryVersion:
         return self._request("PATCH", f"memories/{segment(memory_id)}", MemoryVersion, body=request)
 
@@ -216,6 +225,19 @@ class MemfxxkClient(ClientContext):
 
     def delete_document(self, path: str) -> None:
         return self._request("DELETE", document_endpoint(path), NoneType)
+
+    def export_workspace(self, lesson_ids: Iterable[UUID] = ()) -> WorkspaceSnapshot:
+        return self._request(
+            "GET",
+            "workspace",
+            WorkspaceSnapshot,
+            params={
+                "lesson_ids": [str(lesson_id) for lesson_id in lesson_ids],
+            },
+        )
+
+    def import_workspace(self, request: ImportWorkspaceRequest) -> WorkspaceImportResult:
+        return self._request("POST", "workspace", WorkspaceImportResult, body=request)
 
     def get_session(self, session_id: str) -> SessionState:
         return self._request("GET", f"sessions/{segment(session_id)}/state", SessionState)
@@ -384,6 +406,9 @@ class AsyncMemfxxkClient(ClientContext):
     async def remember(self, request: RememberRequest) -> MemoryVersion:
         return await self._request("POST", "memories", MemoryVersion, body=request)
 
+    async def save_lesson(self, request: SaveLessonRequest) -> MemoryVersion:
+        return await self._request("POST", "lessons", MemoryVersion, body=request)
+
     async def patch_memory(self, memory_id: UUID | str, request: PatchRequest) -> MemoryVersion:
         return await self._request(
             "PATCH", f"memories/{segment(memory_id)}", MemoryVersion, body=request
@@ -431,6 +456,19 @@ class AsyncMemfxxkClient(ClientContext):
 
     async def delete_document(self, path: str) -> None:
         return await self._request("DELETE", document_endpoint(path), NoneType)
+
+    async def export_workspace(self, lesson_ids: Iterable[UUID] = ()) -> WorkspaceSnapshot:
+        return await self._request(
+            "GET",
+            "workspace",
+            WorkspaceSnapshot,
+            params={
+                "lesson_ids": [str(lesson_id) for lesson_id in lesson_ids],
+            },
+        )
+
+    async def import_workspace(self, request: ImportWorkspaceRequest) -> WorkspaceImportResult:
+        return await self._request("POST", "workspace", WorkspaceImportResult, body=request)
 
     async def get_session(self, session_id: str) -> SessionState:
         return await self._request("GET", f"sessions/{segment(session_id)}/state", SessionState)

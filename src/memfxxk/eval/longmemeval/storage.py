@@ -16,6 +16,7 @@ from memfxxk.db import (
 )
 from memfxxk.domain import Actor, Principal, RequestContext
 from memfxxk.domain.events import IngestEvent
+from memfxxk.idempotency import LEGACY_NAMESPACE
 from memfxxk.ingest import ingest
 from memfxxk.scope import ScopeError, visible_filter
 from memfxxk.service import BoundService
@@ -50,6 +51,7 @@ def _require_scope(bound: BoundService, question_id: str | None = None) -> None:
 def _marker_query() -> Select:
     return select(events).where(
         visible_filter(events, eval_context()),
+        events.c.idempotency_namespace == LEGACY_NAMESPACE,
         events.c.kind == "user_op",
         events.c.source["uri"].as_string() == _SOURCE_URI,
     )
@@ -156,6 +158,9 @@ def _delete_question(connection: Connection, question_id: str) -> None:
         .with_for_update()
     ).all()
     if record_ids:
+        from memfxxk.qdrant import queue_removal
+
+        queue_removal(connection, record_ids)
         connection.execute(
             delete(jobs).where(
                 jobs.c.kind == "embed_record",

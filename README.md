@@ -1,6 +1,6 @@
 # memfxxk
 
-memfxxk 为 Agent 提供会话记录、混合检索、可编辑的长期记忆和按预算组装的上下文。用户可以手动标记重要记忆、固定发布约定，或把故障记录关联到修复。
+memfxxk 为 Agent 提供会话记录、混合检索、可滚动压缩的上下文和可编辑的长期记忆。用户可以标记重要记忆、固定项目约定、把故障关联到修复，并把经过验证的步骤留给下一次会话。
 
 [文档站](https://shengming-zhou.github.io/memfxxk/) · [发布记录](https://github.com/shengming-zhou/memfxxk/actions/workflows/docs.yml)
 
@@ -21,6 +21,12 @@ uv run memfxxk serve
 在另一终端将生成的 key 设为 `MEMFXXK_API_KEY`，运行 `uv run python examples/demo_dev_agent.py`。演示无需外部模型。
 
 ## MCP 接入
+
+通用 Harness 可以通过 MCP 自动装载记忆、压缩历史和记录原文。用同一会话 ID 再跑一次即可接续。模型可使用 Harness 开放的搜索、保存和管理工具。
+
+```sh
+uv run python -m examples.mcp_harness --session demo "当前项目有哪些约定？"
+```
 
 在主机的环境中设置 `MEMFXXK_API_KEY`。下列示例使用本机 API 和独立的 `dogfood` 项目。API 地址可通过 `MEMFXXK_URL` 修改。
 
@@ -62,3 +68,5 @@ Claude Code 从仓库工作目录启动时可读取以下 `.mcp.json`。
 ```
 
 [Claude Code MCP 配置](https://code.claude.com/docs/en/mcp)
+
+需要仅通过模型地址接入时，可启用非流式文本 Chat Completions 入口。它在请求前装载记忆，并记录成功的用户消息和模型回复。 [网关接入](docs/user-manual.md#model-gateway)

@@ -1,7 +1,7 @@
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from memfxxk.domain import Scope
 
@@ -12,6 +12,7 @@ Status = Literal["active", "inactive"]
 ScopeLevel = Literal["org", "user", "agent", "project"]
 ForgetMode = Literal["deactivate", "reactivate", "delete"]
 NonEmpty = Annotated[str, Field(min_length=1)]
+LessonText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
 
 
 class Span(BaseModel):
@@ -48,6 +49,25 @@ class RememberRequest(BaseModel):
             raise ValueError("Provide exactly one of content or from_event_id")
         if self.span is not None and self.from_event_id is None:
             raise ValueError("A span requires from_event_id")
+        return self
+
+
+class SaveLessonRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=160)]
+    scenario: LessonText
+    prerequisites: list[LessonText] = Field(default_factory=list, max_length=10)
+    steps: list[LessonText] = Field(min_length=1, max_length=20)
+    result: LessonText
+    failure_event_id: UUID
+    verification_event_id: UUID
+    idempotency_key: NonEmpty | None = None
+
+    @model_validator(mode="after")
+    def distinct_sources(self) -> "SaveLessonRequest":
+        if self.failure_event_id == self.verification_event_id:
+            raise ValueError("Failure and verification must refer to distinct tool results")
         return self
 
 

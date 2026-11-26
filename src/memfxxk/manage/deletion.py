@@ -30,8 +30,8 @@ if TYPE_CHECKING:
 
 
 def _authorize_delete(service: BoundService) -> None:
-    if service.principal.role == "host" and not service.settings.allow_host_hard_delete:
-        raise ManagementError(403, "forbidden", "Hard deletion is disabled for host keys")
+    if denial := service.hard_delete_denial():
+        raise ManagementError(403, "forbidden", denial)
 
 
 def _purge_memories(conn: Connection, ctx: RequestContext, memory_ids: set[UUID]) -> ForgetResult:
@@ -62,6 +62,9 @@ def _purge_memories(conn: Connection, ctx: RequestContext, memory_ids: set[UUID]
         .select_from(record_embeddings)
         .where(record_embeddings.c.record_id.in_(record_ids))
     )
+    from memfxxk.qdrant import queue_removal
+
+    queue_removal(conn, record_ids)
     conn.execute(records.delete().where(record_filter))
     for derived in (memory_preferences, fact_proposals, compactions):
         conn.execute(
@@ -121,6 +124,7 @@ def forget(service: BoundService, memory_id: UUID, mode: ForgetMode) -> ForgetRe
     with transaction(service.engine) as conn:
         lock_user_operations(conn, ctx)
         current = current_record(conn, ctx, memory_id, lock=True)
+        service.require_resource_write(current["project_id"])
         if mode == "delete":
             _authorize_delete(service)
             result = _purge_memories(conn, ctx, {memory_id})
@@ -147,9 +151,12 @@ def forget_event(service: BoundService, event_id: UUID) -> ForgetResult:
     with transaction(service.engine) as conn:
         lock_user_operations(conn, ctx)
         target = and_(events.c.id == event_id, visible_filter(events, ctx))
-        row = conn.execute(select(events.c.session_id).where(target)).one_or_none()
+        row = conn.execute(
+            select(events.c.session_id, events.c.project_id).where(target)
+        ).one_or_none()
         if row is None:
             raise NotFound
+        service.require_resource_write(row.project_id)
         _authorize_delete(service)
         if row.session_id is not None:
             # Take the same row lock as ingest before deleting an event used to rebuild a turn.

@@ -84,9 +84,15 @@ def search(
             timings.lexical = _milliseconds(stage)
 
         if embedder is not None and any(vector):
-            index = PgVectorIndex(embedder.model, embedder.dim, settings.hnsw_ef_search)
+            pg_index = PgVectorIndex(embedder.model, embedder.dim, settings.hnsw_ef_search)
             stage = perf_counter()
-            index.enable_iterative_scan(connection)
+            pg_index.enable_iterative_scan(connection)
+            index: VectorIndex = pg_index
+            if settings.vector_backend == "qdrant":
+                from memfxxk.qdrant import QdrantClient
+                from memfxxk.retrieval.qdrant import QdrantVectorIndex
+
+                index = QdrantVectorIndex(QdrantClient(service.settings.qdrant), pg_index)
             if "vector" in channels:
                 vector_candidates = index.search(connection, vector, filters, settings.n_vector)
                 timings.vector = _milliseconds(stage)

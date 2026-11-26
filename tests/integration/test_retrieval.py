@@ -1,12 +1,12 @@
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from statistics import quantiles
+from statistics import median, quantiles
 from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Connection
+from sqlalchemy import Connection, text
 
 from memfxxk.config import Settings
 from memfxxk.db import memory_marks, memory_relations, record_embeddings, records
@@ -335,3 +335,99 @@ def test_search_performance(service: MemoryService) -> None:
     assert bound.search(request).hits
     samples = [bound.search(request).timings_ms.total for _ in range(40)]
     assert quantiles(samples, n=100)[94] < 150
+
+
+@pytest.mark.scale
+def test_search_performance_250k(service: MemoryService) -> None:
+    size, dim, topic_count = 250_000, 64, 128
+    embedding = service.settings.embedding.model_copy(
+        update={"model": "performance-250k", "dim": dim}
+    )
+    settings = service.settings.model_copy(update={"embedding": embedding})
+    provider = FakeEmbeddingProvider(embedding.model, dim)
+    topics = [f"topic{i} code{i * 7 % 139} label{i * 19 % 257}" for i in range(topic_count)]
+    with service.engine.begin() as connection:
+        connection.exec_driver_sql(
+            "CREATE TEMP TABLE perf_topics "
+            "(topic integer PRIMARY KEY, terms text, embedding vector) ON COMMIT DROP"
+        )
+        connection.execute(
+            text("INSERT INTO perf_topics VALUES (:topic, :terms, CAST(:embedding AS vector))"),
+            [
+                dict(topic=i, terms=terms, embedding=json.dumps(vector))
+                for i, (terms, vector) in enumerate(
+                    zip(topics, provider.embed(topics), strict=True)
+                )
+            ],
+        )
+        attributes = {"size": size, "topics": topic_count, "dim": dim, "model": embedding.model}
+        connection.execute(
+            text("""
+                INSERT INTO records (
+                    id, memory_id, version, org_id, project_id, user_id, type, content,
+                    event_time, session_id, origin, lexemes, created_by
+                )
+                SELECT md5('record-' || i)::uuid, md5('memory-' || i)::uuid, 1, 'test-org',
+                    CASE WHEN (i / :topics) % 4 = 2 THEN 'p2' ELSE 'p1' END,
+                    CASE WHEN (i / :topics) % 4 = 3 THEN 'u2' ELSE 'u1' END,
+                    'turn', content, TIMESTAMPTZ '2026-01-01' + i * INTERVAL '1 second',
+                    'session-' || (i / 512), 'auto_index', to_tsvector('simple', content),
+                    '{"type":"user","id":"synthetic"}'::jsonb
+                FROM generate_series(0, :size - 1) AS seed(i)
+                JOIN perf_topics AS seed_topic ON topic = i % :topics
+                CROSS JOIN LATERAL (
+                    SELECT terms || ' check build benchmark turn' || i AS content
+                ) AS turn
+            """),
+            attributes,
+        )
+        connection.execute(
+            text("""
+                INSERT INTO record_embeddings (record_id, model, dim, embedding)
+                SELECT md5('record-' || i)::uuid, :model, :dim, embedding + noise
+                FROM generate_series(0, :size - 1) AS seed(i)
+                JOIN perf_topics AS seed_topic ON topic = i % :topics
+                CROSS JOIN LATERAL (
+                    SELECT CAST(ARRAY(
+                        SELECT 0.15 * hashint8(i::bigint * :dim + coordinate) / 2147483648.0
+                        FROM generate_series(0, :dim - 1) AS coordinates(coordinate)
+                    ) AS vector) AS noise
+                ) AS perturbation
+            """),
+            attributes,
+        )
+        connection.execute(
+            text("""
+                INSERT INTO memory_marks (
+                    id, memory_id, mark, org_id, project_id, user_id, created_by, source_event_id
+                )
+                SELECT md5('mark-' || i)::uuid, md5('memory-' || i)::uuid, 'important', 'test-org',
+                    CASE WHEN (i / :topics) % 4 = 2 THEN 'p2' ELSE 'p1' END,
+                    CASE WHEN (i / :topics) % 4 = 3 THEN 'u2' ELSE 'u1' END,
+                    '{"type":"user","id":"synthetic"}'::jsonb, md5('event-' || i)::uuid
+                FROM generate_series(0, :size - 1, 31) AS seed(i)
+            """),
+            attributes,
+        )
+        connection.exec_driver_sql("SET LOCAL maintenance_work_mem = '192MB'")
+        connection.exec_driver_sql("SET LOCAL max_parallel_maintenance_workers = 0")
+        ensure_embedding_index(connection, embedding.model, dim)
+        for table in ("records", "record_embeddings", "memory_marks"):
+            connection.exec_driver_sql(f"ANALYZE {table}")
+
+    bound = _bound(MemoryService(service.engine, settings))
+    requests = [SearchRequest(query=topics[i * 73 % topic_count]) for i in range(topic_count)]
+    for request in requests[:16]:
+        search(bound, request, embedder=provider)
+    samples = []
+    for request in requests:
+        result = search(bound, request, embedder=provider)
+        assert len(result.hits) == request.k
+        assert all(
+            hit.scope.user_id == "u1" and hit.scope.project_id == "p1" for hit in result.hits
+        )
+        samples.append(result.timings_ms.total)
+    p50 = median(samples)
+    p95 = quantiles(samples, n=100, method="inclusive")[94]
+    print(f"pgvector turns={size:,} dim={dim} n={len(samples)} p50={p50:.2f}ms p95={p95:.2f}ms")
+    assert p95 <= 100, f"pgvector 250k-turn search p95 {p95:.2f} ms exceeds 100 ms"

@@ -1,6 +1,7 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Query, Response
 
 from memfxxk.api.dependencies import RequestService
 from memfxxk.domain.context import (
@@ -14,8 +15,28 @@ from memfxxk.domain.context import (
 )
 from memfxxk.domain.documents import Document, DocumentInfo, DocumentRevision, PutDocumentRequest
 from memfxxk.domain.sessions import PutSessionState, SessionState
+from memfxxk.domain.workspace import (
+    ImportWorkspaceRequest,
+    WorkspaceImportResult,
+    WorkspaceSnapshot,
+)
 
 router = APIRouter(prefix="/v1")
+
+
+@router.get("/workspace")
+def export_workspace(
+    service: RequestService,
+    lesson_ids: Annotated[list[UUID] | None, Query()] = None,
+) -> WorkspaceSnapshot:
+    return service.export_workspace(lesson_ids or [])
+
+
+@router.post("/workspace")
+def import_workspace(
+    request: ImportWorkspaceRequest, service: RequestService
+) -> WorkspaceImportResult:
+    return service.import_workspace(request)
 
 
 @router.get("/documents")

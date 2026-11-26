@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr, model_validator
+from pydantic import AnyHttpUrl, BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +18,7 @@ class EmbeddingSettings(BaseModel):
 
 
 class SearchSettings(BaseModel):
+    vector_backend: Literal["pgvector", "qdrant"] = "pgvector"
     n_lexical: int = Field(default=50, gt=0)
     n_vector: int = Field(default=50, gt=0)
     m_important: int = Field(default=10, gt=0)
@@ -28,6 +29,22 @@ class SearchSettings(BaseModel):
     important_boost: float = Field(default=1.5, ge=0)
     important_min_sim: float = Field(default=0.35, ge=-1, le=1)
     max_related: int = Field(default=3, ge=0)
+
+
+class QdrantSettings(BaseModel):
+    base_url: AnyHttpUrl = AnyHttpUrl("http://127.0.0.1:6333")
+    api_key: SecretStr | None = None
+    collection_prefix: str = Field(default="memfxxk", pattern=r"^[a-zA-Z0-9_-]{1,64}$")
+    timeout: float = Field(default=3.0, gt=0, le=30)
+    max_prefilter_ids: int = Field(default=5000, gt=0, le=20_000)
+
+    @model_validator(mode="after")
+    def validate_endpoint(self) -> "QdrantSettings":
+        if self.base_url.username or self.base_url.password or self.base_url.query is not None:
+            raise ValueError("Set Qdrant credentials with MEMFXXK_QDRANT__API_KEY")
+        if self.base_url.fragment is not None:
+            raise ValueError("Qdrant URL must not contain a fragment")
+        return self
 
 
 class ContextBudget(BaseModel):
@@ -82,6 +99,7 @@ class Settings(BaseSettings):
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     token_counter: Literal["tiktoken", "simple"] = "tiktoken"
     search: SearchSettings = Field(default_factory=SearchSettings)
+    qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
     context: ContextSettings = Field(default_factory=ContextSettings)
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     eval: EvalSettings = Field(default_factory=EvalSettings)

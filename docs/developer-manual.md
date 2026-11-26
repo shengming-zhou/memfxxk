@@ -44,7 +44,11 @@ T01 验收通过 45 项测试，覆盖并发序号、重复事件、跨作用域
 - T04–T05 将文档、会话和上下文通过同步及异步 Python SDK、CLI 和 MCP 暴露给宿主。HTTP 和评测适配器复用同一工具定义与输出限制。
 - T06–T08 提供 LongMemEval 检索与问答评测、A01–A13 回归和开发 Agent 演示。运行 `uv run pytest -m slow` 检查较大测试语料的检索延时。
 
-M1 关口还需要全量 LongMemEval_S 的检索、真实模型问答和约 25 万条 turn 上的 p95，以及用真实开发 Agent 接入 MCP 一周的记录。M2 原型与这些验收并行推进。
+本机 PostgreSQL 17、pgvector 0.8.7 上实测 25 万条合成 turn。以 64 维测试向量预热后，128 个串行混合检索查询的 p50 为 122.68 ms，p95 为 162.15 ms，超过 100 ms 闸门。耗时包含数据库与融合，排除查询嵌入和 HTTP。该测试独立于日常回归。实际语义检索、并发负载和真实开发 Agent 的长期使用另行验收。
+
+```bash
+uv run pytest -m scale -s -q tests/integration/test_retrieval.py::test_search_performance_250k
+```
 
 ## M2 的接入与验证 {#m2-harness-and-verification}
 
@@ -62,6 +66,85 @@ uv run pytest -s tests/integration/test_m2_memory.py tests/integration/test_m2_b
 ```bash
 uv run pytest -s -m slow tests/integration/test_m2_long_replay.py
 ```
+
+### 30 题配对答题 {#m2-paired-qa}
+
+`eval/suites/longmemeval-s-m2-paired30.json` 固定了知识更新、时间推理、跨会话各十题及 LongMemEval S 的校验和。三组都取八条候选，用相同的 1,500 token 记忆预算和 384 token 答案额度。摘要组先给两次本地滚动压缩的结果留空间，图组从原始用户消息里重复出现的低频名字建立跨会话边，查询走两跳。题目用于检索和答题，标签用于衡量证据和打分。
+
+先按下文启动本地 BGE 并配置向量端点，再运行 `prepare`。它在测试数据库中新建独立的 PostgreSQL schema，共用同一批原文和向量，逐题保存证据。配置 `MEMFXXK_EVAL__GEN__*` 指向 `gpt-5.4-mini` 后运行 `score`，评分也用该模型。可从同一目录恢复未完成的阶段。
+
+换答题模型时，把 `prepared.jsonl` 和 `manifest.json` 复制到新的结果目录，更新清单里的 `answer_model` 并配置对应的生成端点。保留 `judge_model`，通过 `MEMFXXK_EVAL__JUDGE__*` 配置评分模型。这样可以用同一份上下文和同一个评委比较两个答题模型。
+
+```bash
+uv run python eval/run_m2_paired.py prepare --output eval/results/m2-paired30
+uv run python eval/run_m2_paired.py score --output eval/results/m2-paired30
+```
+
+`diagnostics.jsonl` 记录漏召回、入选与装载截断，`metrics.json` 汇总配对输赢、p50/p95 和答题及评分 token。证据完整指装载文本里含整个标注消息。部分内容也可能足以答对。
+
+用同一份 30 题、BGE 语义向量和 1,500 token 上限复测图装载。图预算从 0 改为 350 后，图候选实际装入从 0/19 升到 19/19，召回至少一条标注证据仍是 27/30。装入至少一条完整标注消息从 21/30 变为 18/30，装入全部完整标注消息从 7/30 变为 9/30。在 350 token 图预算下，混合、摘要、图三组的记忆处理 p50/p95 分别为 177/266、174/238、199/379 ms。这次只测证据，模型答题和评分调用均为零。预算默认仍为 0。
+
+```bash
+uv run python eval/run_m2_paired.py prepare --graph-evidence-tokens 350 --output eval/results/m2-paired30-graph350
+```
+
+## M3 程序性记忆 {#m3-procedural-memory}
+
+`POST /v1/lessons` 和同步及异步 SDK 的 `save_lesson` 共用 `SaveLessonRequest`。记录使用当前请求作用域和已有的 `lesson` 类型，保存为用户确认的文本版本，同时在审计事件里记录创建参数。失败与验证事件必须可见，并带各自的工具结果。验证发生的顺序在同会话按事件序号判断，跨会话按事件时间判断。相同幂等键和相同参数返回首次创建的版本。
+
+经验沿用原有检索、版本管理和向量作业。两个来源都保存在 `source_event_ids`，对应的角色由 `source_pos` 区分。删掉任一原文就会清理全部经验版本。自动上下文通过 `search_filters.types` 或用户固定来启用经验。经验文本交给宿主判断和使用。
+
+回归用真实 PostgreSQL 和本地 CSV 数据测一次失败、修复和下一会话复用，并覆盖 API、SDK、MCP、作用域及删除。AMA-Bench 和真实 Agent 的第二次成功率属于 M3 后续验收。
+
+```bash
+uv run pytest tests/integration/test_m3_lessons.py tests/integration/test_cli_mcp.py tests/integration/test_sdk_tools.py
+```
+
+## M3 Markdown 工作区 {#m3-markdown-workspace}
+
+`GET /v1/workspace` 与 SDK `export_workspace` 读取当前精确作用域的文档快照，并按传入的经验 ID 读取两条执行证据。导出使用一致的数据库快照。CLI 把 UTF-8 正文写到 `documents/` 和 `lessons/`，清单保存版本、用途、加载策略和原始工具结果。
+
+`POST /v1/workspace` 与 SDK `import_workspace` 用同一事务处理文档和经验。文档复用已有版本冲突检查、分块和索引。明确更新时，导出清单里的文档 ID 和版本必须匹配目标。经验保留原始 ID 并创建本地事件引用，普通删除逻辑会清理引用该事件的经验。导入时源项目和目标项目各自保留自己的数据。
+
+```bash
+uv run pytest tests/integration/test_workspace.py tests/integration/test_cli_mcp.py tests/unit/test_workspace_files.py
+```
+
+## M3 项目凭据与 MCP Harness {#m3-project-harness}
+
+迁移 `0003` 新增项目授权表。认证时读取凭据绑定的用户、项目、可选 Agent 和读写权限，`BoundService` 统一绑定请求上下文与审计身份。项目范围外的可见继承数据支持读取，项目写入检查拦截越界目标。项目降级会撤销项目凭据。旧宿主凭据继续支持可信 Harness 代行用户。详见 [项目凭据决策](/decisions/0002-project-credentials)。
+
+项目凭据可以停用和恢复记忆。永久删除由管理员或获准的宿主执行。项目凭据删除或重用已有关系时，还会核对创建关联的审计事件是否可见。会话 ID 在组织内唯一，宿主可用 UUID 创建会话并保存该 ID 以便恢复。
+
+迁移 `0005` 按绑定的项目、用户和 Agent 隔离项目凭据使用的幂等键。同一身份续发凭据可继续重试，既有宿主幂等键沿用组织范围。降级会移除项目范围的重试元数据，原始事件仍保留。
+
+`examples/mcp_harness.py` 通过 stdio 接入真实 MCP，使用工具允许列表把模型的检索和主动管理与宿主的自动装载、压缩、记录区分开。宿主用同一会话 ID 恢复状态。工具结果、角色与原始文本按轮保存。
+
+图证据额度独立计入已有的证据区和整窗上限。图段先用最多 `graph_evidence_tokens` 组装，未用额度交给普通证据，渲染时普通证据在前。字段默认值为零。
+
+```bash
+uv run alembic upgrade head
+uv run pytest tests/integration/test_project_credentials.py tests/integration/test_mcp_harness.py tests/integration/test_context_graph_budget.py
+```
+
+## M3 向量后端与模型网关 {#m3-vector-and-gateway}
+
+选择 `MEMFXXK_SEARCH__VECTOR_BACKEND=qdrant` 时，配置 Qdrant 地址和部署专用的集合前缀。数据库先核对候选范围和记录代次，再查询 Qdrant。索引滞后、服务不可用或范围超限时，向量检索回到 pgvector。迁移到 `0004` 后用下面的命令建索引、补向量和运行作业。改用另一个 Qdrant 地址时，原地址仍需对应 worker 完成待处理删除。
+
+```sh
+uv run alembic upgrade head
+uv run memfxxk index ensure
+uv run memfxxk index reembed
+uv run memfxxk worker
+```
+
+Qdrant 恢复后可用 `memfxxk index retry-qdrant` 重试已追踪的镜像。默认向量后端为 pgvector。
+
+降级到 `0003` 或更早前，先停掉写入镜像的 worker，在 Qdrant 删除该部署专用的镜像集合，包括旧地址和前缀仍保留的集合。确认远端清理完成后清空 PostgreSQL 的 `qdrant_replicas` 表，再执行 Alembic 降级。`0004` 在镜像登记非空时会中止降级。
+
+网关在配置上游后开放 `POST /v1/chat/completions`，请求经过同一个 `BoundService`。记忆额度由 `MEMFXXK_GATEWAY__MEMORY_TOKENS` 控制，取回的记忆作为当前用户消息中的引用资料传给模型。成功答复才记录未经注入的本轮用户原文和模型原文。幂等键用于入库去重，上游请求可以重发。MCP 继续处理模型主动管理和宿主生命周期。
+
+仓库的 GitHub CI 在真实 PostgreSQL 上运行测试与 Ruff，双语站点由手册发布工作流处理。 [uv 与 GitHub Actions](https://docs.astral.sh/uv/guides/integration/github/)
 
 ## 重跑基线 {#run-evaluation}
 

@@ -1,3 +1,4 @@
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -8,7 +9,7 @@ from sqlalchemy import Engine, select, text
 from memfxxk import context, documents, ingest, manage, retrieval, sessions
 from memfxxk.config import Settings
 from memfxxk.db import records, transaction
-from memfxxk.domain import Principal, RequestContext
+from memfxxk.domain import Actor, Principal, RequestContext
 from memfxxk.domain.context import (
     BuildContextRequest,
     BundleMetadata,
@@ -30,10 +31,17 @@ from memfxxk.domain.manage import (
     MemoryVersion,
     PatchRequest,
     RememberRequest,
+    SaveLessonRequest,
 )
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 from memfxxk.domain.sessions import PutSessionState, SessionState
+from memfxxk.domain.workspace import (
+    ImportWorkspaceRequest,
+    WorkspaceImportResult,
+    WorkspaceSnapshot,
+)
 from memfxxk.embedding import ensure_embedding_index
+from memfxxk.idempotency import idempotency_namespace
 from memfxxk.jobs import enqueue
 from memfxxk.scope import ScopeError
 
@@ -52,7 +60,19 @@ class MemoryService:
     def ensure_index(self) -> str:
         config = self.settings.embedding
         with transaction(self.engine) as connection:
-            return ensure_embedding_index(connection, config.model, config.dim)
+            index = ensure_embedding_index(connection, config.model, config.dim)
+        if self.settings.search.vector_backend == "qdrant":
+            from memfxxk.qdrant import QdrantClient
+
+            client = QdrantClient(self.settings.qdrant)
+            client.ensure(client.collection(config.model, config.dim), config.dim)
+        return index
+
+    def requeue_qdrant(self) -> int:
+        from memfxxk.qdrant import QdrantClient, requeue_endpoint
+
+        with transaction(self.engine) as connection:
+            return requeue_endpoint(connection, QdrantClient(self.settings.qdrant))
 
     def reembed(self, model: str | None = None) -> int:
         target_model = self.settings.embedding.model if model is None else model
@@ -82,14 +102,67 @@ class BoundService:
     def __post_init__(self) -> None:
         if self.principal.org_id != self.ctx.org_id:
             raise ScopeError("The request context must belong to the principal's organization")
+        grant = self.principal.project_grant
+        if grant is not None:
+            bound = {
+                "user_id": grant.user_id,
+                "project_id": grant.project_id,
+                "agent_id": grant.agent_id,
+            }
+            if any(getattr(self.ctx, key) not in (None, value) for key, value in bound.items()):
+                raise ScopeError("The request context must match the project credential")
+            object.__setattr__(
+                self,
+                "ctx",
+                RequestContext(
+                    org_id=self.principal.org_id,
+                    **bound,
+                    actor=Actor(type="user", id=grant.user_id),
+                ),
+            )
+
+    @property
+    def write_project(self) -> str | None:
+        grant = self.principal.project_grant
+        return grant.project_id if grant is not None else None
+
+    @property
+    def idempotency_namespace(self) -> str:
+        return idempotency_namespace(self.principal.project_grant)
+
+    def require_write(self, scope_drop: Collection[str] = ()) -> None:
+        grant = self.principal.project_grant
+        if grant is not None:
+            if grant.access != "write":
+                raise ScopeError("The project credential is read-only")
+            if "project_id" in scope_drop:
+                raise ScopeError("Project credentials must retain the project scope")
+
+    def require_resource_write(self, project_id: str | None) -> None:
+        if self.write_project is not None and project_id != self.write_project:
+            raise ingest.NotFound
+
+    def hard_delete_denial(self) -> str | None:
+        if self.principal.role == "project":
+            return "Project credentials cannot permanently delete data"
+        if self.principal.role == "host" and not self.settings.allow_host_hard_delete:
+            return "Hard deletion is disabled for host keys"
+        return None
 
     def check_database(self) -> None:
         with self.engine.connect() as connection:
             connection.execute(text("SELECT 1"))
 
     def ingest(self, batch: list[IngestEvent]) -> list[IngestResult]:
+        self.require_write({dimension for event in batch for dimension in event.scope_drop})
         with transaction(self.engine) as connection:
-            results = ingest.ingest(connection, self.ctx, batch)
+            results = ingest.ingest(
+                connection,
+                self.ctx,
+                batch,
+                write_project=self.write_project,
+                namespace=self.idempotency_namespace,
+            )
             if self.settings.m2.extract_facts:
                 from memfxxk.m2.facts import enqueue_closed_turns
 
@@ -104,6 +177,7 @@ class BoundService:
     def review_fact(self, proposal_id: UUID, accept: bool) -> FactProposal:
         from memfxxk.m2.facts import review
 
+        self.require_write()
         return review(self, proposal_id, accept)
 
     def get_event(self, event_id: UUID) -> Event:
@@ -131,27 +205,38 @@ class BoundService:
         return retrieval.get_memory(self, memory_id, version, window)
 
     def remember(self, request: RememberRequest) -> MemoryVersion:
+        self.require_write(request.scope_drop)
         return manage.remember(self, request)
 
+    def save_lesson(self, request: SaveLessonRequest) -> MemoryVersion:
+        self.require_write()
+        return manage.save_lesson(self, request)
+
     def patch_memory(self, memory_id: UUID, request: PatchRequest) -> MemoryVersion:
+        self.require_write(request.mark_scope_drop)
         return manage.patch_memory(self, memory_id, request)
 
     def link(self, request: LinkRequest) -> LinkResult:
+        self.require_write()
         return manage.link(self, request)
 
     def unlink(self, relation_id: UUID) -> None:
+        self.require_write()
         manage.unlink(self, relation_id)
 
     def forget(self, memory_id: UUID, mode: ForgetMode) -> ForgetResult:
+        self.require_write()
         return manage.forget(self, memory_id, mode)
 
     def forget_event(self, event_id: UUID) -> ForgetResult:
+        self.require_write()
         return manage.forget_event(self, event_id)
 
     def list_memories(self, filters: ListRequest | None = None) -> MemoryPage:
         return manage.list_memories(self, filters or ListRequest())
 
     def put_document(self, path: str, request: PutDocumentRequest) -> Document:
+        self.require_write(request.scope_drop)
         return documents.put_document(self, path, request)
 
     def get_document(self, path: str, revision: int | None = None) -> Document:
@@ -164,12 +249,25 @@ class BoundService:
         return documents.list_revisions(self, path)
 
     def delete_document(self, path: str) -> None:
+        self.require_write()
         documents.delete_document(self, path)
+
+    def export_workspace(self, lesson_ids: list[UUID]) -> WorkspaceSnapshot:
+        from memfxxk.workspace import export_workspace
+
+        return export_workspace(self, lesson_ids)
+
+    def import_workspace(self, request: ImportWorkspaceRequest) -> WorkspaceImportResult:
+        from memfxxk.workspace import import_workspace
+
+        self.require_write()
+        return import_workspace(self, request)
 
     def get_session(self, session_id: str) -> SessionState:
         return sessions.get_session(self, session_id)
 
     def put_session_state(self, session_id: str, request: PutSessionState) -> SessionState:
+        self.require_write()
         return sessions.put_session_state(self, session_id, request)
 
     def build_context(self, request: BuildContextRequest) -> ContextBundle:
@@ -178,11 +276,13 @@ class BoundService:
     def prepare_compaction(self, request: PrepareCompaction) -> CompactionDraft:
         from memfxxk.m2.compaction import prepare
 
+        self.require_write()
         return prepare(self, request)
 
     def commit_compaction(self, draft_id: UUID) -> CommittedCompaction:
         from memfxxk.m2.compaction import commit
 
+        self.require_write()
         return commit(self, draft_id)
 
     def get_bundle(self, bundle_id: UUID) -> BundleMetadata:

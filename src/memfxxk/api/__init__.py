@@ -16,6 +16,7 @@ from starlette.exceptions import HTTPException
 
 from memfxxk.api.context import router as context_router
 from memfxxk.api.dependencies import RequestService
+from memfxxk.api.gateway import GatewaySettings, create_gateway_router
 from memfxxk.api.memory import router as memory_router
 from memfxxk.config import Settings
 from memfxxk.db import create_engine
@@ -47,7 +48,12 @@ def _error_response(
     )
 
 
-def create_app(settings: Settings | None = None, *, engine: Engine | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    *,
+    engine: Engine | None = None,
+    gateway: GatewaySettings | None = None,
+) -> FastAPI:
     config = settings if settings is not None else Settings()
     db_engine = engine if engine is not None else create_engine(str(config.database_url))
     service = MemoryService(db_engine, config)
@@ -111,6 +117,7 @@ def create_app(settings: Settings | None = None, *, engine: Engine | None = None
 
     app.include_router(memory_router)
     app.include_router(context_router)
+    app.include_router(create_gateway_router(gateway if gateway is not None else GatewaySettings()))
 
     @app.get("/v1/healthz")
     def healthz(service: RequestService) -> dict[str, str]:

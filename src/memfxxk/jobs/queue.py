@@ -65,7 +65,14 @@ def enqueue(
     return conn.execute(statement.returning(jobs.c.id)).scalar_one_or_none()
 
 
-def claim(conn: Connection, worker_id: str, kinds: Collection[str] | None, limit: int) -> list[Job]:
+def claim(
+    conn: Connection,
+    worker_id: str,
+    kinds: Collection[str] | None,
+    limit: int,
+    *,
+    qdrant_endpoint: str | None = None,
+) -> list[Job]:
     now = func.now()
     ready = or_(
         and_(jobs.c.status == "queued", jobs.c.run_after <= now),
@@ -74,6 +81,13 @@ def claim(conn: Connection, worker_id: str, kinds: Collection[str] | None, limit
     candidates = select(jobs.c.id).where(ready)
     if kinds is not None:
         candidates = candidates.where(jobs.c.kind.in_(kinds))
+    if qdrant_endpoint is not None:
+        candidates = candidates.where(
+            or_(
+                jobs.c.kind != "sync_qdrant",
+                jobs.c.payload["endpoint"].as_string() == qdrant_endpoint,
+            )
+        )
     candidates = (
         candidates.order_by(jobs.c.run_after, jobs.c.id)
         .limit(limit)

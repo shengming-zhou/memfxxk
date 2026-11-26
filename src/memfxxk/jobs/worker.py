@@ -21,12 +21,18 @@ from .queue import Job, claim, complete, fail, owned_claim
 
 if TYPE_CHECKING:
     from memfxxk.embedding import CachedEmbedder
+    from memfxxk.qdrant import QdrantClient
     from memfxxk.service import MemoryService
 
 logger = logging.getLogger(__name__)
 
 
-def embed_records(engine: Engine, embedder: CachedEmbedder, batch: list[Job]) -> None:
+def embed_records(
+    engine: Engine,
+    embedder: CachedEmbedder,
+    batch: list[Job],
+    projection: QdrantClient | None = None,
+) -> None:
     requests = [(job, UUID(job.payload["record_id"]), job.payload["generation"]) for job in batch]
     with engine.connect() as conn:
         rows = conn.execute(
@@ -80,6 +86,10 @@ def embed_records(engine: Engine, embedder: CachedEmbedder, batch: list[Job]) ->
                     },
                 )
             )
+            if projection is not None:
+                from memfxxk.qdrant import queue_projection
+
+                queue_projection(conn, projection, record_id, embedder.model, embedder.dim)
 
 
 class Worker:
@@ -95,6 +105,12 @@ class Worker:
         self.bundle_retention = timedelta(days=service.settings.bundle_retention_days)
         self.draft_retention = timedelta(hours=service.settings.m2.draft_retention_hours)
         from memfxxk.embedding import CachedEmbedder, make_embedding_provider
+        from memfxxk.qdrant import SYNC_KIND, QdrantClient, sync_projection
+
+        qdrant = QdrantClient(service.settings.qdrant)
+        self.qdrant_endpoint = qdrant.endpoint
+        self.qdrant_kind = SYNC_KIND
+        projection = qdrant if service.settings.search.vector_backend == "qdrant" else None
 
         if embedder is None:
             embedder = CachedEmbedder(service.engine, make_embedding_provider(service.settings))
@@ -109,9 +125,15 @@ class Worker:
                     config = service.settings.embedding.model_copy(update={"model": model})
                     settings = service.settings.model_copy(update={"embedding": config})
                     target = CachedEmbedder(self.engine, make_embedding_provider(settings))
-                embed_records(self.engine, target, group)
+                embed_records(self.engine, target, group, projection)
 
-        self.handlers: dict[str, Callable[[list[Job]], None]] = {"embed_record": handle_embed}
+        def handle_projection(batch: list[Job]) -> None:
+            sync_projection(self.engine, qdrant, batch[0])
+
+        self.handlers: dict[str, Callable[[list[Job]], None]] = {
+            "embed_record": handle_embed,
+            SYNC_KIND: handle_projection,
+        }
         if service.settings.m2.extract_facts:
             from memfxxk.eval.llm import ChatClient
             from memfxxk.m2.facts import extract
@@ -129,12 +151,15 @@ class Worker:
     def run_once(self, kinds: Collection[str] | None = None, limit: int = 32) -> int:
         eligible = self.handlers.keys() if kinds is None else self.handlers.keys() & set(kinds)
         with transaction(self.engine) as conn:
-            claimed = claim(conn, self.worker_id, eligible, limit)
+            claimed = claim(
+                conn, self.worker_id, eligible, limit, qdrant_endpoint=self.qdrant_endpoint
+            )
 
-        batches: dict[str, list[Job]] = defaultdict(list)
+        batches: dict[tuple[str, UUID | None], list[Job]] = defaultdict(list)
         for job in claimed:
-            batches[job.kind].append(job)
-        for kind, batch in batches.items():
+            key = (job.kind, job.id if job.kind == self.qdrant_kind else None)
+            batches[key].append(job)
+        for (kind, _), batch in batches.items():
             try:
                 self.handlers[kind](batch)
             except Exception as error:

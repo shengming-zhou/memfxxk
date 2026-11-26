@@ -99,6 +99,63 @@ Start the stdio MCP server with `uv run memfxxk mcp` from the repository directo
 
 [Host integration guide and demo](https://github.com/shengming-zhou/memfxxk/blob/main/docs/usage.md)
 
+The repository includes a generic MCP harness. Reuse the session ID to resume a saved conversation. The harness calls context building, compaction, and event tools directly and forwards the allowed search and management tools to the model.
+
+```sh
+uv run python -m examples.mcp_harness --session inventory --manage "Find the lesson from the last inventory import"
+```
+
+Set `MEMFXXK_DEMO_MODEL_URL`, `MEMFXXK_DEMO_MODEL`, and `MEMFXXK_DEMO_MODEL_API_KEY` when required to connect a model endpoint. Leaving out the model configuration runs the local demo path. Use `--help` to see context and output budget options.
+
+## Team project credentials {#project-credentials}
+
+Administrators can issue credentials bound to a project member. The service fills in scope headers from the credential when they are omitted. Use `--access read` for read access, `--access write` for project collaboration, and `--agent` to bind a specific agent.
+
+Project write credentials can deactivate and reactivate memories. Administrators or authorized hosts can permanently delete memories, source events, or documents.
+
+```sh
+uv run memfxxk keys create --org acme --role project --name alice-inventory --project inventory --user alice --access write
+uv run memfxxk keys list --org acme
+```
+
+To share a memory in the project, drop the user and agent dimensions from its write scope and retain the project dimension. Members can read shared project records and their own private records according to scope. Administrators use `keys revoke KEY_ID --org acme` to revoke access.
+
+## Save and reuse lessons {#procedural-memory}
+
+After a failure and a verified fix, the harness can save the procedure as a lesson. Record two `tool_result` events and set `payload.outcome` to `failure` and `success` respectively. Confirm the scenario, prerequisites, and steps, then save with `POST /v1/lessons` or the Python SDK.
+
+```python
+from memfxxk.domain.manage import SaveLessonRequest
+
+saved = client.save_lesson(
+    SaveLessonRequest(
+        title="Import semicolon-delimited inventory",
+        scenario="The import reports a missing quantity column",
+        prerequisites=["The file header uses semicolons"],
+        steps=["Read the header and select a semicolon delimiter", "Verify the quantity total"],
+        result="The quantity column is readable and the total matches the source",
+        failure_event_id=failed_event_id,
+        verification_event_id=verified_event_id,
+        idempotency_key="warehouse-export-v1",
+    )
+)
+```
+
+For a similar task, pass `types: ["lesson"]` to `memory_search` or `POST /v1/search`. Open the full memory and its source references, then check the prerequisites for the current task. To load lessons automatically, include `lesson` in `context_build.search_filters.types` or pin a lesson. With MCP management tools enabled, `memory_save_lesson` accepts the same parameters. With host tools enabled, `event_get` reads the original event.
+
+## Move a Markdown workspace {#markdown-workspace}
+
+Export documents from the current request scope, then switch projects and import them. Export creates a new directory. Import also accepts an existing folder of UTF-8 Markdown files.
+
+```sh
+uv run memfxxk --project source workspace export ./workspace-copy
+uv run memfxxk --project target workspace import ./workspace-copy
+```
+
+The snapshot keeps document text, purpose, and load policy. Repeat `--lesson` with the IDs of lessons you want to move. Selected lessons are saved as Markdown, and `workspace.json` carries their original failure and verification results. Import creates local references so the destination project can read the evidence.
+
+Reimporting identical content skips it. A conflict preserves the destination content. To edit files in a fresh export and write them back to the original project, import with `--update`. The server checks that the exported revision is still current. The snapshot transfers current content. The original workspace keeps revision history and user marks.
+
 ## Long sessions and graph search {#long-sessions-and-graph}
 
 The harness decides when to load memory, compact history, and invoke the model. Reserve room for system instructions, tool definitions, the current input, and the response before setting `max_tokens` on `POST /v1/context/build`. If the harness already includes a contiguous suffix of raw messages, set `host_history_from_seq` to its first sequence number.
@@ -109,6 +166,8 @@ Use `PATCH /v1/memories/{id}` to set `priority` from 1 to 5 and add `tags`. Pin 
 
 Pass `graph_hops: 1` or `2` to search, or put it in `search_filters` when building context. Search starts with keyword and vector matches and follows links or shared entities on reviewed facts. Inspect `graph_path` to see the chain of evidence.
 
+To reserve room for graph evidence, set `graph_evidence_tokens` on `context_build`. A 1,500-token total budget can reserve up to 300 tokens for graph evidence, for example. Ordinary evidence can use any unused capacity.
+
 Set `evidence_mode` to `excerpt` when the evidence budget is tight. The bundle uses relevant search snippets and still gives you the memory ID and version for reading the full entry.
 
 When background fact extraction is enabled, list pending proposals with `GET /v1/fact-proposals`. Review a proposal at `POST /v1/fact-proposals/{id}/review` using `{"accept": true}` or `{"accept": false}`. For fact searches, `as_of_valid` asks what was effective at a given time and `as_of_recorded` limits what the system could have known by then.
@@ -118,3 +177,11 @@ When background fact extraction is enabled, list pending proposals with `GET /v1
 Evidence evaluation measures whether a memory backend retrieves the history that supports an answer and tracks query latency. Reproduce it with the frozen LongMemEval_S suite in a dedicated evaluation database. This step requires no chat model. [Evaluation steps in the developer manual](https://shengming-zhou.github.io/memfxxk/en/developer-manual/#evidence-comparison)
 
 QA evaluation uses the same model across no-history, recent-history, and memory-backend groups. [First live model report](https://github.com/shengming-zhou/memfxxk/blob/main/eval/results/m1-smoke/qa-real.md)
+
+The paired evaluation uses the same 30 questions and memory budget to compare hybrid search, a rolling summary, and graph expansion. It records where supporting evidence is lost for each question. [Paired evaluation steps](/en/developer-manual/#m2-paired-qa)
+
+## Model gateway compatibility endpoint {#model-gateway}
+
+For a compatible client, configure `MEMFXXK_GATEWAY__UPSTREAM_BASE_URL` and start the API. Set the client's Chat Completions base URL to memfxxk's `/v1` and use a memfxxk credential. The service uses its separately configured `MEMFXXK_GATEWAY__UPSTREAM_API_KEY` for the model upstream.
+
+The endpoint supports non-streaming text chat with one reply per request. Send `X-Memfxxk-Session` to reuse a conversation and `Idempotency-Key` to deduplicate stored turns. Use the MCP harness when the model needs to search and manage memory itself.

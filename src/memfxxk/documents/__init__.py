@@ -143,96 +143,102 @@ def list_revisions(service: BoundService, path: str) -> list[DocumentRevision]:
 
 
 def put_document(service: BoundService, path: str, request: PutDocumentRequest) -> Document:
+    with transaction(service.engine) as connection:
+        return put_document_in_transaction(connection, service, path, request)
+
+
+def put_document_in_transaction(
+    connection: Connection, service: BoundService, path: str, request: PutDocumentRequest
+) -> Document:
     path = document_path(path)
     scope = resolve_write_scope(service.ctx, request.scope_drop)
     scope_values = scope.model_dump()
     always = path in {"persona.md", "user.md", "project.md"}
-    with transaction(service.engine) as connection:
-        if request.base_revision in (None, 0):
-            connection.execute(
-                insert(documents)
-                .values(
-                    id=new_id(),
-                    path=path,
-                    head_revision=0,
-                    purpose=request.purpose or "",
-                    load_policy=request.load_policy or ("always" if always else "on_demand"),
-                    **scope_values,
-                )
-                .on_conflict_do_nothing()
+    if request.base_revision in (None, 0):
+        connection.execute(
+            insert(documents)
+            .values(
+                id=new_id(),
+                path=path,
+                head_revision=0,
+                purpose=request.purpose or "",
+                load_policy=request.load_policy or ("always" if always else "on_demand"),
+                **scope_values,
             )
-        row = (
-            connection.execute(
-                select(documents)
-                .where(
-                    documents.c.path == path,
-                    visible_filter(documents, service.ctx),
-                    *(documents.c[key] == value for key, value in scope_values.items()),
-                )
-                .with_for_update()
-            )
-            .mappings()
-            .one_or_none()
+            .on_conflict_do_nothing()
         )
-        head = row["head_revision"] if row is not None else 0
-        base = request.base_revision if request.base_revision is not None else 0
-        if row is None or base != head:
-            excerpt = _revision(connection, row, None)["content"][:200] if head and row else ""
-            raise ServiceError(
-                409,
-                "revision_conflict",
-                "Document revision has changed",
-                {"head_revision": head, "head_excerpt": excerpt},
+    row = (
+        connection.execute(
+            select(documents)
+            .where(
+                documents.c.path == path,
+                visible_filter(documents, service.ctx),
+                *(documents.c[key] == value for key, value in scope_values.items()),
             )
-        stored = (
-            connection.execute(
-                document_revisions.insert()
-                .values(
-                    document_id=row["id"],
-                    revision=head + 1,
-                    content=request.content,
-                    author=service.ctx.actor.model_dump(),
-                    base_revision=request.base_revision,
-                    message=request.message,
-                )
-                .returning(document_revisions)
-            )
-            .mappings()
-            .one()
+            .with_for_update()
         )
-        updated = (
-            connection.execute(
-                documents.update()
-                .where(documents.c.id == row["id"], visible_filter(documents, service.ctx))
-                .values(
-                    head_revision=head + 1,
-                    updated_at=func.now(),
-                    purpose=row["purpose"] if request.purpose is None else request.purpose,
-                    load_policy=row["load_policy"]
-                    if request.load_policy is None
-                    else request.load_policy,
-                )
-                .returning(documents)
-            )
-            .mappings()
-            .one()
+        .mappings()
+        .one_or_none()
+    )
+    head = row["head_revision"] if row is not None else 0
+    base = request.base_revision if request.base_revision is not None else 0
+    if row is None or base != head:
+        excerpt = _revision(connection, row, None)["content"][:200] if head and row else ""
+        raise ServiceError(
+            409,
+            "revision_conflict",
+            "Document revision has changed",
+            {"head_revision": head, "head_excerpt": excerpt},
         )
-        source_id = _audit(connection, service, scope, "put_document", updated, request.content)
-        from memfxxk.m2.doc_chunks import replace_chunks
+    stored = (
+        connection.execute(
+            document_revisions.insert()
+            .values(
+                document_id=row["id"],
+                revision=head + 1,
+                content=request.content,
+                author=service.ctx.actor.model_dump(),
+                base_revision=request.base_revision,
+                message=request.message,
+            )
+            .returning(document_revisions)
+        )
+        .mappings()
+        .one()
+    )
+    updated = (
+        connection.execute(
+            documents.update()
+            .where(documents.c.id == row["id"], visible_filter(documents, service.ctx))
+            .values(
+                head_revision=head + 1,
+                updated_at=func.now(),
+                purpose=row["purpose"] if request.purpose is None else request.purpose,
+                load_policy=row["load_policy"]
+                if request.load_policy is None
+                else request.load_policy,
+            )
+            .returning(documents)
+        )
+        .mappings()
+        .one()
+    )
+    source_id = _audit(connection, service, scope, "put_document", updated, request.content)
+    from memfxxk.m2.doc_chunks import replace_chunks
 
-        replace_chunks(
-            connection,
-            service.ctx,
-            scope,
-            document_id=updated["id"],
-            path=path,
-            revision=head + 1,
-            text=request.content,
-            source_id=source_id,
-            recorded_at=stored["created_at"],
-            on_demand=updated["load_policy"] == "on_demand",
-        )
-        return _as_document(updated, stored)
+    replace_chunks(
+        connection,
+        service.ctx,
+        scope,
+        document_id=updated["id"],
+        path=path,
+        revision=head + 1,
+        text=request.content,
+        source_id=source_id,
+        recorded_at=stored["created_at"],
+        on_demand=updated["load_policy"] == "on_demand",
+    )
+    return _as_document(updated, stored)
 
 
 def _audit(
@@ -267,8 +273,9 @@ def delete_document(service: BoundService, path: str) -> None:
 
     with transaction(service.engine) as connection:
         row = _resolve(connection, service.ctx, document_path(path), lock=True)
-        if service.principal.role != "admin" and not service.settings.allow_host_hard_delete:
-            raise ServiceError(403, "forbidden", "Hard deletion is disabled for hosts")
+        service.require_resource_write(row["project_id"])
+        if denial := service.hard_delete_denial():
+            raise ServiceError(403, "forbidden", denial)
         chunk_ids = set(
             connection.scalars(
                 select(records.c.memory_id).where(*chunk_filter(service.ctx, row["id"]))

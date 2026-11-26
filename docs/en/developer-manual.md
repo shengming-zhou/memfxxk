@@ -38,7 +38,11 @@ T01 passed 45 tests covering concurrent sequence allocation, duplicate events, s
 - T04–T05 expose documents, sessions, and context through synchronous and asynchronous Python clients, the CLI, and MCP. HTTP and evaluation adapters share tool definitions and output limits.
 - T06–T08 provide LongMemEval retrieval and QA, the A01–A13 regression suite, and a developer-agent demo. Run `uv run pytest -m slow` for the larger test corpus latency check.
 
-M1 still requires full LongMemEval_S retrieval, QA with real models, p95 latency on about 250,000 turns, and a week of MCP use with a real coding agent. The M2 prototype proceeds alongside those checks.
+The local scale test used 250,000 synthetic turns on PostgreSQL 17 with pgvector 0.8.7. After warmup, 128 sequential hybrid queries with 64-dimensional test vectors recorded 122.68 ms p50 and 162.15 ms p95, above the 100 ms gate. The timings cover database queries and fusion, excluding query embedding and HTTP. This benchmark runs separately from routine tests. Real semantic retrieval, concurrent load, and sustained use by a real coding agent have separate acceptance checks.
+
+```bash
+uv run pytest -m scale -s -q tests/integration/test_retrieval.py::test_search_performance_250k
+```
 
 ## M2 integration and verification {#m2-harness-and-verification}
 
@@ -56,6 +60,85 @@ The 512-token LongMemEval S replay used four knowledge-update and four temporal-
 ```bash
 uv run pytest -s -m slow tests/integration/test_m2_long_replay.py
 ```
+
+### Paired QA on 30 questions {#m2-paired-qa}
+
+`eval/suites/longmemeval-s-m2-paired30.json` pins the LongMemEval S checksum and ten questions each for knowledge update, temporal reasoning, and multi-session. Every arm retrieves eight candidates and uses the same 1,500-token memory budget and 384-token answer cap. The summary arm reserves room for two local rolling compactions. The graph arm builds cross-session links from rare repeated names in raw user messages and follows two hops. Questions are used for retrieval and answering. Evaluation labels are used to measure evidence and score answers.
+
+Start the local BGE server and set the embedding endpoint as described below. The `prepare` phase creates a separate PostgreSQL schema in the test database, shares the raw corpus and vectors across arms, and saves evidence as each question completes. Set `MEMFXXK_EVAL__GEN__*` for `gpt-5.4-mini` before running `score`. The judge uses the same model. Unfinished phases can resume in the same output directory.
+
+To compare answer models, copy `prepared.jsonl` and `manifest.json` to a new results directory. Update `answer_model` in the manifest and configure the generation endpoint. Keep `judge_model` and set `MEMFXXK_EVAL__JUDGE__*` to reuse the same evaluation model. Both runs use the same frozen contexts.
+
+```bash
+uv run python eval/run_m2_paired.py prepare --output eval/results/m2-paired30
+uv run python eval/run_m2_paired.py score --output eval/results/m2-paired30
+```
+
+`diagnostics.jsonl` records retrieval misses, packed evidence, and truncation. `metrics.json` reports paired wins and losses, p50/p95, and separate answer and judge tokens. Complete evidence means that the whole annotated message is present in the supplied text. A partial message may still support a correct answer.
+
+The graph packing replay used the same 30 questions, BGE semantic embeddings, and a 1,500-token cap. Raising the graph budget from 0 to 350 packed graph evidence in 19/19 eligible questions, up from 0/19. Retrieval still found annotated evidence for 27/30. The number of questions with at least one complete annotated message packed went from 21/30 to 18/30, while packing all complete annotated messages went from 7/30 to 9/30. At a graph budget of 350 tokens, memory processing p50/p95 was 177/266 ms for hybrid, 174/238 ms with summaries, and 199/379 ms with graph evidence. This replay measured evidence and made zero answer or judge calls. The default remains 0.
+
+```bash
+uv run python eval/run_m2_paired.py prepare --graph-evidence-tokens 350 --output eval/results/m2-paired30-graph350
+```
+
+## M3 procedural memory {#m3-procedural-memory}
+
+`POST /v1/lessons` and the sync and async SDK methods `save_lesson` share `SaveLessonRequest`. The record uses the current request scope and the existing `lesson` type. It stores a user-confirmed text revision, and the audit event records the creation arguments. Failure and verification events must be visible tool results. Session sequence establishes their order within a session, and event time establishes it across sessions. Retrying with the same idempotency key and arguments returns the original creation version.
+
+Lessons use existing search, versioning, and embedding jobs. Both source events are kept in `source_event_ids`, with their roles identified in `source_pos`. Deleting either source removes all lesson versions. Hosts can load lessons through `search_filters.types`, and users can pin them. The host decides how to apply the procedure.
+
+The regression uses real PostgreSQL and local CSV data to exercise failure, verification, and reuse in a later session. It covers API, SDK, MCP, scope, and deletion. AMA-Bench and second-run success with a real agent remain M3 acceptance checks.
+
+```bash
+uv run pytest tests/integration/test_m3_lessons.py tests/integration/test_cli_mcp.py tests/integration/test_sdk_tools.py
+```
+
+## M3 Markdown workspaces {#m3-markdown-workspace}
+
+`GET /v1/workspace` and SDK `export_workspace` read documents from the exact request scope and retrieve the two evidence events for each selected lesson. Export uses a consistent database snapshot. The CLI writes UTF-8 content under `documents/` and `lessons/`. The manifest stores revision identifiers, purpose, load policy, and the original tool results.
+
+`POST /v1/workspace` and SDK `import_workspace` import documents and lessons in one transaction. Documents use the existing revision checks, section splitting, and indexing. An explicit update requires the exported document ID and revision to match the destination. Lessons retain original IDs and receive new local event references. Deleting a local source event removes its dependent lesson through the existing deletion path. The source and destination retain their own data.
+
+```bash
+uv run pytest tests/integration/test_workspace.py tests/integration/test_cli_mcp.py tests/unit/test_workspace_files.py
+```
+
+## M3 project credentials and MCP harness {#m3-project-harness}
+
+Migration `0003` adds project grants. Authentication reads the bound project, user, optional agent, and access level. `BoundService` binds request scope and audit identity. Project credentials can read visible inherited data. Project write checks enforce the target boundary. Downgrading revokes project credentials. Existing host keys continue to support trusted harnesses acting on behalf of users.
+
+Project credentials can deactivate and reactivate memories. Administrators or authorized hosts can permanently delete data. Project credentials also need access to the audit event that created a relation before removing or reusing it. Session IDs are unique within an organization. Hosts can create sessions with UUIDs and keep the ID to resume later.
+
+Migration `0005` isolates idempotency keys by the project credential's project, user, and agent. A reissued credential for the same identity can retry earlier writes. Existing host keys keep organization-wide idempotency. Downgrading removes project retry metadata and retains the source events.
+
+`examples/mcp_harness.py` uses MCP over stdio and an allowlist to keep model search and management calls separate from harness-controlled loading, compaction, and capture. The harness resumes existing state using the same session ID and records tool results, roles, and original text by turn.
+
+Graph evidence shares the original evidence and whole-window limits. The graph lane packs up to `graph_evidence_tokens` and returns unused capacity to ordinary evidence, which is rendered first. The field defaults to zero.
+
+```bash
+uv run alembic upgrade head
+uv run pytest tests/integration/test_project_credentials.py tests/integration/test_mcp_harness.py tests/integration/test_context_graph_budget.py
+```
+
+## M3 vector backend and model gateway {#m3-vector-and-gateway}
+
+To select Qdrant, set `MEMFXXK_SEARCH__VECTOR_BACKEND=qdrant` and configure the endpoint and deployment-specific collection prefix. PostgreSQL checks candidate scope and record generation before the Qdrant query. Search falls back to pgvector when the replica lags, the service is unavailable, or the candidate scope exceeds its limit. After migration `0004`, use these commands to create the index, queue existing embeddings, and run the worker. When moving endpoints, keep a worker on the old endpoint to finish queued deletions.
+
+```sh
+uv run alembic upgrade head
+uv run memfxxk index ensure
+uv run memfxxk index reembed
+uv run memfxxk worker
+```
+
+Use `memfxxk index retry-qdrant` to retry tracked replicas after Qdrant recovers. The default backend is pgvector.
+
+Before downgrading to `0003` or earlier, stop workers that write Qdrant replicas and remove the deployment's dedicated collections, including collections left at old endpoints or prefixes. After confirming remote cleanup, clear the PostgreSQL `qdrant_replicas` table and run the Alembic downgrade. Migration `0004` stops the downgrade while the registry contains placements.
+
+Configuring a model upstream enables `POST /v1/chat/completions` through the existing `BoundService`. Set the memory budget with `MEMFXXK_GATEWAY__MEMORY_TOKENS`. The model receives retrieved memory as quoted reference data in the current user message. A successful response records the original user message and assistant reply. The idempotency key deduplicates storage. Upstream requests can be sent again. MCP handles proactive model tools and the harness lifecycle.
+
+GitHub CI runs tests and Ruff against real PostgreSQL. A separate workflow publishes the bilingual manuals. [uv and GitHub Actions](https://docs.astral.sh/uv/guides/integration/github/)
 
 ## Reproduce the baseline {#run-evaluation}
 

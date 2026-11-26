@@ -11,6 +11,7 @@ from sqlalchemy.engine import RowMapping
 from memfxxk.db import events, record_embeddings, records, sessions
 from memfxxk.domain import RequestContext, Scope
 from memfxxk.domain.events import Event, IngestEvent, IngestResult
+from memfxxk.idempotency import LEGACY_NAMESPACE
 from memfxxk.ids import derived_id, new_id
 from memfxxk.jobs import enqueue
 from memfxxk.scope import resolve_write_scope, visible_filter
@@ -25,7 +26,9 @@ class TurnScopeConflict(ValueError):
     """A turn can be indexed only under one scope."""
 
 
-def _lock_batch(connection: Connection, ctx: RequestContext, batch: list[IngestEvent]) -> None:
+def _lock_batch(
+    connection: Connection, ctx: RequestContext, batch: list[IngestEvent], namespace: str
+) -> None:
     # Use a global ordering across session and idempotency keys in multi-session batches.
     keys = {
         (kind, value)
@@ -40,7 +43,10 @@ def _lock_batch(connection: Connection, ctx: RequestContext, batch: list[IngestE
         {
             int.from_bytes(
                 blake2b(
-                    json.dumps(["memfxxk-ingest", ctx.org_id, kind, value]).encode(),
+                    json.dumps(
+                        ["memfxxk-ingest", ctx.org_id, kind, value]
+                        + ([namespace] if kind == "idempotency" and namespace else [])
+                    ).encode(),
                     digest_size=8,
                 ).digest(),
                 signed=True,
@@ -63,7 +69,11 @@ def _session(
 
 
 def _next_sequence(
-    connection: Connection, ctx: RequestContext, session_id: str, scope: Scope
+    connection: Connection,
+    ctx: RequestContext,
+    session_id: str,
+    scope: Scope,
+    write_project: str | None,
 ) -> int:
     connection.execute(
         insert(sessions)
@@ -71,6 +81,8 @@ def _next_sequence(
         .on_conflict_do_nothing(index_elements=[sessions.c.org_id, sessions.c.id])
     )
     row = _session(connection, ctx, session_id, lock=True)
+    if write_project is not None and row["project_id"] != write_project:
+        raise NotFound
     if any(value is None and row[key] is not None for key, value in scope.model_dump().items()):
         raise NotFound
     sequence = row["next_seq"]
@@ -82,10 +94,14 @@ def _next_sequence(
     return sequence
 
 
-def _duplicate(connection: Connection, ctx: RequestContext, key: str) -> IngestResult | None:
+def _duplicate(
+    connection: Connection, ctx: RequestContext, key: str, namespace: str
+) -> IngestResult | None:
     row = connection.execute(
         select(events.c.id, events.c.session_seq).where(
-            events.c.idempotency_key == key, visible_filter(events, ctx)
+            events.c.idempotency_key == key,
+            events.c.idempotency_namespace == namespace,
+            visible_filter(events, ctx),
         )
     ).one_or_none()
     if row is None:
@@ -215,21 +231,26 @@ def _rebuild_turn(
 
 
 def ingest(
-    connection: Connection, ctx: RequestContext, batch: list[IngestEvent]
+    connection: Connection,
+    ctx: RequestContext,
+    batch: list[IngestEvent],
+    *,
+    write_project: str | None = None,
+    namespace: str = LEGACY_NAMESPACE,
 ) -> list[IngestResult]:
-    _lock_batch(connection, ctx, batch)
+    _lock_batch(connection, ctx, batch, namespace)
     results: list[IngestResult] = []
     turns: dict[tuple[str, str], list[tuple[Scope, UUID | None, IngestResult]]] = {}
     for item in batch:
         scope = resolve_write_scope(ctx, item.scope_drop)
         if item.idempotency_key is not None:
-            duplicate = _duplicate(connection, ctx, item.idempotency_key)
+            duplicate = _duplicate(connection, ctx, item.idempotency_key, namespace)
             if duplicate is not None:
                 results.append(duplicate)
                 continue
         event_id = new_id()
         sequence = (
-            _next_sequence(connection, ctx, item.session_id, scope)
+            _next_sequence(connection, ctx, item.session_id, scope, write_project)
             if item.session_id is not None
             else None
         )
@@ -242,8 +263,9 @@ def ingest(
                 session_seq=sequence,
                 event_time=item.event_time or datetime.now(UTC),
                 actor=ctx.actor.model_dump(),
+                idempotency_namespace=namespace,
             )
-            .on_conflict_do_nothing(index_elements=[events.c.org_id, events.c.idempotency_key])
+            .on_conflict_do_nothing(constraint="uq_events_org_namespace_idempotency_key")
             .returning(events.c.id)
         )
         if inserted is None:

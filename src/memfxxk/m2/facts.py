@@ -227,6 +227,7 @@ def review(service: "BoundService", proposal_id: UUID, accept: bool) -> FactProp
         )
         if row is None:
             raise NotFound
+        service.require_resource_write(row["project_id"])
         decision = "accepted" if accept else "rejected"
         if row["status"] == decision:
             return FactProposal.model_validate(dict(row))

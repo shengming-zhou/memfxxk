@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from sqlalchemy import Connection, func, select
@@ -8,6 +8,7 @@ from sqlalchemy.engine import RowMapping
 
 from memfxxk.db import events, records
 from memfxxk.domain import RequestContext, Scope
+from memfxxk.idempotency import LEGACY_NAMESPACE
 from memfxxk.ids import new_id
 from memfxxk.ingest import NotFound
 from memfxxk.jobs import enqueue
@@ -54,6 +55,7 @@ def write_audit(
     *,
     scope: Scope | None = None,
     idempotency_key: str | None = None,
+    namespace: str = LEGACY_NAMESPACE,
 ) -> UUID | None:
     selected_scope = scope if scope is not None else Scope.model_validate(ctx.model_dump())
     statement = insert(events).values(
@@ -64,10 +66,11 @@ def write_audit(
         event_time=datetime.now(UTC),
         payload={"op": op, "target": str(target), "args": args, "result": result},
         idempotency_key=idempotency_key,
+        idempotency_namespace=namespace,
     )
     if idempotency_key is not None:
         statement = statement.on_conflict_do_nothing(
-            index_elements=[events.c.org_id, events.c.idempotency_key]
+            constraint="uq_events_org_namespace_idempotency_key"
         )
     return conn.scalar(statement.returning(events.c.id))
 
@@ -83,3 +86,41 @@ def embed_record(conn: Connection, record_id: UUID, generation: int) -> None:
         {"record_id": str(record_id), "generation": generation},
         dedupe_key=f"embed:{record_id}",
     )
+
+
+def insert_explicit_record(
+    conn: Connection,
+    ctx: RequestContext,
+    scope: Scope,
+    *,
+    memory_id: UUID,
+    kind: Literal["note", "lesson"],
+    content: str,
+    title: str | None,
+    sources: list[UUID],
+    event_time: datetime,
+    session_id: str | None,
+    source_pos: dict[str, Any] | None,
+    origin: Literal["user_explicit", "import"] = "user_explicit",
+) -> None:
+    record_id = new_id()
+    conn.execute(
+        records.insert().values(
+            id=record_id,
+            memory_id=memory_id,
+            version=1,
+            **scope.model_dump(),
+            type=kind,
+            content=content,
+            title=title,
+            source_event_ids=sources,
+            source_pos=source_pos,
+            session_id=session_id,
+            origin=origin,
+            confirmed=True,
+            event_time=event_time,
+            lexemes=lexemes(content),
+            created_by=ctx.actor.model_dump(),
+        )
+    )
+    embed_record(conn, record_id, 0)

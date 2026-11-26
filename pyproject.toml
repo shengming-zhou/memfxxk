@@ -32,8 +32,13 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-m 'not slow'"
-markers = ["integration: requires real PostgreSQL", "slow: performance smoke test"]
+pythonpath = ["."]
+addopts = "-m 'not slow and not scale'"
+markers = [
+    "integration: requires real PostgreSQL",
+    "slow: performance smoke test",
+    "scale: opt-in workload acceptance benchmark",
+]
 
 [tool.ruff]
 line-length = 100

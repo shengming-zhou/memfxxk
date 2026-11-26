@@ -1,6 +1,7 @@
 import asyncio
 import socket
 import sys
+from pathlib import Path
 from threading import Thread
 from uuid import UUID
 
@@ -14,12 +15,16 @@ from typer.testing import CliRunner
 
 from memfxxk.cli import app
 from memfxxk.client import MemfxxkClient
+from memfxxk.domain.events import IngestEvent
+from memfxxk.domain.manage import SaveLessonRequest
 from memfxxk.domain.sessions import PutSessionState
 
 pytestmark = pytest.mark.integration
 
 
-def test_cli_and_mcp_over_http(api_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_and_mcp_over_http(
+    api_client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         address, port = listener.getsockname()
@@ -37,7 +42,7 @@ def test_cli_and_mcp_over_http(api_client: TestClient, monkeypatch: pytest.Monke
         thread = Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
         thread.start()
         try:
-            _check_cli(env)
+            _check_cli(env, tmp_path)
             asyncio.run(_check_mcp(env))
             asyncio.run(_check_mcp_host(env))
         finally:
@@ -45,7 +50,7 @@ def test_cli_and_mcp_over_http(api_client: TestClient, monkeypatch: pytest.Monke
             thread.join(timeout=10)
 
 
-def _check_cli(env: dict[str, str]) -> None:
+def _check_cli(env: dict[str, str], tmp_path: Path) -> None:
     runner = CliRunner()
 
     def run(*args: str) -> str:
@@ -72,6 +77,33 @@ def _check_cli(env: dict[str, str]) -> None:
         project_id=env["MEMFXXK_PROJECT"],
     ) as client:
         client.put_session_state("cli-session", PutSessionState(revision=0, state={}))
+        failure, verification = client.ingest(
+            [
+                IngestEvent(kind="tool_result", payload={"outcome": "failure"}),
+                IngestEvent(kind="tool_result", payload={"outcome": "success"}),
+            ]
+        )
+        lesson = client.save_lesson(
+            SaveLessonRequest(
+                title="CLI workspace import",
+                scenario="Inventory source rejected",
+                steps=["Choose UTF-8"],
+                result="Inventory loaded",
+                failure_event_id=failure.event_id,
+                verification_event_id=verification.event_id,
+            )
+        )
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    (raw / "checklist.md").write_text("# Import checklist", encoding="utf-8")
+    run("workspace", "import", str(raw))
+    archive = tmp_path / "workspace"
+    run("workspace", "export", str(archive), "--lesson", str(lesson.memory_id))
+    assert (archive / "lessons" / f"{lesson.memory_id}.md").is_file()
+    run("--project", "portable-project", "workspace", "import", str(archive))
+    assert (
+        run("--project", "portable-project", "doc", "show", "checklist.md") == "# Import checklist"
+    )
     context = run("context", "cli-session", "cobalt", "--explain")
     assert "Prefer small changes" in context
     assert "pinned " in context and note in context
@@ -173,3 +205,32 @@ async def _check_mcp_host(env: dict[str, str]) -> None:
             "session_events", {"session_id": session_id, "from_seq": 1, "to_seq": 1}
         )
         assert stored["events"][0]["id"] == draft["source_event_ids"][0]
+        outcomes = await call(
+            "events_append",
+            {
+                "events": [
+                    {"kind": "tool_result", "payload": {"outcome": "failure"}},
+                    {"kind": "tool_result", "payload": {"outcome": "success"}},
+                ]
+            },
+        )
+        failed, verified = [item["event_id"] for item in outcomes["results"]]
+        lesson = await call(
+            "memory_save_lesson",
+            {
+                "title": "CSV header",
+                "scenario": "CSV import has a field mismatch",
+                "steps": ["Read the header before choosing the delimiter"],
+                "result": "The expected fields were read",
+                "failure_event_id": failed,
+                "verification_event_id": verified,
+            },
+        )
+        found = await session.call_tool(
+            "memory_search", {"query": "CSV header", "types": ["lesson"]}
+        )
+        assert not found.isError and lesson["memory_id"] in found.content[0].text
+        details = await session.call_tool("memory_get", {"id": lesson["memory_id"]})
+        assert not details.isError and verified in details.content[0].text
+        event = await call("event_get", {"event_id": verified})
+        assert event["payload"]["outcome"] == "success"

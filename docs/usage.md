@@ -2,6 +2,8 @@
 
 宿主从自己的身份系统取得用户、Agent 和项目 ID，再用服务端保存的 host API key 调用 SDK。会话 ID 由宿主指定，在组织内保持唯一。部署和首个演示见[快速开始](../README.md)。
 
+MCP 接入可以用 [参考 Harness](../examples/mcp_harness.py) 跑完整生命周期。宿主通过 `context_build`、`events_append` 和两步压缩工具管理每轮请求，并通过 `session_state` 和 `session_events` 恢复进度。模型只拿到宿主允许的检索、保存和管理工具。也可借助 [模型网关](user-manual.md#model-gateway) 接入纯文本 Chat Completions 客户端。
+
 ## 在模型调用前装载记忆
 
 在新会话开始时创建会话状态。处理后续请求时沿用同一个 ID，宿主可读取 `get_session` 里的计划与步骤继续执行。在每次调用模型前构建上下文，传入当前用户问题作为召回查询。

@@ -16,5 +16,7 @@ Use memory_remember for a user's explicit request. Confirm an ambiguous target b
 When management tools are available, map relative importance to priority 1 through 5,
 use tags for topics, pinned for short always-loaded rules, and memory_link for explicit links.
 Use memory_set_preferences with the current version for explicit corrections.
+Use memory_save_lesson only after user confirmation and with recorded failure and verification IDs.
+When asked to reuse a lesson, check its prerequisites and evidence before applying the steps.
 Use memory_get to read the relevant section of a long on-demand document when search finds it.
 Use current user-confirmed rules and cite source IDs when explaining a memory decision."""

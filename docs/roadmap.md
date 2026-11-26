@@ -51,6 +51,8 @@ flowchart LR
    - 每组的注入 token、工具调用数、模型 token、延时。
 5. **性能**：完整 LongMemEval_S 上记录 search 延时。规模压测目标为约 25 万 turn，search 不含查询嵌入的 DB+融合耗时 p95 ≤ 100ms。固定 SHA 的 S 清洗版实测解析为 124,366 个 turn。
 
+25 万条合成 turn 的混合检索实测 p95 为 162.15 ms，此项仍待达标。复现命令见 [开发手册](developer-manual.md#m1-implementation)。
+
 ## M2 实施计划
 
 目标是一段对话在多次压缩后仍能继续工作，保留用户明确指定的内容、最新决定和可回查的证据。Harness 负责模型调用、整窗预算和压缩时机。memfxxk 负责记忆装载、受托摘要和存储。先在仓库的参考宿主中走通，再用同一份契约接其他宿主。
@@ -108,6 +110,20 @@ Harness 负责 system/developer 提示、实际暴露的工具定义和 MCP 指�
 - **原定 M2 指标**。对 LongMemEval 的 knowledge-update 和 temporal-reasoning 与 M1 最强基线做配对比较，并复跑单会话回归。报告压缩与提取的输入/输出 token、查询与作业延时、错误率、每千轮写入成本。确认跨作用域隔离、重放、修订和删除传播。
 - **交付**。参考 Harness 示例、工具配置、提示词版本、调用追踪和中英文手册一起更新。M2 图检索采用独立试验开关，生产图谱和代理网关继续按 M3 的退出条件安排。
 
+## M3 实施
+
+| 任务 | 交付 | 验收 |
+| --- | --- | --- |
+| [T09 程序性记忆](codex/T09-procedural-memory.md) | 保存带失败与验证出处的经验，通过 SDK 和 MCP 复用 | 真实库里验证跨会话复用、作用域隔离和删除传播，再用重复工具任务评估 Agent 第二次成功率 |
+| [T10 Markdown 工作区](codex/T10-markdown-workspace.md) | 工作区快照、目录往返、选定经验和原文迁移 | 验证跨项目迁移、冲突回滚、幂等重试和迁移后的证据回查 |
+| [T11 团队项目凭据](codex/T11-project-credentials.md) | 为项目成员签发绑定身份的只读或可写凭据 | 验证团队共享、私有记录隔离、撤销与降级 |
+| [T12 MCP Harness](codex/T12-mcp-harness.md) | 通用宿主循环接入 MCP，模型和宿主各自调用所需工具 | 验证自动装载、主动管理、原文捕获和重启续跑 |
+| [T13 图证据装载](codex/T13-graph-evidence-budget.md) | 让宿主给图证据留额度并回收余额 | 在同一预算下测证据装入与答题收益 |
+| [T14 向量适配](codex/T14-qdrant.md) | 可选 Qdrant 向量镜像，沿用数据库权限与删除 | 验证镜像、故障回退、删除传播和部署规模下延时 |
+| [T15 模型网关](codex/T15-model-gateway.md) | 可选的非流式文本兼容入口，自动装载和捕获 | 验证上游转发、身份隔离及幂等入库 |
+
+T09 至 T15 已有实现与集成回归。图预算留在可选配置。M2 的长对话和问答收益，以及 M3 的真实重复工具任务与向量性能验证，仍按原门槛验收。
+
 ## M1 之后的评测闸门
 
 - **事实提取（M2）**：必须在 knowledge-update、temporal-reasoning 上胜过 G3/G4，且 single-session 类不退化；同时报告每千轮写入成本。
@@ -123,4 +139,4 @@ Harness 负责 system/developer 提示、实际暴露的工具定义和 MCP 指�
 | 嵌入成本（LongMemEval_S 约 25 万条） | `embedding_cache` 按内容哈希去重（S 子集的会话在问题间大量重复）；默认用本地 bge-m3 |
 | 评测分数与公开数字不可比 | 结果清单固定生成模型、judge、嵌入、切分、K、预算；官方 judge 与自定义 judge 分开标注 |
 | 用户显式选择被后台覆盖 | M1 无会改写内容的后台任务；M2 引入时先写回归测试（T08 套件在每次整理后复跑） |
-| Windows 开发环境差异 | 全部依赖 docker 里的 PG；路径与换行在 CI（M1 后补）上用 Linux 再验证 |
+| Windows 开发环境差异 | 使用同一 Docker PostgreSQL 跑本地回归，并由 CI 在 Linux 验证 |

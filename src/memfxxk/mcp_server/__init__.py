@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field, ValidationError
 from memfxxk.client import ClientError
 from memfxxk.domain.context import BuildContextRequest, CommitCompaction, PrepareCompaction
 from memfxxk.domain.events import IngestEvent
-from memfxxk.domain.manage import LinkRequest, Mark, PatchRequest
+from memfxxk.domain.manage import LinkRequest, Mark, PatchRequest, SaveLessonRequest
 from memfxxk.m2.prompts import HOST
 from memfxxk.tools import TOOL_SPECS, HttpBackend, dispatch
 
@@ -37,6 +37,10 @@ class _PreferenceArguments(BaseModel):
 
 class _SessionArguments(BaseModel):
     session_id: str
+
+
+class _EventArguments(BaseModel):
+    event_id: UUID
 
 
 class _SessionEventsArguments(_SessionArguments):
@@ -78,7 +82,7 @@ def make_server(
             ]
         )
 
-    host_tools = (
+    structured_tools = (
         {
             "events_append": (
                 "Save original events.",
@@ -106,6 +110,11 @@ def make_server(
                     ]
                 },
             ),
+            "event_get": (
+                "Read the original event behind a memory reference.",
+                _EventArguments,
+                lambda req: client.get_event(req.event_id).model_dump(mode="json"),
+            ),
             "context_build": (
                 "Build memory within a host budget.",
                 BuildContextRequest,
@@ -125,14 +134,20 @@ def make_server(
         if enable_host
         else {}
     )
+    if enable_manage:
+        structured_tools["memory_save_lesson"] = (
+            "Save a user-confirmed lesson with a failed tool result and subsequent verification.",
+            SaveLessonRequest,
+            lambda req: client.save_lesson(req).model_dump(mode="json"),
+        )
     tools.extend(
         Tool(name=name, description=description, inputSchema=request.model_json_schema())
-        for name, (description, request, _) in host_tools.items()
+        for name, (description, request, _) in structured_tools.items()
     )
 
     def call(name: str, arguments: dict[str, object]) -> list[TextContent] | CallToolResult:
-        if name in host_tools:
-            _, request, handler = host_tools[name]
+        if name in structured_tools:
+            _, request, handler = structured_tools[name]
             try:
                 result = handler(request.model_validate(arguments))
             except ClientError as exc:

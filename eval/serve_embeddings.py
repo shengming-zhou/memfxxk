@@ -52,6 +52,11 @@ def main() -> None:
     parser.add_argument("--threads", type=int, default=min(os.cpu_count() or 1, 4))
     parser.add_argument("--cache-dir", type=Path, default=Path(".uv-cache/fastembed-models"))
     parser.add_argument("--offline", action="store_true", help="Use cached model weights only")
+    parser.add_argument(
+        "--execution-provider",
+        choices=("CPUExecutionProvider", "DmlExecutionProvider"),
+        default="CPUExecutionProvider",
+    )
     args = parser.parse_args()
 
     os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
@@ -61,6 +66,7 @@ def main() -> None:
         model_name=MODEL,
         cache_dir=str(args.cache_dir),
         threads=args.threads,
+        providers=list(dict.fromkeys([args.execution_provider, "CPUExecutionProvider"])),
         local_files_only=args.offline,
     )
     uvicorn.run(

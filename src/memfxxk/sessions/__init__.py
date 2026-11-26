@@ -54,6 +54,7 @@ def put_session_state(
                 .on_conflict_do_nothing()
             )
         current = read_session(connection, service.ctx, session_id, lock=True)
+        service.require_resource_write(current.scope.project_id)
         if current.revision != request.revision:
             raise ServiceError(
                 409,

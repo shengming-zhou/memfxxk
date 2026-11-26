@@ -39,7 +39,18 @@ api_keys = sa.Table(
     timestamp("created_at"),
     sa.Column("revoked_at", sa.DateTime(timezone=True)),
     sa.UniqueConstraint("key_hash", name="uq_api_keys_key_hash"),
-    sa.CheckConstraint("role IN ('admin', 'host')", name="ck_api_keys_role"),
+    sa.CheckConstraint("role IN ('admin', 'host', 'project')", name="ck_api_keys_role"),
+)
+
+project_key_grants = sa.Table(
+    "project_key_grants",
+    metadata,
+    sa.Column("key_id", UUID, sa.ForeignKey("api_keys.id", ondelete="CASCADE"), primary_key=True),
+    sa.Column("project_id", sa.Text, nullable=False),
+    sa.Column("user_id", sa.Text, nullable=False),
+    sa.Column("agent_id", sa.Text),
+    sa.Column("access", sa.Text, nullable=False),
+    sa.CheckConstraint("access IN ('read', 'write')", name="ck_project_grants_access"),
 )
 
 sessions = sa.Table(
@@ -75,8 +86,14 @@ events = sa.Table(
     sa.Column("event_time", sa.DateTime(timezone=True), nullable=False),
     timestamp("recorded_at"),
     sa.Column("idempotency_key", sa.Text),
+    sa.Column("idempotency_namespace", sa.Text, nullable=False, server_default=""),
     sa.Column("redacted", sa.Boolean, nullable=False, server_default=sa.false()),
-    sa.UniqueConstraint("org_id", "idempotency_key", name="uq_events_org_idempotency_key"),
+    sa.UniqueConstraint(
+        "org_id",
+        "idempotency_namespace",
+        "idempotency_key",
+        name="uq_events_org_namespace_idempotency_key",
+    ),
     sa.UniqueConstraint("org_id", "session_id", "session_seq", name="uq_events_session_seq"),
     sa.CheckConstraint(
         "kind IN ('message', 'tool_call', 'tool_result', 'document_import', 'user_op')",
@@ -328,3 +345,18 @@ fact_proposals = sa.Table(
 index_scope(fact_proposals)
 sa.Index("ix_fact_proposals_memory", fact_proposals.c.memory_id)
 sa.Index("ix_fact_proposals_sources", fact_proposals.c.source_event_ids, postgresql_using="gin")
+
+qdrant_replicas = sa.Table(
+    "qdrant_replicas",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    sa.Column("record_id", UUID, nullable=False),
+    sa.Column("endpoint", sa.Text, nullable=False),
+    sa.Column("collection", sa.Text, nullable=False),
+    sa.Column("model", sa.Text, nullable=False),
+    sa.Column("dim", sa.Integer, nullable=False),
+    sa.Column("generation", sa.Integer),
+    sa.UniqueConstraint("record_id", "endpoint", "collection", name="uq_qdrant_replica_placement"),
+    sa.CheckConstraint("dim > 0", name="ck_qdrant_replicas_dim"),
+)
+sa.Index("ix_qdrant_replicas_endpoint", qdrant_replicas.c.endpoint)

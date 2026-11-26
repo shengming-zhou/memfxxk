@@ -16,7 +16,14 @@ from memfxxk.client import (
 )
 from memfxxk.domain import Principal, RequestContext
 from memfxxk.domain.documents import PutDocumentRequest
-from memfxxk.domain.manage import LinkRequest, ListRequest, PatchRequest, RememberRequest
+from memfxxk.domain.events import IngestEvent
+from memfxxk.domain.manage import (
+    LinkRequest,
+    ListRequest,
+    PatchRequest,
+    RememberRequest,
+    SaveLessonRequest,
+)
 from memfxxk.domain.retrieval import SearchRequest
 from memfxxk.domain.sessions import PutSessionState
 from memfxxk.service import MemoryService
@@ -46,6 +53,23 @@ def test_async_sdk_roundtrip(api_client: TestClient) -> None:
             assert all(item.duplicate for item in second)
             assert (await client.get_event(first[0].event_id)).content == args[1]
             assert len(await client.list_session_events("sdk-session")) == 2
+            failed, verified = await client.ingest(
+                [
+                    IngestEvent(kind="tool_result", payload={"outcome": "failure"}),
+                    IngestEvent(kind="tool_result", payload={"outcome": "success"}),
+                ]
+            )
+            lesson = await client.save_lesson(
+                SaveLessonRequest(
+                    title="CSV dialect",
+                    scenario="Delimiter mismatch",
+                    steps=["Set the CSV delimiter"],
+                    result="Imported",
+                    failure_event_id=failed.event_id,
+                    verification_event_id=verified.event_id,
+                )
+            )
+            assert (await client.get_memory(lesson.memory_id)).type == "lesson"
 
             request = SearchRequest(query="unique-argon", channels=["lexical"])
             hit = (await client.search(request)).hits[0]
