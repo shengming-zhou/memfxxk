@@ -28,7 +28,10 @@ def preferences_for(
         )
         .order_by(*preference_order())
     ):
-        selected.setdefault(row.memory_id, (row.priority, row.tags))
+        priority = int(row.priority) if row.priority is not None else None
+        previous = selected.setdefault(row.memory_id, (priority, row.tags))
+        if previous[0] is None and priority is not None:
+            selected[row.memory_id] = (priority, previous[1])
     return selected
 
 

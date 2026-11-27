@@ -176,7 +176,19 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 一次 30 题长对话回放里，DeepSeek Flash 每千轮压缩约用 62 万输入 token、1.25 万输出 token。实际用量取决于消息长度和压缩频率。这个小样本里，加模型摘要答对 8 题，单用混合检索答对 7 题。模型压缩适合需要跨轮接续决定和待办的会话。 [测试条件与结果](/developer-manual/#compaction-live-evaluation)
 
-重要度可通过 `PATCH /v1/memories/{id}` 设置 `priority` 1 到 5，并设置 `tags`。实用做法是把短而稳定的规则固定，把长世界观存成 `on_demand` 文档。写入新修订时会按 Markdown 标题切块，搜索结果会给出章节和修订。已有文档可先按路径读取，并在下次保存时生成可检索的章节。
+用 `PATCH /v1/memories/{id}` 给记忆设整数 `priority` 和 `tags`。长世界观可存成 `on_demand` 文档，写入新修订后，检索结果会显示匹配章节和修订号。短而稳定的规则可固定到上下文。
+
+### 给设定和章节设优先级 {#content-priority-usage}
+
+你可以把小说的 `world/` 目录设为 40，把 `world/ports.md` 中的「港口 / 灯号」设为 75。这个章节用 75，同文档里未单独设置的章节继承 40。也可以用 0 或负数。数字越大，层越靠前，数字相同的内容归在同一层。任何数字的用途都由你决定。
+
+在同一项目作用域下，用 `PUT /v1/priorities` 或 MCP `memory_priority_set` 保存。以下是给一个章节设优先级的请求体。
+
+```json
+{"target":{"kind":"section","path":"world/ports.md","heading":"港口 / 灯号"},"priority":75}
+```
+
+用 `POST /v1/priorities/resolve` 或 `memory_priority_get` 查询，传上面 `target` 的内容。返回的 `source` 和 `source_scope` 会告诉你是哪条规则生效。用 `POST /v1/priorities/clear` 或 `memory_priority_clear` 清除本次作用域的设置，系统会返回重新继承的值。跨目录、文档和章节的预算竞争在自适应分配阶段接通。[优先级实现与迁移](/developer-manual/#t17-priority-inheritance)
 
 图检索需要在搜索里传 `graph_hops: 1` 或 `2`，上下文装载则放在 `search_filters`。它先查关键词和向量，再查候选记忆的关联或已审核事实的共享实体。结果包含 `graph_path`，可逐条核对这条路径。
 

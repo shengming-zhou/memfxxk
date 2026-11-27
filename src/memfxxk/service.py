@@ -42,6 +42,7 @@ from memfxxk.domain.manage import (
     SaveLessonRequest,
 )
 from memfxxk.domain.notes import NoteHistoryEntry, NoteProjection, RollbackNote
+from memfxxk.domain.priorities import ClearPriority, PriorityResult, PriorityTarget, SetPriority
 from memfxxk.domain.reflect import ReflectRequest, ReflectResult
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 from memfxxk.domain.sessions import PutSessionState, SessionState
@@ -355,6 +356,21 @@ class BoundService:
 
     def build_context(self, request: BuildContextRequest) -> ContextBundle:
         return context.build_context(self, request)
+
+    def get_priority(self, target: PriorityTarget) -> PriorityResult:
+        from memfxxk.context.priorities import get
+
+        return get(self, target)
+
+    def set_priority(self, request: SetPriority) -> PriorityResult:
+        from memfxxk.context.priorities import change
+
+        return change(self, request)
+
+    def clear_priority(self, request: ClearPriority) -> PriorityResult:
+        from memfxxk.context.priorities import change
+
+        return change(self, request)
 
     def reflect(self, request: "ReflectRequest") -> "ReflectResult":
         from memfxxk.m2.reflect import run

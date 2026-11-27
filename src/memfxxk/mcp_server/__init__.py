@@ -15,6 +15,7 @@ from memfxxk.domain.context import BuildContextRequest, CommitCompaction, Prepar
 from memfxxk.domain.events import IngestEvent
 from memfxxk.domain.lessons import FinishTask
 from memfxxk.domain.manage import LinkRequest, Mark, PatchRequest, SaveLessonRequest
+from memfxxk.domain.priorities import ClearPriority, PriorityTarget, SetPriority
 from memfxxk.domain.reflect import ReflectRequest
 from memfxxk.m2.prompts import HOST
 from memfxxk.tools import TOOL_SPECS, HttpBackend, dispatch
@@ -159,6 +160,21 @@ def make_server(
         else {}
     )
     if enable_manage:
+        structured_tools["memory_priority_get"] = (
+            "Read a content item's effective integer priority and its source.",
+            PriorityTarget,
+            lambda req: client.get_priority(req).model_dump(mode="json"),
+        )
+        structured_tools["memory_priority_set"] = (
+            "Set an explicitly approved integer priority on a visible target.",
+            SetPriority,
+            lambda req: client.set_priority(req).model_dump(mode="json"),
+        )
+        structured_tools["memory_priority_clear"] = (
+            "Clear the priority at the requested scope and show the inherited value.",
+            ClearPriority,
+            lambda req: client.clear_priority(req).model_dump(mode="json"),
+        )
         structured_tools["memory_reflect"] = (
             "Answer from visible memory with verified citations. Opinion writes are opt-in.",
             ReflectRequest,

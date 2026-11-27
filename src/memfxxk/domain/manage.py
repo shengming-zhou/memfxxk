@@ -77,7 +77,7 @@ class PatchRequest(BaseModel):
     title: str | None = None
     important: bool | None = None
     pinned: bool | None = None
-    priority: int | None = Field(default=None, ge=1, le=5)
+    priority: int | None = None
     tags: list[str] | None = Field(default=None, max_length=32)
     mark_scope_drop: set[str] = Field(default_factory=set)
 

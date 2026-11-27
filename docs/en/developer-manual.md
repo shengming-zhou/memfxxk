@@ -416,6 +416,30 @@ Migration `0014` adds `metadata` for block revisions, block proposals, tier segm
 
 Run `uv run python eval/run_t16_matrix.py --output eval/results/t16/p9-matrix` for the frozen comparison. The default focused histories retain annotated evidence and a few distractors. Use `--histories complete` to retain complete histories, `--profiles baseline mem0 graphiti letta full` to select arms, or `--suite` to provide another question selection. Completed cases are saved individually and reused when rerunning with the same configuration. The manifest records dataset versions and SHA-256 fingerprints for each replay. [Unified evaluation and conclusions](/en/memory-strategy-results/)
 
+## T17 P10 Priority and inheritance {#t17-priority-inheritance}
+
+### Rule design {#priority-upstream}
+
+The user supplies the integer priorities. Candidates with the same effective value belong to a layer. `priority_layers` orders those layers from highest to lowest and preserves input order within a layer.
+
+### Implementation {#priority-implementation}
+
+The core entry points are on `BoundService`. `PUT /v1/priorities` takes `target`, integer `priority`, and optional `scope_drop`. Send the target directly to `POST /v1/priorities/resolve`. Clearing uses `POST /v1/priorities/clear` with `target` and optional `scope_drop`. Both SDKs provide `set_priority`, `get_priority`, and `clear_priority`. Corresponding MCP management tools are `memory_priority_set`, `memory_priority_get`, and `memory_priority_clear`.
+
+Target kinds are `project`, `directory`, `document`, `section`, and `record`. Directories and documents use `path`. Sections also use the `heading` chain. Records use their stable `memory_id`. Resolution uses the first visible rule in order from item, parent section, document, nearest directory, and project default. Ordinary records inherit the project default when they lack a direct rule. Document chunks also inherit through their source section. With no rule the result is 3 and `source=null`. Hidden and missing targets return identical 404 responses. Sets and clears produce user-operation audits.
+
+### Compatibility and migration {#priority-differences}
+
+Migration `0015` changes `memory_preferences.priority` to an integer-valued `NUMERIC` and retains old values and tags. Document rules in `content_priorities` follow the document ID and are deleted with it. Section rules are keyed by heading chain. A rename changes that key. The hybrid retrieval score adjustment keeps its 0.7 to 1.3 range. Layer ordering uses the full integer. Downgrading clips out-of-range record values to 1 or 5 and removes the rule table. [Priority inheritance decision](/decisions/0005-priority-inheritance)
+
+### Novel example {#priority-example}
+
+Set the project default to 3, the `world` directory to 40, `world/ports.md` to 60, and “Harbors / Lanterns” to 75. Resolving the section returns 75 with `source.kind=section`. Clearing its rule returns 60 with `source.kind=document`. Other users' or projects' settings resolve within their own scopes.
+
+### Verification {#priority-evaluation}
+
+Run `uv run pytest -q tests/unit/test_priority_layers.py tests/integration/test_content_priorities.py tests/integration/test_cli_mcp.py` to cover large integers, inheritance, clearing, scope isolation, upgrades and downgrades, and the MCP-to-HTTP path. Priority resolution is deterministic and uses no model API.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

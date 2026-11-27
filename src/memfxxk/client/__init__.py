@@ -58,6 +58,7 @@ from memfxxk.domain.manage import (
     SaveLessonRequest,
 )
 from memfxxk.domain.notes import NoteHistoryEntry, NoteProjection, RollbackNote
+from memfxxk.domain.priorities import ClearPriority, PriorityResult, PriorityTarget, SetPriority
 from memfxxk.domain.reflect import ReflectRequest, ReflectResult
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 from memfxxk.domain.sessions import PutSessionState, SessionState
@@ -293,6 +294,15 @@ class MemfxxkClient(ClientContext):
 
     def get_session(self, session_id: str) -> SessionState:
         return self._request("GET", f"sessions/{segment(session_id)}/state", SessionState)
+
+    def get_priority(self, target: PriorityTarget) -> PriorityResult:
+        return self._request("POST", "priorities/resolve", PriorityResult, body=target)
+
+    def set_priority(self, request: SetPriority) -> PriorityResult:
+        return self._request("PUT", "priorities", PriorityResult, body=request)
+
+    def clear_priority(self, request: ClearPriority) -> PriorityResult:
+        return self._request("POST", "priorities/clear", PriorityResult, body=request)
 
     def finish_task(self, session_id: str, request: FinishTask) -> FinishedTask:
         return self._request(
@@ -583,6 +593,15 @@ class AsyncMemfxxkClient(ClientContext):
 
     async def get_session(self, session_id: str) -> SessionState:
         return await self._request("GET", f"sessions/{segment(session_id)}/state", SessionState)
+
+    async def get_priority(self, target: PriorityTarget) -> PriorityResult:
+        return await self._request("POST", "priorities/resolve", PriorityResult, body=target)
+
+    async def set_priority(self, request: SetPriority) -> PriorityResult:
+        return await self._request("PUT", "priorities", PriorityResult, body=request)
+
+    async def clear_priority(self, request: ClearPriority) -> PriorityResult:
+        return await self._request("POST", "priorities/clear", PriorityResult, body=request)
 
     async def finish_task(self, session_id: str, request: FinishTask) -> FinishedTask:
         return await self._request(

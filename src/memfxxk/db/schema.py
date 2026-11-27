@@ -357,9 +357,9 @@ memory_preferences = sa.Table(
     sa.Column("id", UUID, primary_key=True),
     *scope_columns(),
     sa.Column("memory_id", UUID, nullable=False),
-    sa.Column("priority", sa.Integer),
+    sa.Column("priority", sa.Numeric),
     sa.Column("tags", ARRAY(sa.Text), nullable=False, server_default=sa.text("'{}'")),
-    sa.CheckConstraint("priority BETWEEN 1 AND 5", name="ck_memory_preferences_priority"),
+    sa.CheckConstraint("priority = trunc(priority)", name="ck_memory_preferences_integer"),
 )
 index_scope(memory_preferences)
 sa.Index("ix_memory_preferences_memory", memory_preferences.c.memory_id)
@@ -372,6 +372,19 @@ sa.Index(
     sa.func.coalesce(memory_preferences.c.project_id, ""),
     unique=True,
 )
+
+content_priorities = sa.Table(
+    "content_priorities",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("kind", sa.Text, nullable=False),
+    sa.Column("key", sa.Text, nullable=False),
+    sa.Column("document_id", UUID, sa.ForeignKey("documents.id", ondelete="CASCADE")),
+    sa.Column("priority", sa.Numeric, nullable=False),
+    sa.CheckConstraint("priority = trunc(priority)", name="ck_content_priorities_integer"),
+)
+index_scope(content_priorities)
 
 fact_proposals = sa.Table(
     "fact_proposals",

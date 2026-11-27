@@ -422,6 +422,30 @@ BGE-small-en-v1.5、`deepseek-flash` 和 `gpt-5.4-mini` 实测中，基线 / Rea
 
 `uv run python eval/run_t16_matrix.py --output eval/results/t16/p9-matrix` 按固定题单跑组合横评。默认是保留标准来源与少量干扰的短回放。使用 `--histories complete` 可保留固定题单对应的完整历史，`--profiles baseline mem0 graphiti letta full` 可以缩小策略集合，`--suite` 可以更换题单。结果目录逐组写入完成的案例，原参数运行可继续已有结果。记录版本和每段输入的 SHA-256 在 `manifest.json`。 [统一横评及结论](/memory-strategy-results/)
 
+## T17 P10 优先级与继承 {#t17-priority-inheritance}
+
+### 规则来源 {#priority-upstream}
+
+T17 的优先级由用户写入。所有候选按生效整数从高到低分层，同一层保留输入顺序。P10 的 `priority_layers` 负责这个排序。
+
+### 实现 {#priority-implementation}
+
+核心入口在 `BoundService`。设置走 `PUT /v1/priorities`，参数为 `target`、整数 `priority` 和可选 `scope_drop`。查询把 `target` 直接送给 `POST /v1/priorities/resolve`。清除走 `POST /v1/priorities/clear`，传 `target` 和可选 `scope_drop`。同步及异步 SDK 用 `set_priority`、`get_priority`、`clear_priority`。MCP 管理工具对应 `memory_priority_set`、`memory_priority_get`、`memory_priority_clear`。
+
+目标的 `kind` 为 `project`、`directory`、`document`、`section` 或 `record`。目录和文档传 `path`，章节还传标题链 `heading`，记录传稳定 `memory_id`。优先级按本项、父章节、文档、最近目录、项目默认的顺序取首个可见设置。普通记录在直属设置之后继承项目默认，文档切块记录会先沿来源章节继承。无规则时返回 3，`source=null`。删除或隐藏目标时返回统一的 404。设置和清除记入用户操作审计。
+
+### 兼容与迁移 {#priority-differences}
+
+`0015` 将 `memory_preferences.priority` 改为整数型 `NUMERIC`，原有数值和标签直接保留。文档层的设置存在 `content_priorities`，按文档 ID 关联并随文档删除。章节设置以标题链为键，改名相当于改用一个新的键。旧混合检索的分数修正保留 0.7 至 1.3 的范围，分层使用原始整数。降级将记录中超出旧范围的整数截到 1 或 5，并移除目录、文档、章节和项目规则表。[优先级继承决策](/decisions/0005-priority-inheritance)
+
+### 小说示例 {#priority-example}
+
+设项目默认为 3，目录 `world` 为 40，文档 `world/ports.md` 为 60，「港口 / 灯号」为 75。查询该章节返回 75 和 `source.kind=section`。清除章节规则后返回 60 和 `source.kind=document`。另一个 user 或 project 的同名规则按自己的作用域解析。
+
+### 验证 {#priority-evaluation}
+
+`uv run pytest -q tests/unit/test_priority_layers.py tests/integration/test_content_priorities.py tests/integration/test_cli_mcp.py` 验证超大整数、组合继承、清除、404 隔离、旧数据升级与降级，以及 MCP 到 HTTP 的调用。优先级解析完全确定，本阶段无需模型 API。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

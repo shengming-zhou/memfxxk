@@ -178,6 +178,11 @@ async def _check_mcp_host(env: dict[str, str]) -> None:
             },
         )
         assert sent["results"][-1]["session_seq"] == 2
+        target = {"kind": "record", "memory_id": sent["results"][-1]["memory_ids_touched"][0]}
+        saved_priority = await call("memory_priority_set", {"target": target, "priority": -300})
+        assert await call("memory_priority_get", target) == saved_priority
+        assert saved_priority["priority"] == -300
+        assert (await call("memory_priority_clear", {"target": target}))["source"] is None
         state = await call("session_state", {"session_id": session_id})
         assert state["summary_upto_seq"] is None
         draft = await call(

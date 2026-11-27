@@ -168,7 +168,19 @@ With a compaction model configured, drafts have `method: llm`. Checkpoints prese
 
 In a 30-question replay of long conversations, DeepSeek Flash compaction used about 620,000 input and 12,500 output tokens per 1,000 turns. Usage varies with message length and compaction frequency. The model summary answered 8 questions correctly, and hybrid retrieval alone answered 7. Model compaction can help carry decisions and open tasks across turns. [Evaluation conditions and results](/en/developer-manual/#compaction-live-evaluation)
 
-Use `PATCH /v1/memories/{id}` to set `priority` from 1 to 5 and add `tags`. Pin short, durable rules and store long references as `on_demand` documents. Saving a revision indexes its Markdown sections and returns heading and revision metadata when those sections match a search. Existing documents remain available by path and gain searchable sections on their next save.
+Use `PATCH /v1/memories/{id}` to set an integer `priority` and add `tags`. Pin short, durable rules and store long references as `on_demand` documents. Searching a saved revision can return its matching Markdown section and revision number.
+
+### Give your setting and chapters a priority {#content-priority-usage}
+
+For a novel, set the `world/` directory to 40 and the “Harbors / Lanterns” section in `world/ports.md` to 75. This section uses 75. Other sections without their own settings inherit 40. Zero and negative integers work as well. Higher values rank in higher layers, and equal values share a layer. You decide what the numbers mean for your work.
+
+Set a rule with `PUT /v1/priorities` or MCP `memory_priority_set` in the intended project scope.
+
+```json
+{"target":{"kind":"section","path":"world/ports.md","heading":"Harbors / Lanterns"},"priority":75}
+```
+
+Send the target object to `POST /v1/priorities/resolve` or `memory_priority_get`. The response shows the winning `source` and `source_scope`. To clear the setting in your current scope, use `POST /v1/priorities/clear` or `memory_priority_clear` and inspect the newly inherited value. Shared budget allocation across directories, documents, and sections arrives with the adaptive allocator. [Implementation and migration](/en/developer-manual/#t17-priority-inheritance)
 
 Pass `graph_hops: 1` or `2` to search, or put it in `search_filters` when building context. Search starts with keyword and vector matches and follows links or shared entities on reviewed facts. Inspect `graph_path` to see the chain of evidence.
 

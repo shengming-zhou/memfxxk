@@ -15,6 +15,7 @@ from memfxxk.domain.context import (
 )
 from memfxxk.domain.documents import Document, DocumentInfo, DocumentRevision, PutDocumentRequest
 from memfxxk.domain.lessons import FinishedTask, FinishTask
+from memfxxk.domain.priorities import ClearPriority, PriorityResult, PriorityTarget, SetPriority
 from memfxxk.domain.reflect import ReflectRequest, ReflectResult
 from memfxxk.domain.sessions import PutSessionState, SessionState
 from memfxxk.domain.workspace import (
@@ -85,6 +86,21 @@ def put_state(session_id: str, request: PutSessionState, service: RequestService
 @router.post("/context/build")
 def build_context(request: BuildContextRequest, service: RequestService) -> ContextBundle:
     return service.build_context(request)
+
+
+@router.post("/priorities/resolve")
+def get_priority(target: PriorityTarget, service: RequestService) -> PriorityResult:
+    return service.get_priority(target)
+
+
+@router.put("/priorities")
+def set_priority(request: SetPriority, service: RequestService) -> PriorityResult:
+    return service.set_priority(request)
+
+
+@router.post("/priorities/clear")
+def clear_priority(request: ClearPriority, service: RequestService) -> PriorityResult:
+    return service.clear_priority(request)
 
 
 @router.post("/sessions/{session_id}/finish-task")

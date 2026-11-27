@@ -249,7 +249,9 @@ def _build_hits(
     for key, score in scores.items():
         priority, _ = preferences.get(rows[key]["memory_id"], (None, []))
         if priority is not None:
-            multiplier = 1 + 0.15 * (priority - 3)
+            # Keep legacy hybrid scoring within its established range. The allocator
+            # uses the original integers when comparing priority layers.
+            multiplier = 1 + 0.15 * (min(5, max(1, priority)) - 3)
             score.boost *= multiplier
             score.final *= multiplier
     matches = (
