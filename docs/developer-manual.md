@@ -266,6 +266,32 @@ Graphiti 提取实体，用全文与名称向量找候选，再让模型判断�
 
 时序图写入成功完成 60 个作业，239 次模型调用包含 5 次格式修正前的失败。共用 870,987 输入、89,513 输出 token。每题写入构建 p50 / p95 为 68.77 / 175.23 秒。三个策略的检索与装载 p50 / p95 分别为 208 / 253、80 / 100、124 / 183 毫秒，同次比较的冷启动主要落在第一组。图构建这份回放的每千轮折算约 1,452 万输入、149 万输出 token。加上答题和评分后总用量为 991,779 token。保留 `links` 为默认图策略。
 
+## T16 P4 A-Mem 笔记网络 {#t16-amem}
+
+### 原版怎么做 {#amem-upstream}
+
+论文先从正文生成关键词、标签和上下文描述，再把这几项和正文一同向量化。先向量取近邻，再让模型选择有价值的关系。演化时逐个检查旧近邻的描述。B.3 的 JSON 有 `should_evolve`、`actions`、`suggested_connections`、`tags_to_update`、`new_context_neighborhood` 和 `new_tags_neighborhood`。论文示例的动作名单和文字说明不同，MIT 源码实际处理 `strengthen` 和 `update_neighbor`。 [A-Mem §3 和附录 B.3](https://arxiv.org/pdf/2502.12110) [实现](https://github.com/agiresearch/A-mem/blob/ceffb860f0712bbae97b184d440df62bc910ca8d/agentic_memory/memory_system.py)
+
+### 这里怎么做 {#amem-implementation}
+
+设置 `MEMFXXK_STRATEGIES__NOTES=amem` 后，`note`、`fact`、`lesson` 在普通向量作业后安排 `build_amem_note`。依次做一次 `note_enrich`、有近邻时一次 `note_link`、对最多 10 个可编辑近邻逐条做 `note_evolve`。迁移 `0010` 增加 `amem_revisions` 和 `amem_links`，存独立增强向量、演化修订、来源和调用 ID。`records.metadata.amem` 指向当前加工属性。在向量检索里融合增强近邻，返回 `score.note_rank` 和 `score.note_similarity`。关联 `purpose=auto_link`，现有关系展开可用。
+
+### 和原版的差异 {#amem-differences}
+
+演化只更新派生属性，保留原文和用户手工标签，跳过显式保存及已确认的近邻。建链和演化分别校验输出，来源按模型看到的材料记录。持久化前再校验记录代次、前一版属性、作业租约和原文。删除会清除依赖该来源的修订与自动关联，并在可用时恢复上一份加工属性。用 `GET /v1/memories/{id}/note-attributes/revisions` 查看属性历史。回滚用 `POST /v1/memories/{id}/note-attributes/rollback`，传 `base_revision` 和 `target_revision`，返回新属性版本。找不到本作用域内的目标返回 404，版本冲突返回 `409 note_revision_conflict`。
+
+增强检索和已有来源共用 `build_context` 的候选接口。bundle 中每条候选保留 `ref_id`、`record_type`、相关度 `score`、完整候选的 `candidate_tokens` 和实际装入的 `tokens`。`decision` 与 `decision_reason` 解释入选、截断以及舍弃。重复或已由宿主装载的条目也可审计。持久化只存引用和这些元数据。
+
+### 一个具体例子 {#amem-example}
+
+「Atlas 夜间导入以前跑在巴黎」形成原文笔记和第一版检索描述。后来一条笔记记录迁到里昂，`note_link` 选中巴黎笔记，`note_evolve` 将原来的自动描述调整为「巴黎导入的历史配置」。正文和正文版本继续保留。回滚以第一版属性写出第三版，用户可从 `memory_get` 或 HTTP / SDK 的 `get_memory` 读 `note_attributes`。
+
+### 评测结果 {#amem-evaluation}
+
+`uv run python eval/run_t16_notes.py --output eval/results/t16/p4-oracle-shared-budget` 重跑固定的 LongMemEval Oracle 两道多会话、两道知识更新题。两组都从相同轮次原文构建引用型笔记，共用 1,500 token 总额度。A-Mem 组开启增强向量和一跳自动关联，图证据与普通证据竞争同一额度。
+
+最终实跑用 BGE-small-en-v1.5 向量、`deepseek-flash` 加工笔记、`gpt-5.4-mini` 答题和评分。两组都答对 4/4，也都装入 4/4 的标准来源。A-Mem 每题均装入了增强笔记，这轮没有装入额外的图展开证据。40 个加工任务完成，共 258 次模型调用，含一次首次校验失败后的修正。用量为 1,116,819 输入、8,921 输出 token，算上答题和评分共 1,139,453 token。每题写入构建 p50 / p95 为 75.16 / 92.89 秒，检索与装载为 100 / 135 毫秒。基线分别为 1.92 / 2.59 秒和 178 / 196 毫秒。每千轮折算约 2,792 万输入、22.3 万输出 token。默认保持关闭。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

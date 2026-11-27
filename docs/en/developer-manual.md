@@ -260,6 +260,32 @@ Each arm replayed 60 turns using BGE-small-en-v1.5 embeddings, `deepseek-flash` 
 
 All 60 temporal graph jobs finished. There were 239 model calls, including five initial validation failures followed by repair. Writes used 870,987 input and 89,513 output tokens. Per-question write build p50 / p95 was 68.77 / 175.23 seconds. Retrieval and assembly p50 / p95 was 208 / 253, 80 / 100, and 124 / 183 milliseconds respectively, with cold-start costs concentrated in the first arm. Write usage extrapolates to about 14.52 million input and 1.49 million output tokens per 1,000 turns from this replay. Including answers and judging, the run used 991,779 tokens. Link expansion remains the default graph strategy.
 
+## T16 P4 A-Mem note network {#t16-amem}
+
+### Upstream behavior {#amem-upstream}
+
+The paper generates keywords, tags, and a description, then embeds them with the note content. It retrieves vector neighbors, asks a model to choose useful links, and considers evolving each neighbor's description. Appendix B.3 lists `should_evolve`, `actions`, `suggested_connections`, `tags_to_update`, `new_context_neighborhood` and `new_tags_neighborhood`. The action examples differ from the prose. The MIT implementation handles `strengthen` and `update_neighbor`. [A-Mem §3 and Appendix B.3](https://arxiv.org/pdf/2502.12110) [Implementation](https://github.com/agiresearch/A-mem/blob/ceffb860f0712bbae97b184d440df62bc910ca8d/agentic_memory/memory_system.py)
+
+### Implementation {#amem-implementation}
+
+`MEMFXXK_STRATEGIES__NOTES=amem` schedules `build_amem_note` after normal embedding for `note`, `fact`, and `lesson` records. The worker makes one `note_enrich` call, one `note_link` call when neighbors exist, and a `note_evolve` call per eligible neighbor, up to ten. Migration `0010` adds `amem_revisions` and `amem_links` for enhanced vectors, revision history, sources, and call IDs. `records.metadata.amem` holds current derived attributes. Vector search fuses enhanced matches and reports `score.note_rank` and `score.note_similarity`. Existing expansion can use relations with `purpose=auto_link`.
+
+### Differences from upstream {#amem-differences}
+
+Evolution changes derived attributes and preserves original text and manually assigned tags. It skips explicitly saved and confirmed neighbors. Link and evolution results use separate schemas. The write transaction checks record generations, prior attributes, job ownership, and raw evidence. Erasing a source removes dependent revisions and automatic links, and restores a surviving attribute revision when available. Inspect attribute history with `GET /v1/memories/{id}/note-attributes/revisions`. Rollback uses `POST /v1/memories/{id}/note-attributes/rollback` with `base_revision` and `target_revision`. The API returns a new attribute revision, a 404 for an unavailable target, or `409 note_revision_conflict` for stale revisions.
+
+Enhanced search uses the shared `build_context` candidate interface. Its bundle references carry `ref_id`, `record_type`, relevance `score`, full `candidate_tokens`, and loaded `tokens`. `decision` and `decision_reason` explain selection, truncation, or removal, including duplicates and items already held by the host. Stored bundles contain references and this metadata.
+
+### Example {#amem-example}
+
+“Atlas nightly imports used Paris” stores the original note and first retrieval description. A later note records the move to Lyon. `note_link` connects the two notes and `note_evolve` revises the older note's derived context to describe the historic Paris configuration. The original text and its content version stay available. Rolling attributes back to revision one creates revision three. `memory_get` and the HTTP or SDK `get_memory` expose `note_attributes`.
+
+### Evaluation results {#amem-evaluation}
+
+Run `uv run python eval/run_t16_notes.py --output eval/results/t16/p4-oracle-shared-budget`. The frozen LongMemEval Oracle set contains two multi-session and two knowledge-update questions. Both arms get identical notes derived verbatim from the conversation and a 1,500-token budget. The A-Mem arm uses enhanced embeddings and one-hop automatic links. Graph and ordinary evidence share that budget.
+
+The final run used BGE-small-en-v1.5 embeddings, `deepseek-flash` for note processing, and `gpt-5.4-mini` for answering and judging. Both arms answered 4/4 and loaded gold sources for all four questions. A-Mem loaded enhanced notes for each question, with zero additional graph expansion results loaded. All 40 note jobs finished. The 258 model calls included one initial validation failure and its repair. Usage was 1,116,819 input and 8,921 output tokens, or 1,139,453 tokens including answering and judging. Per-question write p50 / p95 was 75.16 / 92.89 seconds, and retrieval and assembly was 100 / 135 milliseconds. The baseline measured 1.92 / 2.59 seconds and 178 / 196 milliseconds respectively. Scaled from the replay, 1,000 turns would use about 27.92 million input and 223,000 output tokens for writing. A-Mem is off by default.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

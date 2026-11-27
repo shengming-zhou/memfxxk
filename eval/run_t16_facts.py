@@ -2,10 +2,11 @@
 
 import argparse
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from time import perf_counter
+from typing import Literal
 from uuid import UUID
 
 from run_m2_paired import (
@@ -23,7 +24,8 @@ from run_m2_paired import (
 from sqlalchemy import select
 
 from memfxxk.config import Settings, StrategiesSettings
-from memfxxk.db import jobs, llm_calls
+from memfxxk.db import jobs, llm_calls, transaction
+from memfxxk.domain import Scope
 from memfxxk.domain.context import BuildContextRequest, SearchFilters
 from memfxxk.domain.events import IngestEvent
 from memfxxk.domain.manage import LinkRequest
@@ -32,9 +34,20 @@ from memfxxk.eval.longmemeval.judging import _grade
 from memfxxk.eval.longmemeval.qa import ANSWER_PROMPT, _answer, read_prompt
 from memfxxk.eval.longmemeval.storage import EVAL_PRINCIPAL, eval_context
 from memfxxk.eval.longmemeval.suite import load_suite
+from memfxxk.ids import derived_id
 from memfxxk.jobs.worker import drain
 from memfxxk.llm import ChatClient
-from memfxxk.prompts import edge_extract, edge_resolve, entity_extract, entity_resolve, node_summary
+from memfxxk.m2.storage import derived_record
+from memfxxk.prompts import (
+    edge_extract,
+    edge_resolve,
+    entity_extract,
+    entity_resolve,
+    node_summary,
+    note_enrich,
+    note_evolve,
+    note_link,
+)
 from memfxxk.prompts.extract import ADDITIVE_VERSION, CLASSIC_VERSION
 from memfxxk.prompts.reconcile import VERSION as RECONCILE_VERSION
 from memfxxk.scope import visible_filter
@@ -46,6 +59,30 @@ GRAPH_ARMS = ("G3", "links", "graphiti")
 GRAPH_SUITE = Path("eval/suites/longmemeval-oracle-t16-p3.json")
 GRAPH_BUDGET = 300
 GRAPH_TASKS = ("entity_extract", "entity_resolve", "edge_extract", "edge_resolve", "node_summary")
+NOTE_ARMS = ("G3", "amem")
+NOTE_SUITE = Path("eval/suites/longmemeval-oracle-t16-p4.json")
+NOTE_TASKS = ("note_enrich", "note_link", "note_evolve")
+
+
+def _seed_notes(service, scope, turns, staged, stored, arm) -> None:
+    raw = defaultdict(list)
+    for (turn, _), result in zip(staged, stored, strict=True):
+        raw[turn.turn_id].append(result.event_id)
+    with transaction(service.engine) as conn:
+        for turn in turns:
+            derived_record(
+                conn,
+                scope,
+                Scope.model_validate(scope.model_dump()),
+                memory_id=derived_id("oracle-note", arm, turn.turn_id),
+                version=1,
+                kind="note",
+                content="\n".join(
+                    f"[{message.role}] {message.content}" for message in turn.messages
+                ),
+                sources=raw[turn.turn_id],
+                event_time=turn.event_time,
+            )
 
 
 def evaluate(settings: Settings, question: Question, arms: tuple[str, ...] = ARMS) -> dict:
@@ -55,17 +92,19 @@ def evaluate(settings: Settings, question: Question, arms: tuple[str, ...] = ARM
     )
     staged = [(turn, message) for turn in turns for message in turn.messages]
     results = []
+    notes = arms == NOTE_ARMS
     with _isolated_service(settings) as database:
         for arm in arms:
             derived = arm in ("mem0_classic", "mem0_additive")
-            graph = arm in ("links", "graphiti")
+            graph = arm in ("links", "graphiti", "amem")
             arm_settings = database.settings.model_copy(
                 update={
                     "llm": settings.llm,
                     "strategies": StrategiesSettings(
                         facts=arm if derived else "off",
                         mem0_additive_ranking=arm == "mem0_additive",
-                        graph=arm if graph else "off",
+                        graph=arm if arm in ("links", "graphiti") else "links" if graph else "off",
+                        notes="amem" if arm == "amem" else "off",
                     ),
                 }
             )
@@ -91,9 +130,11 @@ def evaluate(settings: Settings, question: Question, arms: tuple[str, ...] = ARM
                 for (_, message), item in zip(staged, stored, strict=True)
                 if message.has_answer
             }
+            if notes:
+                _seed_notes(service, scope, turns, staged, stored, arm)
             drain(
                 service,
-                kinds={"embed_record", "extract_facts", "build_entity_graph"},
+                kinds={"embed_record", "extract_facts", "build_entity_graph", "build_amem_note"},
                 max_rounds=1000,
             )
             if arm == "links":
@@ -118,7 +159,7 @@ def evaluate(settings: Settings, question: Question, arms: tuple[str, ...] = ARM
                 ).all()
                 job_statuses = conn.scalars(
                     select(jobs.c.status).where(
-                        jobs.c.kind.in_(("extract_facts", "build_entity_graph")),
+                        jobs.c.kind.in_(("extract_facts", "build_entity_graph", "build_amem_note")),
                         jobs.c.payload["scope"]["project_id"].as_string() == scope.project_id,
                     )
                 ).all()
@@ -139,12 +180,12 @@ def evaluate(settings: Settings, question: Question, arms: tuple[str, ...] = ARM
                     k=TOP_K,
                     max_tokens=MEMORY_BUDGET,
                     budget={"evidence": MEMORY_BUDGET},
-                    graph_evidence_tokens=GRAPH_BUDGET if graph else 0,
+                    graph_evidence_tokens=GRAPH_BUDGET if arm in GRAPH_ARMS[1:] else 0,
                     search_filters=SearchFilters(
                         time_to=question.asked_at,
                         as_of_valid=question.asked_at,
-                        types=["turn", "fact"] if derived else ["turn"],
-                        graph_hops=2 if graph else 0,
+                        types=["note"] if notes else ["turn", "fact"] if derived else ["turn"],
+                        graph_hops=1 if notes and graph else 2 if graph else 0,
                     ),
                 )
             )
@@ -179,6 +220,9 @@ def evaluate(settings: Settings, question: Question, arms: tuple[str, ...] = ARM
                     "gold_from_loaded": len(sources & gold),
                     "gold_from_facts": len(fact_sources & gold),
                     "facts_loaded": sum(item.type == "fact" for item in loaded),
+                    "augmented_notes_loaded": sum(
+                        item.note_attributes is not None for item in loaded
+                    ),
                     "graph_paths_loaded": sum(
                         item.reason.startswith("graph(") for item in graph_refs
                     ),
@@ -232,11 +276,15 @@ def report(rows: list[dict], arms: tuple[str, ...] = ARMS) -> dict:
             "loaded_gold_question_count": sum(item["gold_from_loaded"] > 0 for item in items),
             "loaded_fact_gold_question_count": sum(item["gold_from_facts"] > 0 for item in items),
         }
-        if arm in GRAPH_ARMS[1:]:
+        if arm in (*GRAPH_ARMS[1:], "amem"):
             summary.update(
                 graph_path_questions=sum(item["graph_paths_loaded"] > 0 for item in items),
                 graph_edge_questions=sum(item["graph_edges_loaded"] > 0 for item in items),
                 graph_gold_questions=sum(item["graph_gold"] for item in items),
+            )
+        if arm == "amem":
+            summary["augmented_note_questions"] = sum(
+                item["augmented_notes_loaded"] > 0 for item in items
             )
         for key in (
             "write_calls",
@@ -266,14 +314,15 @@ def report(rows: list[dict], arms: tuple[str, ...] = ARMS) -> dict:
     return result
 
 
-def main(*, graph: bool = False) -> None:
+def main(*, mode: Literal["facts", "graph", "notes"] = "facts") -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--suite", type=Path, default=GRAPH_SUITE if graph else SUITE)
+    default_suite = {"graph": GRAPH_SUITE, "notes": NOTE_SUITE, "facts": SUITE}[mode]
+    parser.add_argument("--suite", type=Path, default=default_suite)
     args = parser.parse_args()
     settings = Settings()
-    arms = GRAPH_ARMS if graph else ARMS
-    tasks = GRAPH_TASKS if graph else ("extract", "reconcile")
+    arms = {"graph": GRAPH_ARMS, "notes": NOTE_ARMS, "facts": ARMS}[mode]
+    tasks = {"graph": GRAPH_TASKS, "notes": NOTE_TASKS, "facts": ("extract", "reconcile")}[mode]
     model_tasks = {task: settings.task_model(task) for task in tasks}
     required = (*model_tasks.values(), settings.eval.gen, settings.eval.judge)
     if settings.embedding.provider != "openai_compatible" or not all(
@@ -289,7 +338,11 @@ def main(*, graph: bool = False) -> None:
     manifest_path = args.output / "manifest.json"
     rows_path = args.output / "diagnostics.jsonl"
     manifest = {
-        "protocol": "t16-p3-oracle-v1" if graph else "t16-p2-oracle-v1",
+        "protocol": {
+            "graph": "t16-p3-oracle-v1",
+            "notes": "t16-p4-oracle-v1",
+            "facts": "t16-p2-oracle-v1",
+        }[mode],
         **suite.model_dump(mode="json"),
         "arms": list(arms),
         "embedding": settings.embedding.model,
@@ -300,7 +353,7 @@ def main(*, graph: bool = False) -> None:
         "answer_budget": ANSWER_BUDGET,
         "top_k": TOP_K,
     }
-    if graph:
+    if mode == "graph":
         manifest.update(
             task_models={task: item.model for task, item in model_tasks.items()},
             graph_evidence_tokens=GRAPH_BUDGET,
@@ -311,6 +364,12 @@ def main(*, graph: bool = False) -> None:
                 edge_resolve.VERSION,
                 node_summary.VERSION,
             ],
+        )
+    elif mode == "notes":
+        manifest.update(
+            task_models={task: item.model for task, item in model_tasks.items()},
+            prompt_versions=[note_enrich.VERSION, note_link.VERSION, note_evolve.VERSION],
+            note_seed="verbatim user/assistant turn text with original event IDs for both arms",
         )
     else:
         manifest.update(

@@ -33,6 +33,7 @@ from memfxxk.domain.manage import (
     RememberRequest,
     SaveLessonRequest,
 )
+from memfxxk.domain.notes import NoteHistoryEntry, NoteProjection, RollbackNote
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 from memfxxk.domain.sessions import PutSessionState, SessionState
 from memfxxk.domain.workspace import (
@@ -211,6 +212,17 @@ class BoundService:
         self, memory_id: UUID, version: int | None = None, window: int = 0
     ) -> MemoryResponse:
         return retrieval.get_memory(self, memory_id, version, window)
+
+    def rollback_note(self, memory_id: UUID, request: RollbackNote) -> NoteProjection:
+        from memfxxk.m2.amem import rollback
+
+        self.require_write()
+        return rollback(self, memory_id, request)
+
+    def note_history(self, memory_id: UUID, limit: int = 50) -> list[NoteHistoryEntry]:
+        from memfxxk.m2.amem import history
+
+        return history(self, memory_id, limit)
 
     def remember(self, request: RememberRequest) -> MemoryVersion:
         self.require_write(request.scope_drop)

@@ -3,4 +3,4 @@
 from run_t16_facts import main
 
 if __name__ == "__main__":
-    main(graph=True)
+    main(mode="graph")

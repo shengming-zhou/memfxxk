@@ -475,3 +475,37 @@ entity_mentions = sa.Table(
 index_scope(entity_mentions)
 sa.Index("ix_entity_mentions_episode", entity_mentions.c.episode_id)
 sa.Index("ix_entity_mentions_sources", entity_mentions.c.source_event_ids, postgresql_using="gin")
+
+amem_revisions = sa.Table(
+    "amem_revisions",
+    metadata,
+    *scope_columns(),
+    sa.Column("record_id", UUID, sa.ForeignKey("records.id", ondelete="CASCADE"), primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("attributes", JSONB, nullable=False),
+    sa.Column("embedding", VECTOR(), nullable=False),
+    sa.Column("embedding_model", sa.Text, nullable=False),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
+    sa.Column("operation", sa.Text, nullable=False),
+    sa.Column("llm_call_id", UUID),
+    timestamp("created_at"),
+)
+index_scope(amem_revisions)
+sa.Index("ix_amem_revisions_sources", amem_revisions.c.source_event_ids, postgresql_using="gin")
+
+amem_links = sa.Table(
+    "amem_links",
+    metadata,
+    *scope_columns(),
+    sa.Column(
+        "relation_id",
+        UUID,
+        sa.ForeignKey("memory_relations.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
+    sa.Column("llm_call_id", UUID, nullable=False),
+    timestamp("created_at"),
+)
+index_scope(amem_links)
+sa.Index("ix_amem_links_sources", amem_links.c.source_event_ids, postgresql_using="gin")

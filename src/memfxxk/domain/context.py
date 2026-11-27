@@ -101,11 +101,15 @@ class CommittedCompaction(BaseModel):
 class ContextReference(BaseModel):
     kind: SectionKind
     ref_id: str
+    record_type: str | None = None
     version: int | None = None
     revision: int | None = None
     tokens: int = 0
+    candidate_tokens: int | None = None
     truncated: bool = False
     reason: str
+    decision: Literal["selected", "truncated", "dropped"] | None = None
+    decision_reason: str | None = None
     score: float | None = None
     related: list[UUID] = Field(default_factory=list)
     compaction_method: CompactionMethod | None = None

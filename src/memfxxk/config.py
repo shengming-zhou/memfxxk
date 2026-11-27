@@ -96,6 +96,7 @@ class StrategiesSettings(BaseModel):
     mem0_additive_ranking: bool = False
     graph: Literal["off", "links", "graphiti"] = "links"
     graph_reranker: Literal["rrf", "mmr", "node_distance", "episode_mentions"] = "rrf"
+    notes: Literal["off", "amem"] = "off"
 
 
 class Settings(BaseSettings):
@@ -147,4 +148,9 @@ class Settings(BaseSettings):
             missing = [task for task in graph_tasks if not self.task_model(task).model.strip()]
             if missing:
                 raise ValueError(f"Graphiti requires configured models for {', '.join(missing)}")
+        if self.strategies.notes == "amem":
+            note_tasks: tuple[Task, ...] = ("note_enrich", "note_link", "note_evolve")
+            missing = [task for task in note_tasks if not self.task_model(task).model.strip()]
+            if missing:
+                raise ValueError(f"A-Mem requires configured models for {', '.join(missing)}")
         return self

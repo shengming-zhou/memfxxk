@@ -218,6 +218,7 @@ def read_memory(
         origin=row["origin"],
         status=row["status"],
         confirmed=row["confirmed"],
+        note_attributes=row["metadata"].get("amem"),
         content=row["content"],
         source_event_ids=row["source_event_ids"],
         marks=marks_for(connection, ctx, [memory_id]).get(memory_id, []),

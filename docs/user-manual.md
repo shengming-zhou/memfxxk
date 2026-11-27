@@ -206,6 +206,12 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 本次 51 轮回放折算每千轮，classic 写入约用 356 万输入、20 万输出 token，additive 约用 341 万输入、50 万输出 token。实际花费随消息长度和已有事实数量变化。 [实测明细](/developer-manual/#mem0-classic-evaluation)
 
+### 为笔记补检索属性 {#amem-usage}
+
+设 `MEMFXXK_STRATEGIES__NOTES=amem` 让系统为新笔记、事实和经验生成检索用的描述、关键词和标签，并给相关条目建自动关联。需要配置 `note_enrich`、`note_link`、`note_evolve`，可共用默认模型。用 `get_memory` 查看 `note_attributes`，再用 `note_history` 和 `rollback_note` 查看与恢复属性。正文和手工标签继续由用户维护。
+
+本次四题对照，两组均答对四题。按这批历史估算，每千轮加工约用 2,792 万输入和 22.3 万输出 token。 [实现与复现实验](/developer-manual/#t16-amem)
+
 ## 查看证据评测 {#evidence-evaluation}
 
 证据评测检查记忆库能否找回支持答案的历史，并记录查询延时。要复跑，可在独立的评测数据库使用固定的 LongMemEval_S 题集。这一步无需配置聊天模型。 [开发手册的评测步骤](https://shengming-zhou.github.io/memfxxk/developer-manual/#evidence-comparison)

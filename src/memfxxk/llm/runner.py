@@ -60,6 +60,7 @@ class BudgetExceeded(ServiceError):
 class TaskResult[T]:
     response: ChatResult
     parsed: T | None
+    call_id: UUID
 
 
 @dataclass(frozen=True, slots=True)
@@ -300,7 +301,7 @@ class TaskRunner:
                 self._finish(
                     call_id, scope, sources, prompt, started, response, None, repair, estimated
                 )
-                return TaskResult(response, parsed)
+                return TaskResult(response, parsed, call_id)
         raise AssertionError("Validation retry did not resolve")
 
 

@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from memfxxk.domain import Actor, Scope
+from memfxxk.domain.notes import NoteProjection
 
 MemoryType = Literal["turn", "note", "fact", "summary", "lesson", "doc_chunk"]
 MemoryMark = Literal["important", "pinned"]
@@ -51,6 +52,8 @@ class ScoreDetails(BaseModel):
     final: float
     fact_bm25: float | None = None
     fact_entity_boost: float | None = None
+    note_rank: int | None = None
+    note_similarity: float | None = None
 
 
 class RelatedMemory(BaseModel):
@@ -134,6 +137,7 @@ class MemoryResponse(MemoryNeighbor):
     origin: Literal["user_explicit", "auto_index", "auto_extract", "import"]
     status: Literal["active", "inactive"]
     confirmed: bool
+    note_attributes: NoteProjection | None = None
     source_event_ids: list[UUID]
     marks: list[MemoryMark]
     relations: list[RelatedMemory]

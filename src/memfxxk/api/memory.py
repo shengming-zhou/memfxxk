@@ -17,6 +17,7 @@ from memfxxk.domain.manage import (
     RememberRequest,
     SaveLessonRequest,
 )
+from memfxxk.domain.notes import NoteHistoryEntry, NoteProjection, RollbackNote
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 
 router = APIRouter(prefix="/v1")
@@ -47,6 +48,24 @@ def get_memory(
     window: Annotated[int, Query(ge=0)] = 0,
 ) -> MemoryResponse:
     return service.get_memory(memory_id, version, window)
+
+
+@router.post("/memories/{memory_id}/note-attributes/rollback")
+def rollback_note(
+    memory_id: UUID,
+    request: RollbackNote,
+    service: RequestService,
+) -> NoteProjection:
+    return service.rollback_note(memory_id, request)
+
+
+@router.get("/memories/{memory_id}/note-attributes/revisions")
+def note_history(
+    memory_id: UUID,
+    service: RequestService,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> list[NoteHistoryEntry]:
+    return service.note_history(memory_id, limit)
 
 
 @router.post("/memories")

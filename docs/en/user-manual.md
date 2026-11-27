@@ -198,6 +198,12 @@ Use `off` to pause background extraction. Stored facts remain readable after a s
 
 Scaled from a 51-turn replay, classic used about 3.56 million input and 200,000 output tokens per 1,000 turns. Additive used about 3.41 million input and 500,000 output tokens. The cost varies with message length and the amount of existing memory. [Evaluation results](/en/developer-manual/#mem0-classic-evaluation)
 
+### Add retrieval attributes to notes {#amem-usage}
+
+Set `MEMFXXK_STRATEGIES__NOTES=amem` to generate retrieval descriptions, keywords, and tags for new notes, facts, and lessons, and to add automatic links. Configure `note_enrich`, `note_link`, and `note_evolve` or let them inherit a default model. Use `get_memory` to see `note_attributes`, and `note_history` and `rollback_note` to inspect and restore versions. You control the original text and manually assigned tags.
+
+Both arms answered all four questions in the replay. Scaled from this workload, 1,000 turns of note processing would use about 27.92 million input and 223,000 output tokens. [Implementation and evaluation](/en/developer-manual/#t16-amem)
+
 ## Check evidence evaluation {#evidence-evaluation}
 
 Evidence evaluation measures whether a memory backend retrieves the history that supports an answer and tracks query latency. Reproduce it with the frozen LongMemEval_S suite in a dedicated evaluation database. This step requires no chat model. [Evaluation steps in the developer manual](https://shengming-zhou.github.io/memfxxk/en/developer-manual/#evidence-comparison)

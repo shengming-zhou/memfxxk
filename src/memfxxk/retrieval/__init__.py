@@ -75,6 +75,7 @@ def search(
     lexical_candidates: list[Candidate] = []
     vector_candidates: list[Candidate] = []
     important_candidates: list[Candidate] = []
+    note_candidates: list[Candidate] = []
     with service.engine.connect() as connection:
         if "lexical" in channels:
             stage = perf_counter()
@@ -95,6 +96,16 @@ def search(
                 index = QdrantVectorIndex(QdrantClient(service.settings.qdrant), pg_index)
             if "vector" in channels:
                 vector_candidates = index.search(connection, vector, filters, settings.n_vector)
+                if service.settings.strategies.notes == "amem":
+                    from memfxxk.db import amem_revisions
+                    from memfxxk.m2.amem import search_notes
+
+                    note_filters = list(filters)
+                    if request.as_of_recorded is not None:
+                        note_filters.append(amem_revisions.c.created_at <= request.as_of_recorded)
+                    note_candidates = search_notes(
+                        connection, service.ctx, embedder.model, vector, note_filters
+                    )
                 timings.vector = _milliseconds(stage)
             else:
                 timings.important += _milliseconds(stage)
@@ -130,6 +141,7 @@ def search(
             lexical_candidates,
             vector_candidates,
             important_candidates,
+            note_candidates,
             vector,
         )
 
@@ -147,9 +159,10 @@ def _build_hits(
     lexical: list[Candidate],
     vector: list[Candidate],
     important: list[Candidate],
+    notes: list[Candidate],
     query_vector: list[float],
 ) -> list[SearchHit]:
-    ids = {candidate.id for group in (lexical, vector, important) for candidate in group}
+    ids = {candidate.id for group in (lexical, vector, important, notes) for candidate in group}
     graph = service.settings.strategies.graph
     if not ids and not (graph == "graphiti" and request.graph_hops):
         return []
@@ -168,6 +181,12 @@ def _build_hits(
 
     settings = service.settings.search
     scores = fuse(fresh(lexical), fresh(vector), fresh(important), settings)
+    for rank, candidate in enumerate(fresh(notes), start=1):
+        score = scores.setdefault(candidate.id, ScoreDetails(rrf=0, boost=1, final=0))
+        score.note_rank = rank
+        score.note_similarity = candidate.score
+        score.rrf += settings.vector_weight / (settings.rrf_k + rank)
+        score.final = score.rrf * score.boost
     if service.settings.strategies.mem0_additive_ranking:
         from memfxxk.m2.mem0_ranking import apply_additive_weights
 

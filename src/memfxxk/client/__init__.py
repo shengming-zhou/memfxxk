@@ -48,6 +48,7 @@ from memfxxk.domain.manage import (
     RememberRequest,
     SaveLessonRequest,
 )
+from memfxxk.domain.notes import NoteHistoryEntry, NoteProjection, RollbackNote
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 from memfxxk.domain.sessions import PutSessionState, SessionState
 from memfxxk.domain.workspace import (
@@ -178,6 +179,22 @@ class MemfxxkClient(ClientContext):
 
     def remember(self, request: RememberRequest) -> MemoryVersion:
         return self._request("POST", "memories", MemoryVersion, body=request)
+
+    def rollback_note(self, memory_id: UUID | str, request: RollbackNote) -> NoteProjection:
+        return self._request(
+            "POST",
+            f"memories/{segment(memory_id)}/note-attributes/rollback",
+            NoteProjection,
+            body=request,
+        )
+
+    def note_history(self, memory_id: UUID | str, limit: int = 50) -> list[NoteHistoryEntry]:
+        return self._request(
+            "GET",
+            f"memories/{segment(memory_id)}/note-attributes/revisions",
+            list[NoteHistoryEntry],
+            params={"limit": limit},
+        )
 
     def save_lesson(self, request: SaveLessonRequest) -> MemoryVersion:
         return self._request("POST", "lessons", MemoryVersion, body=request)
@@ -405,6 +422,22 @@ class AsyncMemfxxkClient(ClientContext):
 
     async def remember(self, request: RememberRequest) -> MemoryVersion:
         return await self._request("POST", "memories", MemoryVersion, body=request)
+
+    async def rollback_note(self, memory_id: UUID | str, request: RollbackNote) -> NoteProjection:
+        return await self._request(
+            "POST",
+            f"memories/{segment(memory_id)}/note-attributes/rollback",
+            NoteProjection,
+            body=request,
+        )
+
+    async def note_history(self, memory_id: UUID | str, limit: int = 50) -> list[NoteHistoryEntry]:
+        return await self._request(
+            "GET",
+            f"memories/{segment(memory_id)}/note-attributes/revisions",
+            list[NoteHistoryEntry],
+            params={"limit": limit},
+        )
 
     async def save_lesson(self, request: SaveLessonRequest) -> MemoryVersion:
         return await self._request("POST", "lessons", MemoryVersion, body=request)

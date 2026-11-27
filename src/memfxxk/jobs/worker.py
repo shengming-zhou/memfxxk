@@ -126,6 +126,10 @@ class Worker:
                     settings = service.settings.model_copy(update={"embedding": config})
                     target = CachedEmbedder(self.engine, make_embedding_provider(settings))
                 embed_records(self.engine, target, group, projection)
+            if service.settings.strategies.notes == "amem":
+                from memfxxk.m2.amem import queue_from_embeddings
+
+                queue_from_embeddings(service, batch)
 
         def handle_projection(batch: list[Job]) -> None:
             sync_projection(self.engine, qdrant, batch[0])
@@ -153,6 +157,13 @@ class Worker:
                 project_episode(service, batch[0], embedder)
 
             self.register("build_entity_graph", handle_graph)
+        if service.settings.strategies.notes == "amem":
+            from memfxxk.m2.amem import build
+
+            def handle_note(batch: list[Job]) -> None:
+                build(service, batch[0], embedder)
+
+            self.register("build_amem_note", handle_note)
 
     def register(self, kind: str, handler: Callable[[list[Job]], None]) -> None:
         self.handlers[kind] = handler
@@ -171,7 +182,8 @@ class Worker:
             key = (
                 job.kind,
                 job.id
-                if job.kind in (self.qdrant_kind, "extract_facts", "build_entity_graph")
+                if job.kind
+                in (self.qdrant_kind, "extract_facts", "build_entity_graph", "build_amem_note")
                 else None,
             )
             batches[key].append(job)

@@ -54,6 +54,7 @@ class _Candidate:
     wrap: Callable[[str], str]
     marker: str = "[truncated]"
     graph: bool = False
+    excluded_reason: str | None = None
 
 
 def _join(entries: list[tuple[_Candidate, str]], *, reverse_events: bool = False) -> str:
@@ -95,8 +96,27 @@ def _pack(
         return section
 
     for candidate in candidates:
-        if closed or budget == 0:
-            dropped.append(candidate.ref)
+        text = (
+            candidate.wrap(candidate.content)
+            if candidate.excluded_reason != "source_unavailable"
+            else ""
+        )
+        reference = candidate.ref.model_copy(
+            update={
+                "record_type": candidate.ref.record_type or candidate.ref.kind,
+                "candidate_tokens": counter.count(text),
+            }
+        )
+        exclusion = candidate.excluded_reason
+        if exclusion is None:
+            if budget == 0:
+                exclusion = "section_budget_zero"
+            elif closed:
+                exclusion = "earlier_candidate_used_remaining_budget"
+        if exclusion is not None:
+            dropped.append(
+                reference.model_copy(update={"decision": "dropped", "decision_reason": exclusion})
+            )
             continue
 
         def fits(rendered: str) -> bool:
@@ -107,13 +127,19 @@ def _pack(
                 <= max_tokens
             )
 
-        text = candidate.wrap(candidate.content)
         truncated = not fits(text)
         if truncated:
             text = candidate.wrap(candidate.marker)
             if not candidate.marker or not fits(text):
                 closed = not require_excerpt
-                dropped.append(candidate.ref)
+                dropped.append(
+                    reference.model_copy(
+                        update={
+                            "decision": "dropped",
+                            "decision_reason": "insufficient_budget_for_reference",
+                        }
+                    )
+                )
                 continue
             lo, hi = 0, len(candidate.content)
             while lo < hi:
@@ -124,15 +150,26 @@ def _pack(
                 else:
                     hi = middle - 1
             if require_excerpt and not candidate.content[:lo].strip():
-                dropped.append(candidate.ref)
+                dropped.append(
+                    reference.model_copy(
+                        update={
+                            "decision": "dropped",
+                            "decision_reason": "insufficient_budget_for_excerpt",
+                        }
+                    )
+                )
                 continue
             closed = True
         entries.append((candidate, text))
         items.append(
-            candidate.ref.model_copy(
+            reference.model_copy(
                 update={
                     "tokens": counter.count(text),
                     "truncated": candidate.ref.truncated or truncated,
+                    "decision": "truncated" if candidate.ref.truncated or truncated else "selected",
+                    "decision_reason": "trimmed_to_budget"
+                    if truncated
+                    else ("retrieval_excerpt" if candidate.ref.truncated else "fits_budget"),
                 }
             )
         )
@@ -271,6 +308,7 @@ def _memory(
     excerpt: str | None = None,
     graph: bool = False,
     graph_fact: GraphFact | None = None,
+    excluded_reason: str | None = None,
 ) -> _Candidate:
     links = related or []
     content = row["content"] if excerpt is None else excerpt
@@ -280,6 +318,7 @@ def _memory(
         ContextReference(
             kind="memory",
             ref_id=str(row["memory_id"]),
+            record_type=row["type"],
             version=row["version"],
             reason=reason,
             score=score,
@@ -295,6 +334,7 @@ def _memory(
         partial(_wrap_memory, row, links),
         f"[truncated: use memory_get {row['memory_id']}]",
         graph,
+        excluded_reason,
     )
 
 
@@ -422,23 +462,6 @@ def _evidence(
     candidates = []
     for rank, hit in enumerate(response.hits, 1):
         row = by_id.get(hit.memory_id)
-        if row is None or row["version"] != hit.version or str(hit.memory_id) in pinned:
-            continue
-        pos = row["source_pos"] or {}
-        if (
-            request.host_history_from_seq is not None
-            and row["type"] == "turn"
-            and row["session_id"] == request.session_id
-            and pos.get("seq_to", 0) >= request.host_history_from_seq
-        ):
-            continue
-        if (
-            working is not None
-            and row["type"] == "turn"
-            and row["session_id"] == request.session_id
-            and working[0] <= pos.get("seq_from", 0) <= pos.get("seq_to", 0) <= working[1]
-        ):
-            continue
         reason = (
             f"graph(path={','.join(map(str, hit.graph_path))})"
             if hit.graph_path
@@ -446,6 +469,39 @@ def _evidence(
         )
         if request.evidence_mode == "excerpt":
             reason += ":excerpt"
+        if row is None or row["version"] != hit.version:
+            candidates.append(
+                _Candidate(
+                    ContextReference(
+                        kind="memory",
+                        ref_id=str(hit.memory_id),
+                        record_type=hit.type,
+                        version=hit.version,
+                        reason=reason,
+                        score=hit.score.final,
+                    ),
+                    _EVIDENCE_HEADING,
+                    "",
+                    escape,
+                    excluded_reason="source_unavailable",
+                )
+            )
+            continue
+        excluded = None
+        pos = row["source_pos"] or {}
+        if str(hit.memory_id) in pinned:
+            excluded = "already_loaded"
+        elif row["type"] == "turn" and row["session_id"] == request.session_id:
+            if (
+                request.host_history_from_seq is not None
+                and pos.get("seq_to", 0) >= request.host_history_from_seq
+            ):
+                excluded = "host_history_overlap"
+            elif (
+                working is not None
+                and working[0] <= pos.get("seq_from", 0) <= pos.get("seq_to", 0) <= working[1]
+            ):
+                excluded = "working_history_overlap"
         candidates.append(
             _memory(
                 row,
@@ -458,6 +514,7 @@ def _evidence(
                 excerpt=hit.snippet if request.evidence_mode == "excerpt" else None,
                 graph=bool(hit.graph_path),
                 graph_fact=hit.graph_fact,
+                excluded_reason=excluded,
             )
         )
     return candidates, response.timings_ms

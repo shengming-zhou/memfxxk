@@ -5,6 +5,8 @@ from sqlalchemy import create_engine as sqlalchemy_create_engine
 from sqlalchemy.engine import Connection, Engine
 
 from .schema import (
+    amem_links,
+    amem_revisions,
     api_keys,
     compactions,
     context_bundles,
@@ -30,6 +32,8 @@ from .schema import (
 )
 
 __all__ = [
+    "amem_links",
+    "amem_revisions",
     "api_keys",
     "compactions",
     "context_bundles",

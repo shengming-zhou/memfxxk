@@ -143,6 +143,9 @@ def test_context_pinning_provenance_and_budgets(
     assert limited.used_tokens <= 55
     assert "[truncated" in limited.rendered
     assert limited.items[0].truncated
+    assert limited.items[0].candidate_tokens > 0
+    assert limited.items[0].decision == "truncated"
+    assert limited.items[0].decision_reason == "trimmed_to_budget"
     tiny = bound.build_context(request.model_copy(update={"budget": {"evidence": 1}}))
     too_small = next(section for section in tiny.sections if section.name == "evidence")
     assert too_small.rendered == ""
