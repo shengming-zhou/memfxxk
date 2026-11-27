@@ -292,6 +292,42 @@ Graphiti 提取实体，用全文与名称向量找候选，再让模型判断�
 
 最终实跑用 BGE-small-en-v1.5 向量、`deepseek-flash` 加工笔记、`gpt-5.4-mini` 答题和评分。两组都答对 4/4，也都装入 4/4 的标准来源。A-Mem 每题均装入了增强笔记，这轮没有装入额外的图展开证据。40 个加工任务完成，共 258 次模型调用，含一次首次校验失败后的修正。用量为 1,116,819 输入、8,921 输出 token，算上答题和评分共 1,139,453 token。每题写入构建 p50 / p95 为 75.16 / 92.89 秒，检索与装载为 100 / 135 毫秒。基线分别为 1.92 / 2.59 秒和 178 / 196 毫秒。每千轮折算约 2,792 万输入、22.3 万输出 token。默认保持关闭。
 
+## T16 P5 自编辑记忆块 {#t16-memory-blocks}
+
+### 原版怎么做 {#memory-block-upstream}
+
+Letta 将标签、用途、正文、字符上限与 `read_only` 一起交给模型。旧版 Python 实现有 `core_memory_append(agent_state, label, content)`、`core_memory_replace(agent_state, label, old_content, new_content)` 和 `rethink_memory(agent_state, new_memory, target_block_label)`。其通用 `memory` 工具还支持按路径查看、修改和插入。后台 dreaming 可在执行步数达到阈值或压缩时运行，允许另开一轮复查。 [Letta Apache-2.0 旧版源码](https://github.com/letta-ai/letta/blob/archive/letta/functions/function_sets/base.py) [后台整理文档](https://docs.letta.com/configuration/memory)
+
+### 这里怎么做 {#memory-block-implementation}
+
+迁移 `0011` 新增 `memory_blocks`、`block_revisions`、`block_proposals`。块有当前版本指针和只增版本序列。每次采用编辑都会新建一版，保留修改者和来源事件。用户明确写入的初始内容记录为 `user_op`。作用域由核心服务按组织、用户、Agent、项目判断。新策略只开关候选装载和自动整理，显式 API 操作仍可用。
+
+| 操作 | HTTP | SDK 和 MCP |
+| --- | --- | --- |
+| 创建 | `POST /v1/memory-blocks` | `create_block(CreateBlock(...))` |
+| 列出或读取 | `GET /v1/memory-blocks` 或 `GET /v1/memory-blocks/{id}` | `list_blocks`、`get_block` 与 `memory_block_list`、`memory_block_get` |
+| 编辑 | `PATCH /v1/memory-blocks/{id}` | `edit_block(id, EditBlock(...))` 与 `memory_block_edit` |
+| 查提议 | `GET /v1/block-proposals` | `list_block_proposals` |
+| 审核 | `POST /v1/block-proposals/{id}/review`，正文 `{"accept":true}` | `review_block(id, True)` |
+
+编辑请求含 `base_revision`、`operation`、`text`，替换时还要传只匹配一处的 `old_text`。有来源时用 `source_event_ids`。版本冲突返回 `409 block_revision_conflict`，正文超限返回 `422 block_limit_exceeded` 和 `char_count`、`requested_char_count`、`limit`。不可见的块与未知块都返回 404。
+
+`sleeptime_consolidate` 按闭合轮次和已采用的压缩安排。它加载最近的原文、最新可用摘要和当前块，再调用 `sleeptime`。写回时锁定作业租约，检查各来源是否仍在、历史记录的代次以及块修订。可写 Agent 块直接更新，受保护块和事实走提议。忘记来源会清除依赖的版本或提议，并把当前块回退到最近仍可用的版本。
+
+### 和原版的差异 {#memory-block-differences}
+
+单独建表用于修订冲突检查、来源删除和用户审批。共享沿用 memfxxk 的作用域，宿主可为用户块选择对多个 Agent 可见的范围。编辑权限单独判断。一次整理使用一个结构化模型调用。上下文用 `<memory_block>` 渲染用途、字符用量和正文，由 Harness 决定放入消息的什么位置。块走 `_Candidate` 和原有文档装载流程，候选含块 ID、类型、相关度、token 数与装载决定，bundle 只存引用。
+
+### 一个具体例子 {#memory-block-example}
+
+Agent 先读到交接块第 1 版。调用 MCP `memory_block_edit`，传 `{"block_id":"…","edit":{"base_revision":1,"operation":"rewrite","text":"周四交接"}}`。下轮 Harness 请求 `context_build` 时可装入第 2 版。同一次操作对用户块只会返回提议，用户采用后才改变正文。 [参考 Harness 集成测试](https://github.com/shengming-zhou/memfxxk/blob/main/tests/integration/test_mcp_harness.py)
+
+### 评测结果 {#memory-block-evaluation}
+
+`uv run python eval/run_t16_blocks.py --output eval/results/t16/p5-long-dialogue` 重跑固定 64 轮、四题和 1,500 token 总额度对照。BGE-small-en-v1.5 负责检索，`deepseek-flash` 负责整理，`gpt-5.4-mini` 答题和判分。两组都答对 2/2 偏好题和 2/2 改期题，原文证据都装入了 4/4。记忆块记录了相同的偏好和改期信息，这组题的混合检索已经找到足够原文。
+
+四次整理无失败，输入 12,289、输出 1,321 token。每千轮约 192,016 输入和 20,641 输出 token。基线和记忆块组的 64 轮写入总耗时为 2.94 / 12.80 秒，组装 p50 / p95 分别是 135 / 171 毫秒和 69 / 108 毫秒，答题分别是 850 / 1,421 毫秒和 614 / 814 毫秒。四题的答题 token 总量为 3,609 / 4,759。加上判分与整理，两组共用 22,647 token。四题延时受首次调用和运行顺序影响。该小样本用于确认功能，自动整理维持关闭。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

@@ -509,3 +509,61 @@ amem_links = sa.Table(
 )
 index_scope(amem_links)
 sa.Index("ix_amem_links_sources", amem_links.c.source_event_ids, postgresql_using="gin")
+
+memory_blocks = sa.Table(
+    "memory_blocks",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("label", sa.Text, nullable=False),
+    sa.Column("description", sa.Text, nullable=False),
+    sa.Column("owner", sa.Text, nullable=False),
+    sa.Column("owner_id", sa.Text, nullable=False),
+    sa.Column("read_only", sa.Boolean, nullable=False),
+    sa.Column("limit_chars", sa.Integer, nullable=False),
+    sa.Column("head_revision", sa.Integer, nullable=False),
+    sa.Column("revision_seq", sa.Integer, nullable=False),
+    timestamp("created_at"),
+)
+index_scope(memory_blocks)
+sa.Index(
+    "uq_memory_block_label",
+    memory_blocks.c.org_id,
+    sa.func.coalesce(memory_blocks.c.project_id, ""),
+    sa.func.coalesce(memory_blocks.c.user_id, ""),
+    sa.func.coalesce(memory_blocks.c.agent_id, ""),
+    memory_blocks.c.label,
+    unique=True,
+)
+
+block_revisions = sa.Table(
+    "block_revisions",
+    metadata,
+    sa.Column(
+        "block_id", UUID, sa.ForeignKey("memory_blocks.id", ondelete="CASCADE"), primary_key=True
+    ),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("value", sa.Text, nullable=False),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
+    sa.Column("actor", JSONB, nullable=False),
+    timestamp("created_at"),
+)
+sa.Index("ix_block_revisions_sources", block_revisions.c.source_event_ids, postgresql_using="gin")
+
+block_proposals = sa.Table(
+    "block_proposals",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column(
+        "block_id", UUID, sa.ForeignKey("memory_blocks.id", ondelete="CASCADE"), nullable=False
+    ),
+    sa.Column("base_revision", sa.Integer, nullable=False),
+    sa.Column("value", sa.Text, nullable=False),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
+    sa.Column("status", sa.Text, nullable=False, server_default="pending"),
+    sa.Column("adopted_revision", sa.Integer),
+    timestamp("created_at"),
+)
+index_scope(block_proposals)
+sa.Index("ix_block_proposals_sources", block_proposals.c.source_event_ids, postgresql_using="gin")

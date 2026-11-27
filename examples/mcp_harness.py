@@ -35,7 +35,15 @@ from memfxxk.tools import TOOL_SPECS
 
 _BASIC_TOOLS = frozenset(spec.name for spec in TOOL_SPECS)
 _MANAGEMENT_TOOLS = frozenset(
-    ("memory_mark", "memory_link", "memory_set_preferences", "memory_save_lesson")
+    (
+        "memory_mark",
+        "memory_link",
+        "memory_set_preferences",
+        "memory_save_lesson",
+        "memory_block_list",
+        "memory_block_get",
+        "memory_block_edit",
+    )
 )
 _HOST_TOOLS = (
     "session_state",

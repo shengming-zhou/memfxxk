@@ -10,6 +10,7 @@ from mcp.types import CallToolResult, GetPromptResult, Prompt, PromptMessage, Te
 from pydantic import BaseModel, Field, ValidationError
 
 from memfxxk.client import ClientError
+from memfxxk.domain.blocks import EditBlock
 from memfxxk.domain.context import BuildContextRequest, CommitCompaction, PrepareCompaction
 from memfxxk.domain.events import IngestEvent
 from memfxxk.domain.manage import LinkRequest, Mark, PatchRequest, SaveLessonRequest
@@ -41,6 +42,18 @@ class _SessionArguments(BaseModel):
 
 class _EventArguments(BaseModel):
     event_id: UUID
+
+
+class _BlockArguments(BaseModel):
+    block_id: UUID
+
+
+class _BlockListArguments(BaseModel):
+    pass
+
+
+class _BlockEditArguments(_BlockArguments):
+    edit: EditBlock
 
 
 class _SessionEventsArguments(_SessionArguments):
@@ -135,6 +148,22 @@ def make_server(
         else {}
     )
     if enable_manage:
+        structured_tools["memory_block_list"] = (
+            "List visible memory blocks, their owners, and current revisions.",
+            _BlockListArguments,
+            lambda _: {"blocks": [item.model_dump(mode="json") for item in client.list_blocks()]},
+        )
+        structured_tools["memory_block_get"] = (
+            "Read a visible memory block and its current revision.",
+            _BlockArguments,
+            lambda req: client.get_block(req.block_id).model_dump(mode="json"),
+        )
+        structured_tools["memory_block_edit"] = (
+            "Append, replace, or rewrite a block at its current revision. "
+            "Protected blocks go to review.",
+            _BlockEditArguments,
+            lambda req: client.edit_block(req.block_id, req.edit).model_dump(mode="json"),
+        )
         structured_tools["memory_save_lesson"] = (
             "Save a user-confirmed lesson with a failed tool result and subsequent verification.",
             SaveLessonRequest,

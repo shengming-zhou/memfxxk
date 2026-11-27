@@ -13,7 +13,9 @@ from mcp import StdioServerParameters
 
 from examples.host_loop import Window
 from examples.mcp_harness import open_harness
+from memfxxk.config import StrategiesSettings
 from memfxxk.eval.llm import ChatMessage, ChatResult
+from memfxxk.service import MemoryService
 from memfxxk.text import SimpleCounter
 
 pytestmark = pytest.mark.integration
@@ -50,6 +52,27 @@ def test_harness_forwards_tools_and_restores_compaction_after_reconnect(
     api_client: TestClient,
 ) -> None:
     scope = {"X-Memfxxk-User": "harness-user", "X-Memfxxk-Project": "harness-project"}
+    service = api_client.app.state.memory_service
+    api_client.app.state.memory_service = MemoryService(
+        service.engine,
+        service.settings.model_copy(
+            update={
+                "strategies": StrategiesSettings(blocks="letta"),
+            }
+        ),
+    )
+    response = api_client.post(
+        "/v1/memory-blocks",
+        headers=scope,
+        json={
+            "label": "handoff",
+            "description": "Next handoff",
+            "value": "Draft",
+            "owner": "agent",
+        },
+    )
+    assert response.status_code == 200, response.text
+    block_id = response.json()["id"]
     note = api_client.post(
         "/v1/memories", headers=scope, json={"content": "Cobalt harness release rule"}
     )
@@ -79,7 +102,7 @@ def test_harness_forwards_tools_and_restores_compaction_after_reconnect(
         thread = Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
         thread.start()
         try:
-            _assert_harness(api_client, scope, env, memory_id)
+            _assert_harness(api_client, scope, env, memory_id, block_id)
         finally:
             server.should_exit = True
             thread.join(timeout=10)
@@ -90,6 +113,7 @@ def _assert_harness(
     scope: dict[str, str],
     env: dict[str, str],
     memory_id: str,
+    block_id: str,
 ) -> None:
     parameters = StdioServerParameters(
         command=sys.executable,
@@ -112,6 +136,17 @@ def _assert_harness(
             "tool_calls": [
                 _tool("memory_mark", {"id": memory_id, "mark": "pinned"}),
                 _tool("memory_search", {"query": "Cobalt harness"}),
+                _tool(
+                    "memory_block_edit",
+                    {
+                        "block_id": block_id,
+                        "edit": {
+                            "base_revision": 1,
+                            "operation": "rewrite",
+                            "text": "Thursday handoff",
+                        },
+                    },
+                ),
                 _tool("events_append", {"events": [{"kind": "message", "content": "leak"}]}),
             ],
         },
@@ -149,24 +184,28 @@ def _assert_harness(
                 "Pin the rule. " + "Read the following task details. " * 24,
                 turn_id="first",
             )
-            assert len(first.events) == 8
+            assert len(first.events) == 10
             assert first.answer == "Pinned the rule."
             assert "host persona" in first.context.rendered
             assert "memory_mark" in model.requests[0][1]
+            assert "memory_block_edit" in model.requests[0][1]
             assert "events_append" not in model.requests[0][1]
             assert "context_build" not in model.requests[0][1]
-            for reply in model.requests[1][0][-3:]:
+            for reply in model.requests[1][0][-4:]:
                 assert reply["role"] == "tool"
-            assert memory_id in model.requests[1][0][-2]["content"]
+            assert memory_id in model.requests[1][0][-3]["content"]
+            assert "Thursday handoff" in model.requests[1][0][-2]["content"]
             assert "unavailable" in model.requests[1][0][-1]["content"]
             second = await harness.run_turn("cli-harness", "What comes next?", turn_id="second")
             assert second.compaction is None
             assert "Cobalt harness release rule" in second.context.rendered
+            assert "Thursday handoff" in second.context.rendered
 
         async with open_harness(
             parameters, model=resumed_model, window=window, counter=SimpleCounter()
         ) as reopened:
             assert "memory_mark" not in reopened.model_tool_names
+            assert "memory_block_edit" not in reopened.model_tool_names
             assert "memory_remember" in reopened.model_tool_names
             third = await reopened.run_turn("cli-harness", "Continue the work.", turn_id="third")
             assert third.answer == "Resumed after reconnect."
@@ -186,12 +225,17 @@ def _assert_harness(
 
     asyncio.run(exercise())
     rows = api_client.get("/v1/sessions/cli-harness/events", headers=scope).json()
-    assert len(rows) == 12
+    assert len(rows) == 14
     assert {
         row["payload"]["name"]: row["payload"]["outcome"]
         for row in rows
         if row["kind"] == "tool_result"
-    } == {"memory_mark": "success", "memory_search": "success", "events_append": "failure"}
+    } == {
+        "memory_mark": "success",
+        "memory_search": "success",
+        "memory_block_edit": "success",
+        "events_append": "failure",
+    }
     hidden = {**scope, "X-Memfxxk-Project": "other"}
     assert api_client.get("/v1/sessions/cli-harness/state", headers=hidden).status_code == 404
     assert api_client.get("/v1/sessions/too-large/state", headers=scope).status_code == 404

@@ -269,7 +269,12 @@ def review(service: "BoundService", proposal_id: UUID, accept: bool) -> FactProp
                 raise NotFound
             timestamp = max(item["event_time"] for item in source)
             if row["operation"] == "propose":
-                memory_id, version = _accept_key(conn, ctx, scope, fact, timestamp)
+                dependencies = sorted(set(row["source_event_ids"]) | set(fact.source_event_ids))
+                if len(dependencies) != len(source) and len(
+                    list(conn.scalars(_source_query(scope, dependencies)))
+                ) != len(dependencies):
+                    raise NotFound
+                memory_id, version = _accept_key(conn, ctx, scope, fact, timestamp, dependencies)
             else:
                 from .mem0 import accept_action
 
@@ -300,7 +305,12 @@ def review(service: "BoundService", proposal_id: UUID, accept: bool) -> FactProp
 
 
 def _accept_key(
-    conn: Connection, ctx: RequestContext, scope: Scope, fact: FactCandidate, timestamp: datetime
+    conn: Connection,
+    ctx: RequestContext,
+    scope: Scope,
+    fact: FactCandidate,
+    timestamp: datetime,
+    sources: list[UUID],
 ) -> tuple[UUID, int]:
     memory_id = _memory_id(scope, fact.key)
     versions = (
@@ -331,7 +341,7 @@ def _accept_key(
         version=version,
         kind="fact",
         content=fact.content,
-        sources=fact.source_event_ids,
+        sources=sources,
         event_time=timestamp,
         valid_from=fact.valid_from or timestamp,
         confirmed=True,

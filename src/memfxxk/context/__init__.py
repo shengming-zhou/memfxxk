@@ -15,6 +15,7 @@ from sqlalchemy.engine import RowMapping
 from memfxxk.db import context_bundles, events, memory_marks, records, transaction
 from memfxxk.documents import document_contents, list_resolved
 from memfxxk.domain import Scope
+from memfxxk.domain.blocks import MemoryBlock
 from memfxxk.domain.context import (
     BuildContextRequest,
     BundleMetadata,
@@ -29,7 +30,7 @@ from memfxxk.ids import new_id
 from memfxxk.ingest import NotFound, _turn_part
 from memfxxk.scope import visible_filter
 from memfxxk.sessions import read_session
-from memfxxk.text import TokenCounter, make_token_counter
+from memfxxk.text import MixedTokenizer, TokenCounter, make_token_counter
 
 if TYPE_CHECKING:
     from memfxxk.service import BoundService
@@ -238,6 +239,48 @@ def _document_rank(item: DocumentInfo) -> tuple[int, str]:
 
 def _wrap_document(item: DocumentInfo, content: str) -> str:
     return f"<!-- doc:{item.path} rev:{item.revision} -->\n{content}"
+
+
+def _wrap_block(item: MemoryBlock, content: str) -> str:
+    label = escape(item.label, quote=True)
+    return (
+        f'<memory_block label="{label}" id="{item.id}" revision="{item.revision}" '
+        f'owner="{item.owner}" read_only="{str(item.read_only).lower()}" '
+        f'characters="{item.char_count}/{item.limit}">\n'
+        f"{escape(item.description)}\n{escape(content)}\n</memory_block>"
+    )
+
+
+def _blocks(
+    connection: Connection,
+    service: BoundService,
+    query: str | None,
+) -> list[_Candidate]:
+    from memfxxk.m2.blocks import list_visible
+
+    tokenizer = MixedTokenizer()
+    terms = set(tokenizer.tokenize(query or ""))
+    candidates = []
+    for item in list_visible(connection, service.ctx):
+        words = set(tokenizer.tokenize(f"{item.label} {item.description} {item.value}"))
+        score = len(words & terms) / len(terms) if terms else 1.0
+        candidates.append(
+            _Candidate(
+                ContextReference(
+                    kind="block",
+                    ref_id=str(item.id),
+                    record_type="memory_block",
+                    revision=item.revision,
+                    reason="memory_block",
+                    score=score,
+                ),
+                "## Core memory",
+                item.value,
+                partial(_wrap_block, item),
+                f"[truncated: use memory_block_get {item.id}]",
+            )
+        )
+    return candidates
 
 
 def _documents(
@@ -556,6 +599,8 @@ def build_context(service: BoundService, request: BuildContextRequest) -> Contex
     with transaction(service.engine) as connection:
         if "documents" in selected:
             docs = _documents(connection, service, request.include_on_demand_index)
+            if service.settings.strategies.blocks == "letta":
+                docs.extend(_blocks(connection, service, request.query))
             pack("documents", docs)
         if "pinned" in selected:
             section = pack("pinned", _pinned(connection, service))

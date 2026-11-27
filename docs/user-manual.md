@@ -212,6 +212,16 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 本次四题对照，两组均答对四题。按这批历史估算，每千轮加工约用 2,792 万输入和 22.3 万输出 token。 [实现与复现实验](/developer-manual/#t16-amem)
 
+### 给 Agent 一块可以自己编辑的记忆 {#memory-block-usage}
+
+记忆块适合维护少量经常用的约定、偏好或交接事项。创建时填 `label`、`description`、`value`、字符上限 `limit` 和 `owner`。设 `MEMFXXK_STRATEGIES__BLOCKS=letta` 后，符合当前作用域的块会和其他文档候选一起争取上下文空间。关掉装载策略后仍可通过 API 或 SDK 打开块。
+
+- 宿主为用户创建块时，使用用户身份 `X-Memfxxk-Actor: {"type":"user"}`。用户拥有的块默认为只读，对 Agent 的改动进入提议，由用户确认。
+- 创建 `owner="agent"` 的块时指定 Agent ID。给 MCP 打开管理工具后，Agent 用 `memory_block_list` 或 `memory_block_get` 读取当前 `revision`，再用 `memory_block_edit` 追加、更换一段文字或重写。下次装载会用新版本。发生冲突时先读最新版本。
+- 设置 `MEMFXXK_SLEEPTIME__EVERY_TURNS=16`，让后台每 16 个闭合对话轮检查块。也可另外设置 `MEMFXXK_SLEEPTIME__AFTER_COMPACTION=true`，让宿主确认一次压缩后触发。开启自动整理时需配置 `sleeptime` 模型，并让 Worker 处理作业。
+
+64 轮实测里，两组都答对两道偏好题和两道改期题。后台四次整理额外用了 13,610 个 token，默认关闭自动装载和整理。 [API、复跑命令与指标](/developer-manual/#t16-memory-blocks)
+
 ## 查看证据评测 {#evidence-evaluation}
 
 证据评测检查记忆库能否找回支持答案的历史，并记录查询延时。要复跑，可在独立的评测数据库使用固定的 LongMemEval_S 题集。这一步无需配置聊天模型。 [开发手册的评测步骤](https://shengming-zhou.github.io/memfxxk/developer-manual/#evidence-comparison)

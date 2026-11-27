@@ -10,6 +10,13 @@ from memfxxk import context, documents, ingest, manage, retrieval, sessions
 from memfxxk.config import Settings
 from memfxxk.db import records, transaction
 from memfxxk.domain import Actor, Principal, RequestContext
+from memfxxk.domain.blocks import (
+    BlockEditResult,
+    BlockProposal,
+    CreateBlock,
+    EditBlock,
+    MemoryBlock,
+)
 from memfxxk.domain.context import (
     BuildContextRequest,
     BundleMetadata,
@@ -172,6 +179,8 @@ class BoundService:
                 kinds.append("extract_facts")
             if self.settings.strategies.graph == "graphiti":
                 kinds.append("build_entity_graph")
+            if self.settings.strategies.blocks == "letta" and self.settings.sleeptime.every_turns:
+                kinds.append("sleeptime_consolidate")
             if kinds:
                 from memfxxk.m2.facts import enqueue_closed_turns
 
@@ -212,6 +221,38 @@ class BoundService:
         self, memory_id: UUID, version: int | None = None, window: int = 0
     ) -> MemoryResponse:
         return retrieval.get_memory(self, memory_id, version, window)
+
+    def create_block(self, request: CreateBlock) -> MemoryBlock:
+        from memfxxk.m2.blocks import create
+
+        return create(self, request)
+
+    def get_block(self, block_id: UUID) -> MemoryBlock:
+        from memfxxk.m2.blocks import get
+
+        return get(self, block_id)
+
+    def list_blocks(self) -> list[MemoryBlock]:
+        from memfxxk.m2.blocks import list_blocks
+
+        return list_blocks(self)
+
+    def edit_block(self, block_id: UUID, request: EditBlock) -> BlockEditResult:
+        from memfxxk.m2.blocks import edit
+
+        self.require_write()
+        return edit(self, block_id, request)
+
+    def list_block_proposals(self) -> list[BlockProposal]:
+        from memfxxk.m2.blocks import list_proposals
+
+        return list_proposals(self)
+
+    def review_block(self, proposal_id: UUID, accept: bool) -> BlockProposal:
+        from memfxxk.m2.blocks import review
+
+        self.require_write()
+        return review(self, proposal_id, accept)
 
     def rollback_note(self, memory_id: UUID, request: RollbackNote) -> NoteProjection:
         from memfxxk.m2.amem import rollback

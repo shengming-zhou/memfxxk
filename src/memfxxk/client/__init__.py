@@ -23,6 +23,14 @@ from memfxxk.client._shared import (
     turn_events,
 )
 from memfxxk.domain import Actor
+from memfxxk.domain.blocks import (
+    BlockEditResult,
+    BlockProposal,
+    CreateBlock,
+    EditBlock,
+    MemoryBlock,
+    ReviewBlock,
+)
 from memfxxk.domain.context import (
     BuildContextRequest,
     BundleMetadata,
@@ -179,6 +187,31 @@ class MemfxxkClient(ClientContext):
 
     def remember(self, request: RememberRequest) -> MemoryVersion:
         return self._request("POST", "memories", MemoryVersion, body=request)
+
+    def create_block(self, request: CreateBlock) -> MemoryBlock:
+        return self._request("POST", "memory-blocks", MemoryBlock, body=request)
+
+    def list_blocks(self) -> list[MemoryBlock]:
+        return self._request("GET", "memory-blocks", list[MemoryBlock])
+
+    def get_block(self, block_id: UUID | str) -> MemoryBlock:
+        return self._request("GET", f"memory-blocks/{segment(block_id)}", MemoryBlock)
+
+    def edit_block(self, block_id: UUID | str, request: EditBlock) -> BlockEditResult:
+        return self._request(
+            "PATCH", f"memory-blocks/{segment(block_id)}", BlockEditResult, body=request
+        )
+
+    def list_block_proposals(self) -> list[BlockProposal]:
+        return self._request("GET", "block-proposals", list[BlockProposal])
+
+    def review_block(self, proposal_id: UUID | str, accept: bool) -> BlockProposal:
+        return self._request(
+            "POST",
+            f"block-proposals/{segment(proposal_id)}/review",
+            BlockProposal,
+            body=ReviewBlock(accept=accept),
+        )
 
     def rollback_note(self, memory_id: UUID | str, request: RollbackNote) -> NoteProjection:
         return self._request(
@@ -422,6 +455,31 @@ class AsyncMemfxxkClient(ClientContext):
 
     async def remember(self, request: RememberRequest) -> MemoryVersion:
         return await self._request("POST", "memories", MemoryVersion, body=request)
+
+    async def create_block(self, request: CreateBlock) -> MemoryBlock:
+        return await self._request("POST", "memory-blocks", MemoryBlock, body=request)
+
+    async def list_blocks(self) -> list[MemoryBlock]:
+        return await self._request("GET", "memory-blocks", list[MemoryBlock])
+
+    async def get_block(self, block_id: UUID | str) -> MemoryBlock:
+        return await self._request("GET", f"memory-blocks/{segment(block_id)}", MemoryBlock)
+
+    async def edit_block(self, block_id: UUID | str, request: EditBlock) -> BlockEditResult:
+        return await self._request(
+            "PATCH", f"memory-blocks/{segment(block_id)}", BlockEditResult, body=request
+        )
+
+    async def list_block_proposals(self) -> list[BlockProposal]:
+        return await self._request("GET", "block-proposals", list[BlockProposal])
+
+    async def review_block(self, proposal_id: UUID | str, accept: bool) -> BlockProposal:
+        return await self._request(
+            "POST",
+            f"block-proposals/{segment(proposal_id)}/review",
+            BlockProposal,
+            body=ReviewBlock(accept=accept),
+        )
 
     async def rollback_note(self, memory_id: UUID | str, request: RollbackNote) -> NoteProjection:
         return await self._request(

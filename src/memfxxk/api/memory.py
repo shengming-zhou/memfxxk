@@ -4,6 +4,14 @@ from uuid import UUID
 from fastapi import APIRouter, Query, Response
 
 from memfxxk.api.dependencies import RequestService
+from memfxxk.domain.blocks import (
+    BlockEditResult,
+    BlockProposal,
+    CreateBlock,
+    EditBlock,
+    MemoryBlock,
+    ReviewBlock,
+)
 from memfxxk.domain.facts import FactProposal, FactReview
 from memfxxk.domain.manage import (
     ForgetRequest,
@@ -21,6 +29,40 @@ from memfxxk.domain.notes import NoteHistoryEntry, NoteProjection, RollbackNote
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 
 router = APIRouter(prefix="/v1")
+
+
+@router.post("/memory-blocks")
+def create_block(request: CreateBlock, service: RequestService) -> MemoryBlock:
+    return service.create_block(request)
+
+
+@router.get("/memory-blocks")
+def list_blocks(service: RequestService) -> list[MemoryBlock]:
+    return service.list_blocks()
+
+
+@router.get("/memory-blocks/{block_id}")
+def get_block(block_id: UUID, service: RequestService) -> MemoryBlock:
+    return service.get_block(block_id)
+
+
+@router.patch("/memory-blocks/{block_id}")
+def edit_block(block_id: UUID, request: EditBlock, service: RequestService) -> BlockEditResult:
+    return service.edit_block(block_id, request)
+
+
+@router.get("/block-proposals")
+def list_block_proposals(service: RequestService) -> list[BlockProposal]:
+    return service.list_block_proposals()
+
+
+@router.post("/block-proposals/{proposal_id}/review")
+def review_block(
+    proposal_id: UUID,
+    request: ReviewBlock,
+    service: RequestService,
+) -> BlockProposal:
+    return service.review_block(proposal_id, request.accept)
 
 
 @router.get("/fact-proposals")

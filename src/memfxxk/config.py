@@ -97,6 +97,13 @@ class StrategiesSettings(BaseModel):
     graph: Literal["off", "links", "graphiti"] = "links"
     graph_reranker: Literal["rrf", "mmr", "node_distance", "episode_mentions"] = "rrf"
     notes: Literal["off", "amem"] = "off"
+    blocks: Literal["off", "letta"] = "off"
+
+
+class SleeptimeSettings(BaseModel):
+    every_turns: int = Field(default=0, ge=0)
+    after_compaction: bool = False
+    recent_turns: int = Field(default=12, ge=1, le=100)
 
 
 class Settings(BaseSettings):
@@ -115,6 +122,7 @@ class Settings(BaseSettings):
     eval: EvalSettings = Field(default_factory=EvalSettings)
     m2: M2Settings = Field(default_factory=M2Settings)
     strategies: StrategiesSettings = Field(default_factory=StrategiesSettings)
+    sleeptime: SleeptimeSettings = Field(default_factory=SleeptimeSettings)
     llm: LLMSettings = Field(default_factory=LLMSettings)
     mcp_enable_host: bool = False
     mcp_enable_manage: bool = False
@@ -153,4 +161,10 @@ class Settings(BaseSettings):
             missing = [task for task in note_tasks if not self.task_model(task).model.strip()]
             if missing:
                 raise ValueError(f"A-Mem requires configured models for {', '.join(missing)}")
+        if (
+            self.strategies.blocks == "letta"
+            and (self.sleeptime.every_turns or self.sleeptime.after_compaction)
+            and not self.task_model("sleeptime").model.strip()
+        ):
+            raise ValueError("Background block consolidation requires a configured sleeptime model")
         return self

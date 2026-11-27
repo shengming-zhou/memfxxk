@@ -9,7 +9,7 @@ from memfxxk.prompts.compact import Checkpoint
 SectionName = Literal["documents", "pinned", "working", "evidence"]
 CompactionMethod = Literal["legacy", "llm", "extractive_fallback"]
 Pressure = Literal["normal", "warning"]
-SectionKind = Literal["document", "index", "memory", "event", "summary"]
+SectionKind = Literal["document", "index", "memory", "event", "summary", "block"]
 
 
 class SearchFilters(BaseModel):

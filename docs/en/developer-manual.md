@@ -286,6 +286,42 @@ Run `uv run python eval/run_t16_notes.py --output eval/results/t16/p4-oracle-sha
 
 The final run used BGE-small-en-v1.5 embeddings, `deepseek-flash` for note processing, and `gpt-5.4-mini` for answering and judging. Both arms answered 4/4 and loaded gold sources for all four questions. A-Mem loaded enhanced notes for each question, with zero additional graph expansion results loaded. All 40 note jobs finished. The 258 model calls included one initial validation failure and its repair. Usage was 1,116,819 input and 8,921 output tokens, or 1,139,453 tokens including answering and judging. Per-question write p50 / p95 was 75.16 / 92.89 seconds, and retrieval and assembly was 100 / 135 milliseconds. The baseline measured 1.92 / 2.59 seconds and 178 / 196 milliseconds respectively. Scaled from the replay, 1,000 turns would use about 27.92 million input and 223,000 output tokens for writing. A-Mem is off by default.
 
+## T16 P5 Editable memory blocks {#t16-memory-blocks}
+
+### Upstream behavior {#memory-block-upstream}
+
+Letta provides a label, purpose, value, character limit, and `read_only` flag with each block. The archived Python implementation exposes `core_memory_append(agent_state, label, content)`, `core_memory_replace(agent_state, label, old_content, new_content)`, and `rethink_memory(agent_state, new_memory, target_block_label)`. The generic `memory` tool also supports viewing, editing, and inserting by path. Background dreaming can run after a configured number of steps or after compaction, with an optional review pass. [Letta's Apache-2.0 Python source](https://github.com/letta-ai/letta/blob/archive/letta/functions/function_sets/base.py) [Dreaming documentation](https://docs.letta.com/configuration/memory)
+
+### Implementation {#memory-block-implementation}
+
+Migration `0011` adds `memory_blocks`, `block_revisions`, and `block_proposals`. Blocks have a current revision pointer and a monotonically increasing revision counter. Every adopted edit creates a revision with an actor and source events. Explicit initial values are recorded as `user_op` events. The core service enforces organization, user, agent, and project visibility. The strategy controls context loading and background consolidation. Explicit API operations remain available.
+
+| Operation | HTTP | SDK and MCP |
+| --- | --- | --- |
+| Create | `POST /v1/memory-blocks` | `create_block(CreateBlock(...))` |
+| List or read | `GET /v1/memory-blocks` or `GET /v1/memory-blocks/{id}` | `list_blocks`, `get_block`, and `memory_block_list`, `memory_block_get` |
+| Edit | `PATCH /v1/memory-blocks/{id}` | `edit_block(id, EditBlock(...))` and `memory_block_edit` |
+| List proposals | `GET /v1/block-proposals` | `list_block_proposals` |
+| Review | `POST /v1/block-proposals/{id}/review` with `{"accept":true}` | `review_block(id, True)` |
+
+An edit carries `base_revision`, `operation`, and `text`. For replacements, pass an `old_text` that matches once. Use `source_event_ids` when citing source events. A stale revision returns `409 block_revision_conflict`. Oversize edits return `422 block_limit_exceeded` with `char_count`, `requested_char_count`, and `limit`. Hidden and unknown blocks both return 404.
+
+Completed turns and adopted compactions can schedule `sleeptime_consolidate`. The worker reads recent originals, the latest eligible summary, and current blocks. It then calls `sleeptime`. Before writing it checks the job claim, source availability, generations, and block revisions. Editable agent blocks update directly, while protected block edits and suggested facts go to review. Forgetting a source removes dependent revisions and proposals and restores the latest surviving block revision.
+
+### Differences from upstream {#memory-block-differences}
+
+Separate tables support optimistic edits, source deletion, and approvals. A host can make a user block visible to multiple agents through existing scopes. Edit permissions are evaluated separately. Consolidation uses one structured model call. Context renders the description, character count, and value in a `<memory_block>` element. The harness places it in the model request. A block uses the same `_Candidate` path as documents, with an ID, type, relevance, token count, and packing decision. The stored bundle contains references.
+
+### Worked example {#memory-block-example}
+
+An agent reads revision 1 of its handoff block and invokes `memory_block_edit` with `{"block_id":"…","edit":{"base_revision":1,"operation":"rewrite","text":"Thursday handoff"}}`. The next harness turn can load revision 2 through `context_build`. For a user block, the same call returns a proposal. The value changes after the owner accepts it. [Reference harness integration test](https://github.com/shengming-zhou/memfxxk/blob/main/tests/integration/test_mcp_harness.py)
+
+### Evaluation {#memory-block-evaluation}
+
+Run `uv run python eval/run_t16_blocks.py --output eval/results/t16/p5-long-dialogue` for the frozen 64-turn, four-question replay with a shared 1,500-token memory limit. It uses BGE-small-en-v1.5 embeddings, `deepseek-flash` for consolidation, and `gpt-5.4-mini` for answering and grading. Both arms answered 2/2 preference and 2/2 rescheduling questions. Both loaded the original supporting message for all four answers. The blocks also captured the preferences and updated commitments.
+
+Four consolidation calls succeeded and spent 12,289 input and 1,321 output tokens, or about 192,016 input and 20,641 output tokens per 1,000 turns at this rate. Total write time was 2.94 seconds for hybrid and 12.80 seconds for blocks. Assembly p50 / p95 was 135 / 171 ms and 69 / 108 ms. Answer p50 / p95 was 850 / 1,421 ms and 614 / 814 ms. Four answers used 3,609 and 4,759 tokens respectively. Including grading and consolidation, both arms spent 22,647 tokens in total. First-call timing and run order affect these small-sample latencies. Automatic consolidation remains off by default.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

@@ -479,6 +479,9 @@ def commit(service: BoundService, draft_id: UUID) -> CommittedCompaction:
             .mappings()
             .one()
         )
+        from memfxxk.m2.sleeptime import queue_compaction
+
+        queue_compaction(conn, service, memory_id, version)
         return _committed(saved)
 
 

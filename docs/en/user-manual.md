@@ -204,6 +204,16 @@ Set `MEMFXXK_STRATEGIES__NOTES=amem` to generate retrieval descriptions, keyword
 
 Both arms answered all four questions in the replay. Scaled from this workload, 1,000 turns of note processing would use about 27.92 million input and 223,000 output tokens. [Implementation and evaluation](/en/developer-manual/#t16-amem)
 
+### Give the agent an editable memory block {#memory-block-usage}
+
+Use a block for a small set of regularly used preferences, commitments, or handoff notes. Supply a `label`, `description`, `value`, character `limit`, and `owner` when creating a block. With `MEMFXXK_STRATEGIES__BLOCKS=letta`, visible blocks compete for context space alongside documents. The API and SDK can read the blocks with automatic loading disabled.
+
+- To create a user block, send the user actor from your host with `X-Memfxxk-Actor: {"type":"user"}`. A user-owned block defaults to read-only. Agent edits become proposals for the user to review.
+- Set `owner="agent"` with an agent ID to create an agent block. With MCP management tools enabled, call `memory_block_list` or `memory_block_get` for its current `revision`. Then call `memory_block_edit` to append, replace a passage, or rewrite it. The next context build uses the new version. Read the latest revision if an edit conflicts.
+- Set `MEMFXXK_SLEEPTIME__EVERY_TURNS=16` to run consolidation every 16 completed turns. You can also set `MEMFXXK_SLEEPTIME__AFTER_COMPACTION=true` to trigger it after the host commits compaction. Configure the `sleeptime` model and run a worker when using either trigger.
+
+In a 64-turn replay, both groups answered two preference and two rescheduling questions correctly. Four background consolidation calls added 13,610 tokens. Automatic loading and consolidation are off by default. [API, reproduction, and metrics](/en/developer-manual/#t16-memory-blocks)
+
 ## Check evidence evaluation {#evidence-evaluation}
 
 Evidence evaluation measures whether a memory backend retrieves the history that supports an answer and tracks query latency. Reproduce it with the frozen LongMemEval_S suite in a dedicated evaluation database. This step requires no chat model. [Evaluation steps in the developer manual](https://shengming-zhou.github.io/memfxxk/en/developer-manual/#evidence-comparison)

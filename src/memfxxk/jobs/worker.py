@@ -164,6 +164,15 @@ class Worker:
                 build(service, batch[0], embedder)
 
             self.register("build_amem_note", handle_note)
+        if service.settings.strategies.blocks == "letta" and (
+            service.settings.sleeptime.every_turns or service.settings.sleeptime.after_compaction
+        ):
+            from memfxxk.m2.sleeptime import consolidate
+
+            def handle_sleeptime(batch: list[Job]) -> None:
+                consolidate(service, batch[0])
+
+            self.register("sleeptime_consolidate", handle_sleeptime)
 
     def register(self, kind: str, handler: Callable[[list[Job]], None]) -> None:
         self.handlers[kind] = handler
@@ -183,7 +192,13 @@ class Worker:
                 job.kind,
                 job.id
                 if job.kind
-                in (self.qdrant_kind, "extract_facts", "build_entity_graph", "build_amem_note")
+                in (
+                    self.qdrant_kind,
+                    "extract_facts",
+                    "build_entity_graph",
+                    "build_amem_note",
+                    "sleeptime_consolidate",
+                )
                 else None,
             )
             batches[key].append(job)
