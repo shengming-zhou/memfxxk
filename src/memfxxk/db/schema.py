@@ -285,6 +285,7 @@ document_revisions = sa.Table(
     sa.Column("author", JSONB, nullable=False),
     sa.Column("base_revision", sa.Integer),
     sa.Column("message", sa.Text),
+    sa.Column("lore", JSONB, nullable=False, server_default="{}"),
     timestamp("created_at"),
 )
 
@@ -543,6 +544,25 @@ sa.Index("ix_entity_edges_source", entity_edges.c.source_id, entity_edges.c.rela
 sa.Index("ix_entity_edges_target", entity_edges.c.target_id)
 sa.Index("ix_entity_edges_sources", entity_edges.c.source_event_ids, postgresql_using="gin")
 sa.Index("ix_entity_edges_lexemes", entity_edges.c.lexemes, postgresql_using="gin")
+
+story_annotations = sa.Table(
+    "story_annotations",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("fact_id", UUID, sa.ForeignKey("records.id", ondelete="CASCADE")),
+    sa.Column("edge_id", UUID, sa.ForeignKey("entity_edges.id", ondelete="CASCADE")),
+    sa.Column("label", sa.Text, nullable=False),
+    sa.Column("start", sa.BigInteger, nullable=False),
+    sa.Column("end", sa.BigInteger),
+    sa.Column(
+        "source_event_id", UUID, sa.ForeignKey("events.id", ondelete="CASCADE"), nullable=False
+    ),
+    sa.CheckConstraint("num_nonnulls(fact_id, edge_id) = 1", name="ck_story_annotations_target"),
+    sa.CheckConstraint('"end" > start', name="ck_story_annotations_interval"),
+)
+sa.Index("ix_story_annotations_fact", story_annotations.c.fact_id)
+sa.Index("ix_story_annotations_edge", story_annotations.c.edge_id)
 
 entity_mentions = sa.Table(
     "entity_mentions",

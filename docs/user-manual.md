@@ -202,6 +202,14 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 用 `memfxxk --project novel allocation show` 看当前状态，`allocation history` 查历史，`allocation reset` 恢复该范围的默认权重。保持与写作时相同的用户和 Agent 标识。反馈只改变预算权重，原始优先级、标签和正文仍由你控制。[反馈接口与回放](/developer-manual/#t17-allocation-feedback)
 
+### 用别名、故事时间和设定检查写长篇 {#story-context-usage}
+
+在世界观文档的一节里写「银卫，也称黎明哨」，或在保存文档时给该节传 `"lore":{"银卫":{"aliases":["黎明哨"],"keywords":["北门守卫"]}}`。用 `adaptive` 装载时，草稿或请求提到这些词就会让对应章节参与分配。写作宿主可以检查 `decision_reason` 确认它是否真的装进了本轮。
+
+用 `POST /v1/context/consistency` 或 MCP `context_check_consistency` 提交 `{"text":"红潮来临时，她打开了北门。" }`。系统会根据可见的相关设定报告可能的冲突、草稿位置和可查证的出处。可传 `min_priority` 只检查指定优先级及以上的设定。发现冲突后，由作者决定怎么修。若该设定在当前 bundle 被省略或缩短，宿主可把结果中的 `target` 作为 `conflict` 反馈。
+
+用 `PUT /v1/context/story-time` 给事实或图边标上 `time={"label":"第一次围城前","start":10,"end":30}`。之后在搜索中传 `as_of_story:20`，就能按故事里的时间查设定，即使那一章是倒叙。用 `POST /v1/context/outline` 选中并排序几个章节路径，可查看章节短版和卷摘要。[数据格式与核验](/developer-manual/#t17-story-context)
+
 图检索需要在搜索里传 `graph_hops: 1` 或 `2`，上下文装载则放在 `search_filters`。它先查关键词和向量，再查候选记忆的关联或已审核事实的共享实体。结果包含 `graph_path`，可逐条核对这条路径。
 
 如需把沿图找到的证据装进本轮上下文，可在 `context_build` 传 `graph_evidence_tokens`。例如总额度 1,500 token 时给图保留最多 300 token，图证据用不完的额度会回给普通证据。

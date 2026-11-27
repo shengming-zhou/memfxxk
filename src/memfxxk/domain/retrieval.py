@@ -5,6 +5,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validato
 
 from memfxxk.domain import Actor, Scope
 from memfxxk.domain.notes import NoteProjection
+from memfxxk.domain.story import StoryKey, StoryTime
 
 MemoryType = Literal["turn", "note", "fact", "summary", "lesson", "doc_chunk", "opinion"]
 MemoryMark = Literal["important", "pinned"]
@@ -27,6 +28,7 @@ class SearchRequest(BaseModel):
     as_of_valid: AwareDatetime | None = None
     as_of_recorded: AwareDatetime | None = None
     query_time: AwareDatetime | None = None
+    as_of_story: StoryKey | None = None
     channels: list[SearchChannel] = Field(
         default_factory=lambda: ["lexical", "vector", "important"]
     )
@@ -82,6 +84,7 @@ class MemoryReference(BaseModel):
     scope: Scope
     session_id: str | None = None
     source_pos: dict[str, object] | None = None
+    story_time: StoryTime | None = None
 
 
 class GraphFact(BaseModel):
@@ -93,6 +96,7 @@ class GraphFact(BaseModel):
     source_event_ids: list[UUID]
     prompt_versions: list[str] = Field(default_factory=list)
     generation: int = Field(default=0, exclude=True)
+    story_time: StoryTime | None = None
 
 
 class SearchHit(MemoryReference):

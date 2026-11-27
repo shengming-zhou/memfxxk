@@ -13,9 +13,10 @@ from sqlalchemy import Connection
 from memfxxk.context import _Candidate, _document_index, _wrap_document
 from memfxxk.context.adaptive import Candidate, Layer, Variant, allocate
 from memfxxk.context.feedback import state
+from memfxxk.context.lore import matches as lore_matches
 from memfxxk.context.priorities import ContentTarget, effective
 from memfxxk.context.resolutions import fallback, read_pairs
-from memfxxk.documents import document_contents, list_resolved
+from memfxxk.documents import document_contents, document_lore, list_resolved
 from memfxxk.domain.context import (
     AllocationTrace,
     BuildContextRequest,
@@ -42,6 +43,9 @@ def _units(
     terms: set[str],
     tokenizer: MixedTokenizer,
     include_index: bool,
+    query: str = "",
+    *,
+    all_units: bool = False,
 ) -> tuple[list[_Candidate], dict[int, ContentTarget], dict[int, ResolutionPair]]:
     matches: dict[tuple[str, int, str], float] = {}
     for item in existing:
@@ -52,6 +56,7 @@ def _units(
         matches[key] = max(matches.get(key, 0.0), item.ref.score or 0.0)
     documents = list_resolved(conn, service.ctx)
     raw_documents = document_contents(conn, documents)
+    lore = document_lore(conn, documents) if query else {}
     candidates, targets, pairs = [], {}, {}
     for doc in documents:
         original = raw_documents.get(doc.document_id)
@@ -63,12 +68,22 @@ def _units(
             lexical = len(terms.intersection(tokenizer.tokenize(f"{doc.path} {content}"))) / max(
                 1, len(terms)
             )
-            if doc.load_policy == "always" or matched in matches or lexical >= 0.4:
-                wanted.append((index, heading, content, max(lexical, matches.get(matched, 0.0))))
+            triggered = query and lore_matches(
+                query, heading, content, lore.get(doc.document_id, {}).get(heading)
+            )
+            if (
+                all_units
+                or doc.load_policy == "always"
+                or matched in matches
+                or lexical >= 0.4
+                or triggered
+            ):
+                score = 1.0 if triggered else max(lexical, matches.get(matched, 0.0))
+                wanted.append((index, heading, content, score, bool(triggered)))
         if not wanted:
             continue
         variants = read_pairs(conn, service.ctx, "document", doc.document_id, doc.revision)
-        for index, heading, content, score in wanted:
+        for index, heading, content, score, triggered in wanted:
             position = len(candidates)
             targets[position] = ContentTarget(
                 PriorityTarget(
@@ -89,9 +104,13 @@ def _units(
                         record_type="doc_section",
                         revision=doc.revision,
                         section_index=index,
-                        reason="always_document"
-                        if doc.load_policy == "always"
-                        else "matched_section",
+                        reason=(
+                            "always_document"
+                            if doc.load_policy == "always"
+                            else "lore_trigger"
+                            if triggered
+                            else "matched_section"
+                        ),
                         score=score,
                     ),
                     "## Persona & conventions" if doc.load_policy == "always" else "## Reference",
@@ -248,6 +267,7 @@ def assemble(
             terms,
             tokenizer,
             request.include_on_demand_index,
+            request.query or "",
         )
         if "documents" in sources
         else ([], {}, {})

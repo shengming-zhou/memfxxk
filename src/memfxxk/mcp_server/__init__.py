@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from memfxxk.client import ClientError
 from memfxxk.domain.blocks import EditBlock
+from memfxxk.domain.consistency import ConsistencyRequest, OutlineRequest
 from memfxxk.domain.context import BuildContextRequest, CommitCompaction, PrepareCompaction
 from memfxxk.domain.events import IngestEvent
 from memfxxk.domain.feedback import FeedbackReport
@@ -18,6 +19,7 @@ from memfxxk.domain.lessons import FinishTask
 from memfxxk.domain.manage import LinkRequest, Mark, PatchRequest, SaveLessonRequest
 from memfxxk.domain.priorities import ClearPriority, PriorityTarget, SetPriority
 from memfxxk.domain.reflect import ReflectRequest
+from memfxxk.domain.story import StoryAnnotation
 from memfxxk.m2.prompts import HOST
 from memfxxk.tools import TOOL_SPECS, HttpBackend, dispatch
 
@@ -151,6 +153,16 @@ def make_server(
                 FeedbackReport,
                 lambda req: client.report_feedback(req).model_dump(mode="json"),
             ),
+            "context_check_consistency": (
+                "Compare draft text with visible setting evidence and report possible conflicts.",
+                ConsistencyRequest,
+                lambda req: client.check_consistency(req).model_dump(mode="json"),
+            ),
+            "context_outline": (
+                "Read chapter and volume summaries from the selected Markdown paths.",
+                OutlineRequest,
+                lambda req: client.get_outline(req).model_dump(mode="json"),
+            ),
             "context_prepare_compaction": (
                 "Prepare a bounded summary of closed turns.",
                 PrepareCompaction,
@@ -166,6 +178,11 @@ def make_server(
         else {}
     )
     if enable_manage:
+        structured_tools["memory_annotate_story_time"] = (
+            "Set or clear a story-time interval on a visible fact or graph edge.",
+            StoryAnnotation,
+            lambda req: client.annotate_story_time(req).model_dump(mode="json"),
+        )
         structured_tools["memory_priority_get"] = (
             "Read a content item's effective integer priority and its source.",
             PriorityTarget,

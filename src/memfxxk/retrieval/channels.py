@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import ColumnElement, Connection, String, and_, cast, func, or_, select
 from sqlalchemy.dialects.postgresql import TSQUERY
 
+from memfxxk.context.story_time import at as story_at
 from memfxxk.db import memory_preferences, record_embeddings, records
 from memfxxk.documents import resolved_document_id
 from memfxxk.domain import Scope
@@ -67,6 +68,8 @@ def search_filters(ctx: Scope, request: SearchRequest) -> list[ColumnElement[boo
     ]
     if request.as_of_recorded is not None:
         filters.append(records.c.recorded_at <= recorded_at)
+    if request.as_of_story is not None:
+        filters.append(story_at(ctx, "fact", records.c.id, request.as_of_story))
     if not request.include_inactive:
         filters.append(records.c.status == "active")
         filters.append(

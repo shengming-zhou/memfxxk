@@ -335,7 +335,7 @@ def _build_hits(
         selected = [*keep, *expanded, *backfill][: request.k]
         timings.graph = _milliseconds(stage)
     stage = perf_counter()
-    if request.expand_relations and selected:
+    if request.expand_relations and selected and request.as_of_story is None:
         related = related_for(
             connection,
             service.ctx,
@@ -354,9 +354,14 @@ def _build_hits(
         for hit in selected
         for memory_id in [hit.memory_id, *hit.graph_path]
     }
+    verification_filters = (
+        search_filters(service.ctx, request.model_copy(update={"as_of_story": None}))
+        if request.as_of_story is not None
+        else filters
+    )
     remaining = connection.execute(
         select(record_table.c.id, record_table.c.generation).where(
-            record_table.c.id.in_(verify), *filters
+            record_table.c.id.in_(verify), *verification_filters
         ),
     )
     fresh_ids = {key for key, generation in remaining if rows[key]["generation"] == generation}
@@ -374,6 +379,21 @@ def _build_hits(
         for hit in selected:
             if hit.graph_fact and live.get(hit.graph_fact.edge_id) != hit.graph_fact.generation:
                 hit.graph_fact = None
+    if request.as_of_story is not None:
+        from memfxxk.context.story_time import get as story_time
+
+        matching = []
+        for hit in selected:
+            if hit.graph_fact is not None:
+                time = story_time(connection, service.ctx, "edge", hit.graph_fact.edge_id)
+                hit.graph_fact.story_time = time
+            else:
+                time = story_time(connection, service.ctx, "fact", by_memory_id[hit.memory_id])
+                hit.story_time = time
+            key = request.as_of_story
+            if time and time.start <= key and (time.end is None or key < time.end):
+                matching.append(hit)
+        selected = matching
     return [
         hit
         for hit in selected
@@ -393,12 +413,19 @@ def _graph_rows(
     if service.settings.strategies.graph == "graphiti":
         from memfxxk.m2.temporal_graph.search import graph_matches
 
+        episode_filters = (
+            search_filters(service.ctx, request.model_copy(update={"as_of_story": None}))
+            if request.as_of_story is not None
+            else filters
+        )
         return [
             (item.row, item.path, item.fact)
             for item in graph_matches(
-                connection, service, request, seeds, filters, tokens, query_vector
+                connection, service, request, seeds, episode_filters, tokens, query_vector
             )
         ]
+    if request.as_of_story is not None:
+        return []
     return [
         (row, path, None)
         for row, path in graph_neighbors(connection, service.ctx, request, seeds, filters)

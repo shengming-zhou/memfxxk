@@ -27,6 +27,7 @@ Task = Literal[
     "persona_update",
     "resolution_summarize",
     "context_plan",
+    "consistency_check",
 ]
 
 

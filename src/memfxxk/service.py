@@ -58,7 +58,14 @@ from memfxxk.jobs import enqueue
 from memfxxk.scope import ScopeError
 
 if TYPE_CHECKING:
+    from memfxxk.domain.consistency import (
+        ConsistencyRequest,
+        ConsistencyResult,
+        OutlineRequest,
+        OutlineResult,
+    )
     from memfxxk.domain.feedback import AllocationChange, AllocationState, FeedbackReport
+    from memfxxk.domain.story import StoryAnnotation
     from memfxxk.eval.longmemeval.dataset import Dataset, Question
     from memfxxk.llm.runner import FakeLLM
 
@@ -418,6 +425,21 @@ class BoundService:
         from memfxxk.context.feedback import report
 
         return report(self, request)
+
+    def check_consistency(self, request: "ConsistencyRequest") -> "ConsistencyResult":
+        from memfxxk.context.consistency import check
+
+        return check(self, request)
+
+    def get_outline(self, request: "OutlineRequest") -> "OutlineResult":
+        from memfxxk.context.consistency import outline
+
+        return outline(self, request)
+
+    def annotate_story_time(self, request: "StoryAnnotation") -> "StoryAnnotation":
+        from memfxxk.context.story_time import annotate
+
+        return annotate(self, request)
 
     def eval_ingest(self, question: "Question", dataset: "Dataset", sha256: str) -> bool:
         from memfxxk.eval.longmemeval.storage import ingest_question

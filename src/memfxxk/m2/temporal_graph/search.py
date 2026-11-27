@@ -8,6 +8,8 @@ from sqlalchemy import Connection, case, cast, func, or_, select
 from sqlalchemy.dialects.postgresql import TSQUERY
 from sqlalchemy.engine import RowMapping
 
+from memfxxk.context.story_time import at as story_at
+from memfxxk.context.story_time import get as story_time
 from memfxxk.db import entities, entity_edges, entity_mentions, records
 from memfxxk.domain import Scope
 from memfxxk.domain.retrieval import GraphFact, SearchRequest
@@ -38,7 +40,7 @@ def _period(ctx: Scope, request: SearchRequest) -> tuple[Any, list]:
     )
     source = entities.alias("visible_graph_source")
     target = entities.alias("visible_graph_target")
-    return end, [
+    filters = [
         visible_filter(entity_edges, ctx),
         entity_edges.c.created_at <= recorded,
         start <= valid,
@@ -50,6 +52,9 @@ def _period(ctx: Scope, request: SearchRequest) -> tuple[Any, list]:
         .where(target.c.id == entity_edges.c.target_id, visible_filter(target, ctx))
         .exists(),
     ]
+    if request.as_of_story is not None:
+        filters.append(story_at(ctx, "edge", entity_edges.c.id, request.as_of_story))
+    return end, filters
 
 
 def _bm25(rows: list[RowMapping], terms: list[str], text: Any) -> list[RowMapping]:
@@ -309,6 +314,9 @@ def graph_matches(
             source_event_ids=sorted({UUID(key) for group in support.values() for key in group}),
             generation=edge["generation"],
             prompt_versions=edge["metadata"].get("prompt_versions", []),
+            story_time=story_time(conn, scope, "edge", edge["id"])
+            if request.as_of_story is not None
+            else None,
         )
         seed = seed_by_entity.get(edge["source_id"]) or seed_by_entity.get(edge["target_id"])
         for episode_id in support:
@@ -320,7 +328,7 @@ def graph_matches(
                 GraphMatch(row, [seed, key] if seed and seed != key else [key], reference)
             )
             returned.add(key)
-    for mention in exact_mentions:
+    for mention in exact_mentions if request.as_of_story is None else []:
         row = episodes.get(mention.episode_id)
         if row is not None and row["memory_id"] not in returned:
             key = row["memory_id"]

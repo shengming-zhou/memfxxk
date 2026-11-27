@@ -4,6 +4,12 @@ from uuid import UUID
 from fastapi import APIRouter, Query, Response
 
 from memfxxk.api.dependencies import RequestService
+from memfxxk.domain.consistency import (
+    ConsistencyRequest,
+    ConsistencyResult,
+    OutlineRequest,
+    OutlineResult,
+)
 from memfxxk.domain.context import (
     BuildContextRequest,
     BundleMetadata,
@@ -20,6 +26,7 @@ from memfxxk.domain.priorities import ClearPriority, PriorityResult, PriorityTar
 from memfxxk.domain.reflect import ReflectRequest, ReflectResult
 from memfxxk.domain.resolutions import ContentResolutions, ResolutionTarget
 from memfxxk.domain.sessions import PutSessionState, SessionState
+from memfxxk.domain.story import StoryAnnotation
 from memfxxk.domain.workspace import (
     ImportWorkspaceRequest,
     WorkspaceImportResult,
@@ -88,6 +95,21 @@ def put_state(session_id: str, request: PutSessionState, service: RequestService
 @router.post("/context/build")
 def build_context(request: BuildContextRequest, service: RequestService) -> ContextBundle:
     return service.build_context(request)
+
+
+@router.post("/context/consistency")
+def check_consistency(request: ConsistencyRequest, service: RequestService) -> ConsistencyResult:
+    return service.check_consistency(request)
+
+
+@router.post("/context/outline")
+def get_outline(request: OutlineRequest, service: RequestService) -> OutlineResult:
+    return service.get_outline(request)
+
+
+@router.put("/context/story-time")
+def annotate_story_time(request: StoryAnnotation, service: RequestService) -> StoryAnnotation:
+    return service.annotate_story_time(request)
 
 
 @router.get("/context/allocation")

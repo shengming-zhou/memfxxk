@@ -36,6 +36,7 @@ from .schema import (
     record_embeddings,
     records,
     sessions,
+    story_annotations,
     tier_pages,
     tier_segments,
 )
@@ -73,6 +74,7 @@ __all__ = [
     "record_embeddings",
     "records",
     "sessions",
+    "story_annotations",
     "tier_pages",
     "tier_segments",
     "transaction",

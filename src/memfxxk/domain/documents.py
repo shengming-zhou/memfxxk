@@ -6,6 +6,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from memfxxk.domain import Actor, Scope
 from memfxxk.domain.errors import ServiceError
+from memfxxk.domain.story import LoreKeys
 
 LoadPolicy = Literal["always", "on_demand"]
 
@@ -26,6 +27,7 @@ class PutDocumentRequest(BaseModel):
     load_policy: LoadPolicy | None = None
     scope_drop: set[str] = Field(default_factory=set)
     message: str | None = None
+    lore: dict[str, LoreKeys] | None = Field(default=None, max_length=100)
 
 
 class DocumentInfo(BaseModel):
@@ -40,6 +42,7 @@ class DocumentInfo(BaseModel):
 
 class Document(DocumentInfo):
     content: str
+    lore: dict[str, LoreKeys] = Field(default_factory=dict)
 
 
 class DocumentRevision(BaseModel):

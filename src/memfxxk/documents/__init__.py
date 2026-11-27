@@ -92,6 +92,7 @@ def _as_document(row: RowMapping, revision: RowMapping) -> Document:
         revision=revision["revision"],
         updated_at=revision["created_at"],
         content=revision["content"],
+        lore=revision["lore"],
     )
 
 
@@ -117,7 +118,19 @@ def document_contents(connection: Connection, items: list[DocumentInfo]) -> dict
             tuple_(document_revisions.c.document_id, document_revisions.c.revision).in_(eligible)
         )
     )
-    return {document_id: path for document_id, path in result}
+    return {document_id: content for document_id, content in result}
+
+
+def document_lore(connection: Connection, items: list[DocumentInfo]) -> dict[UUID, dict]:
+    if not items:
+        return {}
+    eligible = [(item.document_id, item.revision) for item in items]
+    result = connection.execute(
+        select(document_revisions.c.document_id, document_revisions.c.lore).where(
+            tuple_(document_revisions.c.document_id, document_revisions.c.revision).in_(eligible)
+        )
+    )
+    return {document_id: lore for document_id, lore in result}
 
 
 def get_document(service: BoundService, path: str, revision: int | None = None) -> Document:
@@ -150,6 +163,8 @@ def put_document(service: BoundService, path: str, request: PutDocumentRequest) 
 def put_document_in_transaction(
     connection: Connection, service: BoundService, path: str, request: PutDocumentRequest
 ) -> Document:
+    from memfxxk.m2.doc_chunks import replace_chunks, sections
+
     path = document_path(path)
     scope = resolve_write_scope(service.ctx, request.scope_drop)
     scope_values = scope.model_dump()
@@ -190,6 +205,12 @@ def put_document_in_transaction(
             "Document revision has changed",
             {"head_revision": head, "head_excerpt": excerpt},
         )
+    lore = _revision(connection, row, None)["lore"] if head else {}
+    if request.lore is not None:
+        headings = {heading for heading, _ in sections(request.content)}
+        if request.lore.keys() - headings:
+            raise ServiceError(422, "unknown_lore_section", "Use a heading in this document")
+        lore = {heading: keys.model_dump() for heading, keys in request.lore.items()}
     stored = (
         connection.execute(
             document_revisions.insert()
@@ -200,6 +221,7 @@ def put_document_in_transaction(
                 author=service.ctx.actor.model_dump(),
                 base_revision=request.base_revision,
                 message=request.message,
+                lore=lore,
             )
             .returning(document_revisions)
         )
@@ -225,7 +247,6 @@ def put_document_in_transaction(
     )
     source_id = _audit(connection, service, scope, "put_document", updated, request.content)
     from memfxxk.context.resolutions import queue_resolution
-    from memfxxk.m2.doc_chunks import replace_chunks
 
     queue_resolution(connection, scope, "document", updated["id"], head + 1, [source_id])
 

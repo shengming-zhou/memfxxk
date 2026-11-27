@@ -490,6 +490,26 @@ Migration `0017` adds `allocation_states` and `allocation_changes`. State is key
 
 `context.feedback.replay` applies history in version order. Run `uv run pytest -q tests/unit/test_allocation_learning.py tests/integration/test_allocation_feedback.py` to check the four signals, convergence, same-turn detection, retries, scope, and reset. The six endpoint cases use no external model.
 
+## T17 P14 Long-form writing {#t17-story-context}
+
+### Keywords and aliases {#story-lore}
+
+A revision's `lore` map uses complete Markdown heading chains. Each section can define up to 24 `keywords` and 24 `aliases`. Omit the map to inherit it, send an empty object to clear it, or supply a new map with valid headings. Automatic extraction uses section headings, proper names, and alias cues including `aka`, `also known as`, `called`, `又称`, and `别名`. Latin words match at word boundaries. East Asian phrases match within text. Width and case are normalized. Matching sections enter the adaptive pool with `lore_trigger`. Extraction uses visible documents and textual rules without a model call.
+
+### Consistency checks {#story-consistency}
+
+`POST /v1/context/consistency`, SDK `check_consistency`, and host MCP `context_check_consistency` accept draft `text` and optional `min_priority`, `graph_hops`, and `evidence_tokens`. With no floor the service uses the two highest layers among visible sections and retrieved records. The check sends up to 16 relevant sources and 600 tokens per source. Use `MEMFXXK_LLM__TASKS__CONSISTENCY_CHECK__MODEL` to configure a separate model. A request with no relevant evidence returns an empty result without a model call. A failed model call with evidence returns the model-layer error.
+
+The model supplies evidence labels and exact excerpts from the draft and source. The service verifies both excerpts and resolves zero-based Unicode character positions `[start,end)`. A repeated excerpt needs a valid position. Results report potential conflicts and reference the source revision or version. The host can use `target` for P13 `conflict` feedback. The operation leaves draft and setting content under the author's control.
+
+### Story time and volume outlines {#story-time-and-outline}
+
+Migration `0018` adds revision-level `lore` and scoped `story_annotations`. `PUT /v1/context/story-time`, SDK `annotate_story_time`, and management MCP `memory_annotate_story_time` accept `kind:fact|edge`, the fact memory ID or graph edge ID, and interval `time`. Send `time:null` to clear the annotation in your scope. An annotation applies to a specific fact version or graph edge and has an audit event. End points are exclusive, and `end:null` is open-ended. `SearchRequest.as_of_story` and `BuildContextRequest.search_filters.as_of_story` select annotated facts and Graphiti edges at that story time while preserving existing date filters. Ordinary links lack story-time intervals.
+
+`POST /v1/context/outline`, SDK `get_outline`, and host MCP `context_outline` take `paths` in reading order and `max_tokens`. Optionally pass `session_ids` to reuse current T16 checkpoints. The service composes excerpts from current P11 chapter versions and selected conversation summaries. It returns a capped volume summary, a one-line extract, and chapter and checkpoint references at read time.
+
+Run `uv run pytest -q tests/integration/test_story_context.py tests/integration/test_temporal_graph.py` for word boundaries and aliases, conflicts and empty results, excerpts and offsets, story-time filtering, scope, and graph regression. The six stage examples use the local database and a fake model.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

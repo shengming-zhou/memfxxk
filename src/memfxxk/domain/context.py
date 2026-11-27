@@ -5,6 +5,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validato
 
 from memfxxk.domain.resolutions import ResolutionLevel
 from memfxxk.domain.retrieval import MemoryType, SearchChannel, SearchTimings
+from memfxxk.domain.story import StoryKey
 from memfxxk.prompts.compact import Checkpoint
 
 SectionName = Literal["documents", "pinned", "working", "evidence"]
@@ -66,6 +67,7 @@ class SearchFilters(BaseModel):
     as_of_valid: AwareDatetime | None = None
     as_of_recorded: AwareDatetime | None = None
     query_time: AwareDatetime | None = None
+    as_of_story: StoryKey | None = None
 
     @model_validator(mode="after")
     def ordered_dates(self) -> Self:

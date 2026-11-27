@@ -496,6 +496,26 @@ T17 的优先级由用户写入。所有候选按生效整数从高到低分层�
 
 `context.feedback.replay` 按版本回放历史。用 `uv run pytest -q tests/unit/test_allocation_learning.py tests/integration/test_allocation_feedback.py` 检验四类信号、多次更新的收敛、同轮检测、去重、隔离和重置。此阶段的六个接口样例无需外部模型。
 
+## T17 P14 长篇写作 {#t17-story-context}
+
+### 关键词和别名 {#story-lore}
+
+文档修订的 `lore` 按完整 Markdown 标题链索引，每节可写 `keywords` 和 `aliases` 各至多 24 个。保存时省略 `lore` 继承旧版本，传空对象清空，带值时校验标题链。自动提取使用章节标题、正文中的专名和别名标记，支持 `aka`、`also known as`、`called`、`又称` 和 `别名` 等形式。Latin 词按词界匹配，东亚文字按短语匹配。大小写和全半角归一化。匹配章节进入自适应池并标记 `lore_trigger`。此路径读取作用域内的文档，自动提取使用规则，无额外模型费用。
+
+### 一致性检查 {#story-consistency}
+
+`POST /v1/context/consistency`、SDK `check_consistency` 和宿主 MCP `context_check_consistency` 接收 `text`、可选 `min_priority`、`graph_hops` 和 `evidence_tokens`。省略下限时取作用域内可见章节及召回记录中的最高两层。检查至多 16 个相关来源，每条最多 600 token。配置 `MEMFXXK_LLM__TASKS__CONSISTENCY_CHECK__MODEL` 可以独立指定模型。无相关来源时返回空列表并省去模型调用。有证据但模型失败时返回模型层错误。
+
+模型先选证据标签并原样引用草稿和来源片段。服务验证两处引用并计算从 0 开始的 Unicode 字符区间 `[start,end)`。重复出现的片段需给正确位置。模型只能报告可能冲突。返回的 `target` 与文档修订或记录版本可用于回查，也可用作 P13 的 `conflict` 反馈。没有写入草稿或设定的路径。
+
+### 故事时间和卷摘要 {#story-time-and-outline}
+
+迁移 `0018` 加入按文档修订保存的 `lore` 和 `story_annotations`。`PUT /v1/context/story-time`、SDK `annotate_story_time`、MCP 管理工具 `memory_annotate_story_time` 接受 `kind:fact|edge`、逻辑事实 ID 或图边 ID 以及区间 `time`。传 `time:null` 清除本作用域的标注。标注跟随事实的特定版本或图边，记录审计事件。故事时间范围左闭右开，`end:null` 表示一直有效。`SearchRequest.as_of_story` 和 `BuildContextRequest.search_filters.as_of_story` 只筛选此时有效的显式标注事实与 Graphiti 边，同时保留原有记录时间和事件时间过滤。旧的普通链接没有故事时间。
+
+`POST /v1/context/outline`、SDK `get_outline` 和宿主 MCP `context_outline` 接受按阅读顺序排列的 `paths` 与总上限 `max_tokens`，可附 `session_ids` 复用当前 T16 压缩结果。用 P11 当前章节短版和选定的对话摘要生成有上限的卷摘要和一句话摘录，保留章节、修订及参与的检查点 ID。只在读取时组合。
+
+`uv run pytest -q tests/integration/test_story_context.py tests/integration/test_temporal_graph.py` 验证词界和别名、真冲突与空结果、原文位置、故事时间、作用域以及原有图检索。阶段检查使用六个本地样例和模拟模型。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

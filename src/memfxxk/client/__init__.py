@@ -31,6 +31,12 @@ from memfxxk.domain.blocks import (
     MemoryBlock,
     ReviewBlock,
 )
+from memfxxk.domain.consistency import (
+    ConsistencyRequest,
+    ConsistencyResult,
+    OutlineRequest,
+    OutlineResult,
+)
 from memfxxk.domain.context import (
     BuildContextRequest,
     BundleMetadata,
@@ -64,6 +70,7 @@ from memfxxk.domain.reflect import ReflectRequest, ReflectResult
 from memfxxk.domain.resolutions import ContentResolutions, ResolutionTarget
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 from memfxxk.domain.sessions import PutSessionState, SessionState
+from memfxxk.domain.story import StoryAnnotation
 from memfxxk.domain.workspace import (
     ImportWorkspaceRequest,
     WorkspaceImportResult,
@@ -351,6 +358,15 @@ class MemfxxkClient(ClientContext):
 
     def report_feedback(self, request: FeedbackReport) -> AllocationState:
         return self._request("POST", "context/allocation/feedback", AllocationState, body=request)
+
+    def check_consistency(self, request: ConsistencyRequest) -> ConsistencyResult:
+        return self._request("POST", "context/consistency", ConsistencyResult, body=request)
+
+    def get_outline(self, request: OutlineRequest) -> OutlineResult:
+        return self._request("POST", "context/outline", OutlineResult, body=request)
+
+    def annotate_story_time(self, request: StoryAnnotation) -> StoryAnnotation:
+        return self._request("PUT", "context/story-time", StoryAnnotation, body=request)
 
     def build_context(
         self,
@@ -674,6 +690,15 @@ class AsyncMemfxxkClient(ClientContext):
         return await self._request(
             "POST", "context/allocation/feedback", AllocationState, body=request
         )
+
+    async def check_consistency(self, request: ConsistencyRequest) -> ConsistencyResult:
+        return await self._request("POST", "context/consistency", ConsistencyResult, body=request)
+
+    async def get_outline(self, request: OutlineRequest) -> OutlineResult:
+        return await self._request("POST", "context/outline", OutlineResult, body=request)
+
+    async def annotate_story_time(self, request: StoryAnnotation) -> StoryAnnotation:
+        return await self._request("PUT", "context/story-time", StoryAnnotation, body=request)
 
     async def build_context(
         self,
