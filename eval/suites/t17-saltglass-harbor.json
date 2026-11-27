@@ -1,0 +1,38 @@
+{
+  "id": "saltglass-harbor-v1",
+  "budget_tokens": 420,
+  "documents": [
+    {"path":"world/1-charter.md","heading":"Saltglass Harbor","policy":"always","priority":90,"keys":["red tide","north gate","charter"],"rule":"During a red tide the north gate must stay closed.","detail":"The charter is kept above the eastern toll desk. Weather readings go into a weekly register that remains visible to travelers. Bronze inlays on the floor mark the old town boundaries. Council clerks carry spare pencils and leave them beside the lamp hooks."},
+    {"path":"world/2-council.md","heading":"Ashward Council","policy":"always","priority":80,"keys":["council","court","verdict"],"rule":"Only Regent Mara can overturn a harbor-court verdict.","detail":"The council chamber has small blue windows facing the channel. Voters are called by district during morning sessions. Witnesses wait in the alcove and may read printed schedules. High tide reaches the steps at the back of the building after evening bells."},
+    {"path":"world/3-crossings.md","heading":"South Ferry","policy":"on_demand","priority":60,"keys":["ferry","crossing","bell"],"rule":"The South Ferry departs after the second bell.","detail":"Passengers use a sloping jetty under willow trees. A covered stall lends umbrellas for a coin. Chalk signs list weather conditions. Some visitors walk along the wall and watch the pilots prepare their ropes."},
+    {"path":"world/4-signals.md","heading":"Silver Watch","policy":"on_demand","priority":45,"keys":["dawnward","silver watch","lantern"],"rule":"The Silver Watch carries brass lanterns.","detail":"The watch guard carries damp cloaks and usually stops at the corner shed. The courtyard includes benches and a shallow basin. The banner hangs under a timber arch. Locals sweep the alley before the shift changes."},
+    {"path":"chapters/3-low-tide.md","heading":"Chapter Three","policy":"on_demand","priority":32,"keys":["tess","third chapter","weapon"],"rule":"In Chapter Three, Tess carries the Ironsilk Blade.","detail":"Tess crossed the reeds as light moved on the wall. Loose rope coils lay on a long slate landing. She recognized the boatman by the mismatched cuffs on his coat. A cold wind disturbed the pond beyond the gate."},
+    {"path":"chapters/7-high-road.md","heading":"Chapter Seven","policy":"on_demand","priority":25,"keys":["lian","map","high road"],"rule":"Lian hides the map in the Lantern Archive.","detail":"At the turning, Lian paused to close a clasp before climbing the hill. Lamps hung along the passage on iron chains. The earliest visitors had placed sprigs of rosemary in a stone cup. Several workers were already folding cloth covers."},
+    {"path":"world/5-pact.md","heading":"Salt Oath","policy":"on_demand","priority":18,"keys":["salt oath","moor guild","treaty","glass fleet"],"rule":"The Moor Guild and Glass Fleet are allies under the Salt Oath.","detail":"Two identical copies of the treaty exist. The stamps represent the first day when both delegations could cross the channel. The tables are made of smooth grey wood. A low cabinet holds strips of paper for the winter invitations."},
+    {"path":"chapters/9-embassy.md","heading":"Chapter Nine","policy":"on_demand","priority":10,"keys":["ambassador","cliff station","embassy"],"rule":"Ambassador Sera waits at Cliff Station.","detail":"Air from the open window lifted the paper tickets. Travelers counted red roof tiles on the station. The path curved below a quarry where lamps hung against the stone. The waiting room stayed bright until shortly before sunrise."}
+  ],
+  "warmup": [
+    {"query":"Continue the negotiation without mentioning ships or the treaty.", "path":"world/5-pact.md"},
+    {"query":"Write the letter before the election. Keep the factions unnamed.", "path":"world/5-pact.md"},
+    {"query":"Stage the meeting with an unnamed officer at the end of the passage.", "path":"world/4-signals.md"},
+    {"query":"Leave one light burning at the end of the corridor.", "path":"world/4-signals.md"}
+  ],
+  "cases": [
+    {"id":"q01","kind":"qa","text":"During a red tide, what state must the north gate remain in?","sources":["world/1-charter.md"],"answers":["closed","shut"]},
+    {"id":"q02","kind":"qa","text":"Who can overturn a harbor-court verdict?","sources":["world/2-council.md"],"answers":["Regent Mara","Mara"]},
+    {"id":"q03","kind":"qa","text":"When does the South Ferry depart?","sources":["world/3-crossings.md"],"answers":["after the second bell","second bell"]},
+    {"id":"q04","kind":"qa","text":"What kind of lanterns does the Dawnward, also called the Silver Watch, carry?","sources":["world/4-signals.md"],"answers":["brass lanterns","brass"]},
+    {"id":"q05","kind":"qa","text":"Which weapon does Tess carry in the third chapter?","sources":["chapters/3-low-tide.md"],"answers":["Ironsilk Blade","the Ironsilk Blade"]},
+    {"id":"q06","kind":"qa","text":"Where does Lian hide the map on the high road?","sources":["chapters/7-high-road.md"],"answers":["Lantern Archive","the Lantern Archive"]},
+    {"id":"q07","kind":"qa","text":"Under the Salt Oath what are the Moor Guild and Glass Fleet to one another?","sources":["world/5-pact.md"],"answers":["allies"]},
+    {"id":"q08","kind":"qa","text":"Where is Ambassador Sera waiting?","sources":["chapters/9-embassy.md"],"answers":["Cliff Station"]},
+    {"id":"c01","kind":"conflict","text":"As the red tide rose, Tess opened the north gate and waved the carts through.","sources":["world/1-charter.md"],"draft_span":"opened the north gate"},
+    {"id":"c02","kind":"conflict","text":"A clerk overturned the harbor-court verdict before Regent Mara had even arrived.","sources":["world/2-council.md"],"draft_span":"A clerk overturned the harbor-court verdict"},
+    {"id":"c03","kind":"conflict","text":"The South Ferry departed before the first bell, with every ticket sold.","sources":["world/3-crossings.md"],"draft_span":"departed before the first bell"},
+    {"id":"c04","kind":"conflict","text":"The entire Silver Watch carried silver lanterns as their standard equipment.","sources":["world/4-signals.md"],"draft_span":"carried silver lanterns"},
+    {"id":"c05","kind":"conflict","text":"Under the Salt Oath the Moor Guild and Glass Fleet remained enemies.","sources":["world/5-pact.md"],"draft_span":"remained enemies"},
+    {"id":"c06","kind":"conflict","text":"During the red tide, Tess kept the north gate closed.","sources":["world/1-charter.md"],"draft_span":null},
+    {"id":"c07","kind":"conflict","text":"The South Ferry departed after the second bell, and the fog settled.","sources":["world/3-crossings.md"],"draft_span":null},
+    {"id":"c08","kind":"conflict","text":"Lian slid the map under an old book in the Lantern Archive.","sources":["chapters/7-high-road.md"],"draft_span":null}
+  ]
+}

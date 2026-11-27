@@ -1,0 +1,91 @@
+{
+  "model": "deepseek-flash",
+  "prompt": "source-resolution-v1",
+  "elapsed_ms": 5685,
+  "cases": [
+    {
+      "kind": "document",
+      "full_tokens": 76,
+      "summary_tokens": 11,
+      "line_tokens": 11,
+      "summary_method": "llm_extract",
+      "line_method": "llm_extract",
+      "source_grounded": true,
+      "expected_in_summary": true,
+      "model_input_tokens": 337,
+      "model_output_tokens": 30,
+      "calls": 1,
+      "call_errors": []
+    },
+    {
+      "kind": "block",
+      "full_tokens": 72,
+      "summary_tokens": 11,
+      "line_tokens": 11,
+      "summary_method": "llm_extract",
+      "line_method": "llm_extract",
+      "source_grounded": true,
+      "expected_in_summary": true,
+      "model_input_tokens": 335,
+      "model_output_tokens": 30,
+      "calls": 1,
+      "call_errors": []
+    },
+    {
+      "kind": "note",
+      "full_tokens": 72,
+      "summary_tokens": 11,
+      "line_tokens": 11,
+      "summary_method": "llm_extract",
+      "line_method": "llm_extract",
+      "source_grounded": true,
+      "expected_in_summary": true,
+      "model_input_tokens": 335,
+      "model_output_tokens": 30,
+      "calls": 1,
+      "call_errors": []
+    },
+    {
+      "kind": "fact",
+      "full_tokens": 71,
+      "summary_tokens": 10,
+      "line_tokens": 10,
+      "summary_method": "llm_extract",
+      "line_method": "llm_extract",
+      "source_grounded": true,
+      "expected_in_summary": true,
+      "model_input_tokens": 334,
+      "model_output_tokens": 28,
+      "calls": 1,
+      "call_errors": []
+    },
+    {
+      "kind": "lesson",
+      "full_tokens": 72,
+      "summary_tokens": 11,
+      "line_tokens": 11,
+      "summary_method": "llm_extract",
+      "line_method": "llm_extract",
+      "source_grounded": true,
+      "expected_in_summary": true,
+      "model_input_tokens": 335,
+      "model_output_tokens": 30,
+      "calls": 1,
+      "call_errors": []
+    },
+    {
+      "kind": "turn",
+      "full_tokens": 76,
+      "summary_tokens": 12,
+      "line_tokens": 4,
+      "summary_method": "extractive_fallback",
+      "line_method": "llm_extract",
+      "source_grounded": true,
+      "expected_in_summary": false,
+      "model_input_tokens": 339,
+      "model_output_tokens": 25,
+      "calls": 1,
+      "call_errors": []
+    }
+  ]
+}

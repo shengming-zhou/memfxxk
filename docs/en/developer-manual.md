@@ -454,7 +454,7 @@ Migration `0016` adds `content_resolutions` for shorter versions and source even
 
 ### Configuration and verification {#resolution-verification}
 
-Explicitly set `MEMFXXK_LLM__TASKS__RESOLUTION_SUMMARIZE__MODEL` to enable calls. The task uses the shared endpoint, credential, timeout, and JSON configuration. Run `uv run pytest -q tests/integration/test_content_resolutions.py` for invalidation, concurrent changes, deletion, fallback, and scope isolation. For a live check of six source types, run `uv run python eval/run_t17_resolutions.py --output eval/results/t17/p11-smoke`. All six DeepSeek Flash requests in the saved run used the fallback. All extracts were grounded. The gateway reported no token usage. Separate fake-model tests exercise successful generation.
+Explicitly set `MEMFXXK_LLM__TASKS__RESOLUTION_SUMMARIZE__MODEL` to enable calls. The task uses the shared endpoint, credential, timeout, and JSON configuration. Run `uv run pytest -q tests/integration/test_content_resolutions.py` for invalidation, concurrent changes, deletion, fallback, and scope isolation. For a live check of six source types, run `uv run python eval/run_t17_resolutions.py --output eval/results/t17/p11-smoke-live`. The DeepSeek Flash rerun after gateway recovery preserved provenance in all six cases. Five summaries preserved the whole setting rule, and one turn summary used the fallback after validation.
 
 ## T17 P12 Adaptive context {#t17-adaptive-context}
 
@@ -474,7 +474,7 @@ The highest layer uses stable source ordering. Its membership and resolutions ca
 
 Set `plan_with_llm=true` on a request and configure the explicit `context_plan` task. It receives a short description, example types, and weights for up to 100 layers. Finite coefficients for known layers are clamped to 0.7–1.3 by default. Budget and model failures use the base weights. Stored metadata records those weights, applied coefficients, and the call ID. Bundles retain references and omit source and request text.
 
-Run `uv run pytest -q tests/unit/test_adaptive_allocation.py tests/integration/test_adaptive_context.py` for repairs, budgets, pressure, cross-layer relevance, scope, and plan fallback. Run `uv run python eval/run_t17_allocator_smoke.py --output eval/results/t17/p12-smoke` for six requests. Add `--live` when the gateway is available.
+Run `uv run pytest -q tests/unit/test_adaptive_allocation.py tests/integration/test_adaptive_context.py` for repairs, budgets, pressure, cross-layer relevance, scope, and plan fallback. Run `uv run python eval/run_t17_allocator_smoke.py --output eval/results/t17/p12-smoke` for six requests. Add `--live` to verify the model. All six DeepSeek Flash requests returned valid coefficients and stayed within budget.
 
 ## T17 P13 Allocation feedback {#t17-allocation-feedback}
 
@@ -508,7 +508,24 @@ Migration `0018` adds revision-level `lore` and scoped `story_annotations`. `PUT
 
 `POST /v1/context/outline`, SDK `get_outline`, and host MCP `context_outline` take `paths` in reading order and `max_tokens`. Optionally pass `session_ids` to reuse current T16 checkpoints. The service composes excerpts from current P11 chapter versions and selected conversation summaries. It returns a capped volume summary, a one-line extract, and chapter and checkpoint references at read time.
 
-Run `uv run pytest -q tests/integration/test_story_context.py tests/integration/test_temporal_graph.py` for word boundaries and aliases, conflicts and empty results, excerpts and offsets, story-time filtering, scope, and graph regression. The six stage examples use the local database and a fake model.
+Run `uv run pytest -q tests/integration/test_story_context.py tests/integration/test_temporal_graph.py` for word boundaries and aliases, conflicts and empty results, excerpts and offsets, story-time filtering, scope, and graph regression. The agent's `memory_search` also accepts the story-time parameter. Run `uv run python eval/run_t17_consistency_smoke.py --output eval/results/t17/p14-smoke-live` for the live check. DeepSeek Flash detected 3/3 contradictions and left all 3 clean drafts unflagged.
+
+## T17 P15 Writing evaluation {#t17-writing-evaluation}
+
+### Suite and annotations {#writing-eval-format}
+
+Start with `eval/suites/t17-saltglass-harbor.json`. Each `documents` entry gives the path, heading, load policy, integer priority, keys, setting rule, and additional text. A QA case has `id`, `kind:"qa"`, `text`, acceptable short `answers`, and required `sources`. A draft case has `kind:"conflict"`. Set `draft_span` to an exact span from the draft, or `null` for a clean draft. `warmup` records writing requests and the references looked up afterward. Keep private manuscripts in a local evaluation directory.
+
+### Run, score, and archive {#writing-eval-run}
+
+```sh
+uv run python eval/run_t17_writing.py --output eval/results/t17/new-evidence
+uv run python eval/run_t17_writing.py --live --output eval/results/t17/new-live
+```
+
+The first command measures evidence coverage per case. The live run uses `MEMFXXK_EVAL__GEN__MODEL` to answer and requires an explicit `context_plan` model. The manifest records the suite hash, budget, prompts, and models. Grading uses explicit answers and annotated sources, with conflict detection and citation accuracy measured separately. Prefix fraction is the common token prefix of consecutive memory blocks divided by the current memory block length. Usage separates actual answer requests from repeated local results.
+
+`p15-live` keeps the initial results. `p15-rescored` adds per-case decisions and regrades the original responses. `p15-neutral-pilot` contains the six neutral follow-up requests. Run `eval/run_t17_check_pilot.py` to repeat that pilot. The current full runner uses the neutral prompt for drafts. Use `--reuse-run` to reuse answers and planning coefficients from a completed run on the same suite. [Writing evaluation and default decision](/en/writing-evaluation/)
 
 ## Reproduce the baseline {#run-evaluation}
 

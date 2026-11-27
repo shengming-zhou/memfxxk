@@ -1,0 +1,60 @@
+{
+  "model": "deepseek-flash",
+  "prompt": "story-consistency-v1",
+  "cases": [
+    {
+      "case": "c01",
+      "correct": true,
+      "conflicts": 1,
+      "sources": 4,
+      "elapsed_ms": 1625.48,
+      "input_tokens": 555,
+      "output_tokens": 68
+    },
+    {
+      "case": "c03",
+      "correct": true,
+      "conflicts": 1,
+      "sources": 5,
+      "elapsed_ms": 1147.18,
+      "input_tokens": 599,
+      "output_tokens": 65
+    },
+    {
+      "case": "c05",
+      "correct": true,
+      "conflicts": 1,
+      "sources": 3,
+      "elapsed_ms": 1298.47,
+      "input_tokens": 467,
+      "output_tokens": 70
+    },
+    {
+      "case": "c06",
+      "correct": true,
+      "conflicts": 0,
+      "sources": 4,
+      "elapsed_ms": 777.87,
+      "input_tokens": 550,
+      "output_tokens": 6
+    },
+    {
+      "case": "c07",
+      "correct": true,
+      "conflicts": 0,
+      "sources": 2,
+      "elapsed_ms": 1000.62,
+      "input_tokens": 413,
+      "output_tokens": 6
+    },
+    {
+      "case": "c08",
+      "correct": true,
+      "conflicts": 0,
+      "sources": 5,
+      "elapsed_ms": 870.2,
+      "input_tokens": 607,
+      "output_tokens": 6
+    }
+  ]
+}

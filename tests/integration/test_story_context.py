@@ -19,6 +19,7 @@ from memfxxk.llm import ChatResult
 from memfxxk.llm.runner import FakeLLM
 from memfxxk.m2.storage import derived_record
 from memfxxk.service import MemoryService
+from memfxxk.tools import ServiceBackend, dispatch
 
 pytestmark = pytest.mark.integration
 HEADERS = {"X-Memfxxk-User": "writer", "X-Memfxxk-Project": "novel"}
@@ -197,6 +198,8 @@ def test_story_time_intervals_filter_facts_and_graph_independently_of_recording(
     req = SearchRequest(query="lighthouse beacon", channels=["lexical"], as_of_story=20)
     hits = bound.search(req).hits
     assert [(hit.memory_id, hit.story_time) for hit in hits] == [(identity, early)]
+    arguments = {"query": "lighthouse beacon", "as_of_story": 20}
+    assert early.label in dispatch(ServiceBackend(bound), "memory_search", arguments)
     assert not bound.search(req.model_copy(update={"as_of_story": 30})).hits
     assert not private.search(req).hits
     assert not _bound(service, make_ctx, project="another").search(req).hits

@@ -210,6 +210,8 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 用 `PUT /v1/context/story-time` 给事实或图边标上 `time={"label":"第一次围城前","start":10,"end":30}`。之后在搜索中传 `as_of_story:20`，就能按故事里的时间查设定，即使那一章是倒叙。用 `POST /v1/context/outline` 选中并排序几个章节路径，可查看章节短版和卷摘要。[数据格式与核验](/developer-manual/#t17-story-context)
 
+长篇写作功能可以按需使用。默认仍是 `fixed`。在目前的 420 token 对照中，查完整专名和设定句时，固定分区保住了更多原文。 [长篇写作评测](/writing-evaluation/)
+
 图检索需要在搜索里传 `graph_hops: 1` 或 `2`，上下文装载则放在 `search_filters`。它先查关键词和向量，再查候选记忆的关联或已审核事实的共享实体。结果包含 `graph_path`，可逐条核对这条路径。
 
 如需把沿图找到的证据装进本轮上下文，可在 `context_build` 传 `graph_evidence_tokens`。例如总额度 1,500 token 时给图保留最多 300 token，图证据用不完的额度会回给普通证据。

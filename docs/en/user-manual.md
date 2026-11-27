@@ -202,6 +202,8 @@ Send `{"text":"While the red tide rose, she opened the north gate."}` to `POST /
 
 Use `PUT /v1/context/story-time` to add `time={"label":"Before the siege","start":10,"end":30}` to a fact or graph edge. A search at `as_of_story:20` follows the story chronology even for a flashback. Use `POST /v1/context/outline` with chapter paths in reading order to see chapter excerpts and a volume summary. [Formats and verification](/en/developer-manual/#t17-story-context)
 
+Writing features are available as needed. The default allocator remains `fixed`. In the 420-token comparison, fixed allocation preserved more complete setting rules and names. [Writing evaluation](/en/writing-evaluation/)
+
 Pass `graph_hops: 1` or `2` to search, or put it in `search_filters` when building context. Search starts with keyword and vector matches and follows links or shared entities on reviewed facts. Inspect `graph_path` to see the chain of evidence.
 
 To reserve room for graph evidence, set `graph_evidence_tokens` on `context_build`. A 1,500-token total budget can reserve up to 300 tokens for graph evidence, for example. Ordinary evidence can use any unused capacity.

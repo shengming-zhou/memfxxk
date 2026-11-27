@@ -460,7 +460,7 @@ T17 的优先级由用户写入。所有候选按生效整数从高到低分层�
 
 ### 配置和核验 {#resolution-verification}
 
-显式设置 `MEMFXXK_LLM__TASKS__RESOLUTION_SUMMARIZE__MODEL` 才会调用 `resolution_summarize`。模型端点、密钥、超时和 JSON 模式沿用模型层设置。用 `uv run pytest -q tests/integration/test_content_resolutions.py` 验证版本失效、后台竞争、删除、降级和读权限。可选运行 `uv run python eval/run_t17_resolutions.py --output eval/results/t17/p11-smoke` 检查六类来源。保存的 DeepSeek Flash 试跑六次请求都落入摘录回退，六条均能追溯原文，网关未返回 token 用量。模型成功生成由独立的 fake LLM 回归验证。
+显式设置 `MEMFXXK_LLM__TASKS__RESOLUTION_SUMMARIZE__MODEL` 才会调用 `resolution_summarize`。模型端点、密钥、超时和 JSON 模式沿用模型层设置。用 `uv run pytest -q tests/integration/test_content_resolutions.py` 验证版本失效、后台竞争、删除、降级和读权限。可选运行 `uv run python eval/run_t17_resolutions.py --output eval/results/t17/p11-smoke-live` 检查六类来源。网关恢复后的 DeepSeek Flash 补测六条均能回查原文。其中 5 条摘要选中了完整设定句，1 条对话摘要因模型输出没有通过预算或出处校验而回退。
 
 ## T17 P12 自适应上下文 {#t17-adaptive-context}
 
@@ -480,7 +480,7 @@ T17 的优先级由用户写入。所有候选按生效整数从高到低分层�
 
 请求传 `plan_with_llm=true`，并配置独立的 `context_plan` 任务。模型接收请求短描述、最多 100 层的类型示例和权重。仅保留已知层的有限系数，默认截到 0.7–1.3。预算耗尽或模型失败时使用基准权重。Bundle 持久化基准权重、有效系数及调用 ID。查询和原文不保存在 bundle 中。
 
-`uv run pytest -q tests/unit/test_adaptive_allocation.py tests/integration/test_adaptive_context.py` 验证各修补路径、预算、压力、跨层保护、作用域隔离和模型失败回退。`uv run python eval/run_t17_allocator_smoke.py --output eval/results/t17/p12-smoke` 试跑六条请求。网关可用时加 `--live` 核验模型微调。
+`uv run pytest -q tests/unit/test_adaptive_allocation.py tests/integration/test_adaptive_context.py` 验证各修补路径、预算、压力、跨层保护、作用域隔离和模型失败回退。`uv run python eval/run_t17_allocator_smoke.py --output eval/results/t17/p12-smoke` 试跑六条请求。加 `--live` 核验模型微调。DeepSeek Flash 六次均返回有效系数，输出都守住了预算。
 
 ## T17 P13 分配反馈 {#t17-allocation-feedback}
 
@@ -514,7 +514,24 @@ T17 的优先级由用户写入。所有候选按生效整数从高到低分层�
 
 `POST /v1/context/outline`、SDK `get_outline` 和宿主 MCP `context_outline` 接受按阅读顺序排列的 `paths` 与总上限 `max_tokens`，可附 `session_ids` 复用当前 T16 压缩结果。用 P11 当前章节短版和选定的对话摘要生成有上限的卷摘要和一句话摘录，保留章节、修订及参与的检查点 ID。只在读取时组合。
 
-`uv run pytest -q tests/integration/test_story_context.py tests/integration/test_temporal_graph.py` 验证词界和别名、真冲突与空结果、原文位置、故事时间、作用域以及原有图检索。阶段检查使用六个本地样例和模拟模型。
+`uv run pytest -q tests/integration/test_story_context.py tests/integration/test_temporal_graph.py` 验证词界和别名、真冲突与空结果、原文位置、故事时间、作用域以及原有图检索。故事时间参数也可用于 Agent 的 `memory_search`。真实模型阶段检查用 `uv run python eval/run_t17_consistency_smoke.py --output eval/results/t17/p14-smoke-live`，DeepSeek Flash 检出 3/3 真冲突，对 3 条干净文本无误报。
+
+## T17 P15 写作横评 {#t17-writing-evaluation}
+
+### 材料和打标 {#writing-eval-format}
+
+用 `eval/suites/t17-saltglass-harbor.json` 作模板。每份 `documents` 记录路径、章节标题、装载策略、整数优先级、触发词、设定句 `rule` 和原文细节。问答题填 `id`、`kind:"qa"`、`text`、可接受的简短 `answers` 及必须引用的 `sources`。草稿题用 `kind:"conflict"`，以原稿里的连续子串设置 `draft_span`，干净文段传 `null`。回放用 `warmup` 指定预热请求和随后的补读路径。真实小说和未公开稿件应留在本机评测目录。
+
+### 运行、评分和归档 {#writing-eval-run}
+
+```sh
+uv run python eval/run_t17_writing.py --output eval/results/t17/new-evidence
+uv run python eval/run_t17_writing.py --live --output eval/results/t17/new-live
+```
+
+第一条记录逐题证据覆盖。第二条使用 `MEMFXXK_EVAL__GEN__MODEL` 答题，并需要配置独立 `context_plan` 模型。提示版本、模型、原料 SHA-256 和预算写入结果目录清单。评测以每道题的明确答案和来源标签评分，冲突检出与准确文件引用分别算分。可复用前缀是相邻记忆文本的共同 token 数除以本次记忆长度，以评估缓存机会。实际请求与评测本地缓存复用的用量分别记录。
+
+`p15-live` 留初试统计，`p15-rescored` 留首轮逐题复核，`p15-neutral-pilot` 只记录获准补测的六次中性请求。可用 `eval/run_t17_check_pilot.py` 复跑小样。当前完整脚本对草稿使用中性提示。`--reuse-run` 可从同一套题的已完成结果复用答题和规划系数。报告页解释了首轮提示缺陷、改用中性请求后的抽查，以及保留默认配置的理由。 [长篇写作评测](/writing-evaluation/)
 
 ## 重跑基线 {#run-evaluation}
 

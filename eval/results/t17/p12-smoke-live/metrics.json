@@ -1,0 +1,124 @@
+{
+  "live": true,
+  "cases": [
+    {
+      "case": 1,
+      "budget": 120,
+      "tokens": 94,
+      "elapsed_ms": 1053.77,
+      "included": [
+        "Gates",
+        "Ferry",
+        "Lanterns"
+      ],
+      "coefficients": {
+        "3": 1.1,
+        "2": 1.0,
+        "1": 0.95
+      },
+      "calls": 1,
+      "input_tokens": 228,
+      "output_tokens": 22,
+      "errors": []
+    },
+    {
+      "case": 2,
+      "budget": 120,
+      "tokens": 94,
+      "elapsed_ms": 859.06,
+      "included": [
+        "Gates",
+        "Ferry",
+        "Lanterns"
+      ],
+      "coefficients": {
+        "3": 1.1,
+        "2": 1.0,
+        "1": 0.95
+      },
+      "calls": 1,
+      "input_tokens": 227,
+      "output_tokens": 22,
+      "errors": []
+    },
+    {
+      "case": 3,
+      "budget": 120,
+      "tokens": 94,
+      "elapsed_ms": 1093.48,
+      "included": [
+        "Gates",
+        "Ferry",
+        "Lanterns"
+      ],
+      "coefficients": {
+        "3": 1.1,
+        "2": 1.0,
+        "1": 0.9
+      },
+      "calls": 1,
+      "input_tokens": 228,
+      "output_tokens": 22,
+      "errors": []
+    },
+    {
+      "case": 4,
+      "budget": 160,
+      "tokens": 129,
+      "elapsed_ms": 785.96,
+      "included": [
+        "Gates",
+        "Ferry",
+        "Lanterns"
+      ],
+      "coefficients": {
+        "3": 1.1,
+        "2": 1.0,
+        "1": 0.9
+      },
+      "calls": 1,
+      "input_tokens": 226,
+      "output_tokens": 22,
+      "errors": []
+    },
+    {
+      "case": 5,
+      "budget": 80,
+      "tokens": 76,
+      "elapsed_ms": 832.61,
+      "included": [
+        "Gates",
+        "Ferry",
+        "Lanterns"
+      ],
+      "coefficients": {
+        "3": 1.1,
+        "2": 1.0,
+        "1": 0.9
+      },
+      "calls": 1,
+      "input_tokens": 228,
+      "output_tokens": 22,
+      "errors": []
+    },
+    {
+      "case": 6,
+      "budget": 44,
+      "tokens": 27,
+      "elapsed_ms": 797.9,
+      "included": [
+        "Lanterns"
+      ],
+      "coefficients": {
+        "3": 1.1,
+        "2": 1.0,
+        "1": 0.95
+      },
+      "calls": 1,
+      "input_tokens": 226,
+      "output_tokens": 22,
+      "errors": []
+    }
+  ],
+  "model": "deepseek-flash"
+}

@@ -9,9 +9,11 @@ export default defineConfig({
     'user-manual.md': 'user-manual/index.md',
     'developer-manual.md': 'developer-manual/index.md',
     'memory-strategy-results.md': 'memory-strategy-results/index.md',
+    'writing-evaluation.md': 'writing-evaluation/index.md',
     'en/user-manual.md': 'en/user-manual/index.md',
     'en/developer-manual.md': 'en/developer-manual/index.md',
     'en/memory-strategy-results.md': 'en/memory-strategy-results/index.md',
+    'en/writing-evaluation.md': 'en/writing-evaluation/index.md',
   },
   locales: {
     root: {

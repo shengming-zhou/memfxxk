@@ -9,6 +9,7 @@ from pydantic import ValidationError as ModelValidationError
 from memfxxk.domain.documents import Document, document_path
 from memfxxk.domain.manage import MemoryVersion, RememberRequest
 from memfxxk.domain.retrieval import MemoryResponse, MemoryType, SearchRequest, SearchResponse
+from memfxxk.domain.story import StoryKey
 
 if TYPE_CHECKING:
     from memfxxk.client import AsyncMemfxxkClient, MemfxxkClient
@@ -34,6 +35,7 @@ class _SearchArgs(BaseModel):
     graph_hops: int = Field(default=0, ge=0, le=2)
     as_of_valid: AwareDatetime | None = None
     as_of_recorded: AwareDatetime | None = None
+    as_of_story: StoryKey | None = None
 
 
 class _GetArgs(BaseModel):
@@ -232,6 +234,9 @@ def _format(result: ToolResult, max_item_chars: int) -> str:
                 text += f"\n    related: {links}"
             if hit.graph_path:
                 text += "\n    graph path: " + " -> ".join(map(str, hit.graph_path))
+            in_story = hit.story_time or (hit.graph_fact.story_time if hit.graph_fact else None)
+            if in_story is not None:
+                text += f"\n    story time: {in_story.label} (start={in_story.start})"
             items.append(_clip(text, max_item_chars))
         return "\n".join(
             [

@@ -1,0 +1,130 @@
+{
+  "model": "gpt-5.4-mini",
+  "prompt": "writing-check-v2",
+  "cases": [
+    {
+      "case": "c01",
+      "arm": "fixed",
+      "grade": {
+        "parsed": true,
+        "correct": true,
+        "grounded_findings": 1,
+        "reported": 1,
+        "detected_with_quote": true,
+        "matches": [
+          {
+            "source": "world/1-charter.md",
+            "start": 27,
+            "excerpt": "opened the north gate",
+            "source_excerpt": "During a red tide the north gate must stay closed."
+          }
+        ]
+      },
+      "input_tokens": 479,
+      "output_tokens": 42,
+      "latency_ms": 850.18,
+      "cache_hit": false
+    },
+    {
+      "case": "c01",
+      "arm": "adaptive",
+      "grade": {
+        "parsed": true,
+        "correct": true,
+        "grounded_findings": 1,
+        "reported": 1,
+        "detected_with_quote": true,
+        "matches": [
+          {
+            "source": "world/1-charter.md",
+            "start": 0,
+            "excerpt": "As the red tide rose, Tess opened the north gate and waved the carts through.",
+            "source_excerpt": "During a red tide the north gate must stay closed."
+          }
+        ]
+      },
+      "input_tokens": 492,
+      "output_tokens": 54,
+      "latency_ms": 930.77,
+      "cache_hit": false
+    },
+    {
+      "case": "c05",
+      "arm": "fixed",
+      "grade": {
+        "parsed": true,
+        "correct": true,
+        "grounded_findings": 1,
+        "reported": 1,
+        "detected_with_quote": true,
+        "matches": [
+          {
+            "source": "world/5-pact.md",
+            "start": 0,
+            "excerpt": "Under the Salt Oath the Moor Guild and Glass Fleet remained enemies.",
+            "source_excerpt": "# Salt Oath\nThe Moor Guild and Glass Fleet are allies under the Salt Oath."
+          }
+        ]
+      },
+      "input_tokens": 472,
+      "output_tokens": 57,
+      "latency_ms": 719.47,
+      "cache_hit": false
+    },
+    {
+      "case": "c05",
+      "arm": "adaptive",
+      "grade": {
+        "parsed": true,
+        "correct": true,
+        "grounded_findings": 1,
+        "reported": 1,
+        "detected_with_quote": true,
+        "matches": [
+          {
+            "source": "world/5-pact.md",
+            "start": 0,
+            "excerpt": "Under the Salt Oath the Moor Guild and Glass Fleet remained enemies.",
+            "source_excerpt": "The Moor Guild and Glass Fleet are allies under the"
+          }
+        ]
+      },
+      "input_tokens": 489,
+      "output_tokens": 50,
+      "latency_ms": 843.2,
+      "cache_hit": false
+    },
+    {
+      "case": "c06",
+      "arm": "fixed",
+      "grade": {
+        "parsed": true,
+        "correct": true,
+        "grounded_findings": 0,
+        "reported": 0,
+        "detected_with_quote": false,
+        "matches": []
+      },
+      "input_tokens": 474,
+      "output_tokens": 8,
+      "latency_ms": 772.31,
+      "cache_hit": false
+    },
+    {
+      "case": "c06",
+      "arm": "adaptive",
+      "grade": {
+        "parsed": true,
+        "correct": true,
+        "grounded_findings": 0,
+        "reported": 0,
+        "detected_with_quote": false,
+        "matches": []
+      },
+      "input_tokens": 487,
+      "output_tokens": 8,
+      "latency_ms": 531.92,
+      "cache_hit": false
+    }
+  ]
+}

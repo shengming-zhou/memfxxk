@@ -1,0 +1,3740 @@
+[
+  {
+    "case": "q01",
+    "kind": "qa",
+    "arm": "lorebook",
+    "gold_conflict": null,
+    "context_tokens": 157,
+    "prompt_tokens_estimate": 260,
+    "prefix_fraction": null,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.18,
+    "answer_ms": 1494.4669000033173,
+    "answer_cache_hit": false,
+    "input_tokens": 272,
+    "output_tokens": 8,
+    "total_ms": 1600.27,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "closed"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q01",
+    "kind": "qa",
+    "arm": "fixed",
+    "gold_conflict": null,
+    "context_tokens": 316,
+    "prompt_tokens_estimate": 419,
+    "prefix_fraction": null,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 119.31,
+    "answer_ms": 740.7162000017706,
+    "answer_cache_hit": false,
+    "input_tokens": 431,
+    "output_tokens": 8,
+    "total_ms": 1016.72,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "closed"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q01",
+    "kind": "qa",
+    "arm": "adaptive",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": null,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 116.44,
+    "answer_ms": 532.5404000031995,
+    "answer_cache_hit": false,
+    "input_tokens": 444,
+    "output_tokens": 8,
+    "total_ms": 672.3,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "closed"
+    },
+    "evidence_decisions": {
+      "world/1-charter.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "q01",
+    "kind": "qa",
+    "arm": "adaptive_plan",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": null,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 1356.23,
+    "answer_ms": 1.2521999960881658,
+    "answer_cache_hit": true,
+    "input_tokens": 444,
+    "output_tokens": 8,
+    "total_ms": 1363.21,
+    "plan_input_tokens": 375,
+    "plan_output_tokens": 28,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 0.95,
+        "45": 0.9
+      },
+      "plan_call_id": "01a21bbf-d5bf-7295-8594-8358cadbb5be",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "closed"
+    },
+    "evidence_decisions": {
+      "world/1-charter.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "q01",
+    "kind": "qa",
+    "arm": "adaptive_feedback",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": null,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 99.64,
+    "answer_ms": 0.7889000044087879,
+    "answer_cache_hit": true,
+    "input_tokens": 444,
+    "output_tokens": 8,
+    "total_ms": 101.01,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "closed"
+    },
+    "evidence_decisions": {
+      "world/1-charter.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "q01",
+    "kind": "qa",
+    "arm": "all_text",
+    "gold_conflict": null,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 692,
+    "prefix_fraction": null,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.02,
+    "answer_ms": 606.3435000032769,
+    "answer_cache_hit": false,
+    "input_tokens": 704,
+    "output_tokens": 8,
+    "total_ms": 701.3,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "closed"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q02",
+    "kind": "qa",
+    "arm": "lorebook",
+    "gold_conflict": null,
+    "context_tokens": 157,
+    "prompt_tokens_estimate": 255,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/2-council.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.29,
+    "answer_ms": 701.5700999982073,
+    "answer_cache_hit": false,
+    "input_tokens": 267,
+    "output_tokens": 10,
+    "total_ms": 806.31,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Regent Mara"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q02",
+    "kind": "qa",
+    "arm": "fixed",
+    "gold_conflict": null,
+    "context_tokens": 306,
+    "prompt_tokens_estimate": 404,
+    "prefix_fraction": 0.598,
+    "evidence": {
+      "world/2-council.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 129.09,
+    "answer_ms": 729.2493999993894,
+    "answer_cache_hit": false,
+    "input_tokens": 416,
+    "output_tokens": 10,
+    "total_ms": 938.07,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Regent Mara"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q02",
+    "kind": "qa",
+    "arm": "adaptive",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 427,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/2-council.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 120.02,
+    "answer_ms": 1259.6297999989474,
+    "answer_cache_hit": false,
+    "input_tokens": 439,
+    "output_tokens": 10,
+    "total_ms": 1461.16,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Regent Mara"
+    },
+    "evidence_decisions": {
+      "world/2-council.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "q02",
+    "kind": "qa",
+    "arm": "adaptive_plan",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 427,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/2-council.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 1509.35,
+    "answer_ms": 0.7025999948382378,
+    "answer_cache_hit": true,
+    "input_tokens": 439,
+    "output_tokens": 10,
+    "total_ms": 1513.99,
+    "plan_input_tokens": 371,
+    "plan_output_tokens": 28,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.12,
+        "80": 1.05,
+        "60": 0.95,
+        "45": 0.9
+      },
+      "plan_call_id": "01a21bbf-ead1-74e2-b652-1df59f8a3082",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Regent Mara"
+    },
+    "evidence_decisions": {
+      "world/2-council.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "q02",
+    "kind": "qa",
+    "arm": "adaptive_feedback",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 427,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/2-council.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 96.96,
+    "answer_ms": 0.6900000007590279,
+    "answer_cache_hit": true,
+    "input_tokens": 439,
+    "output_tokens": 10,
+    "total_ms": 98.17,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Regent Mara"
+    },
+    "evidence_decisions": {
+      "world/2-council.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "q02",
+    "kind": "qa",
+    "arm": "all_text",
+    "gold_conflict": null,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 687,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/2-council.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.01,
+    "answer_ms": 851.0733000002801,
+    "answer_cache_hit": false,
+    "input_tokens": 699,
+    "output_tokens": 10,
+    "total_ms": 1005.3,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Regent Mara"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q03",
+    "kind": "qa",
+    "arm": "lorebook",
+    "gold_conflict": null,
+    "context_tokens": 224,
+    "prompt_tokens_estimate": 320,
+    "prefix_fraction": 0.6964,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.39,
+    "answer_ms": 586.8843999996898,
+    "answer_cache_hit": false,
+    "input_tokens": 332,
+    "output_tokens": 11,
+    "total_ms": 617.13,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "world/3-crossings.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "after the second bell"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q03",
+    "kind": "qa",
+    "arm": "fixed",
+    "gold_conflict": null,
+    "context_tokens": 306,
+    "prompt_tokens_estimate": 402,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 121.85,
+    "answer_ms": 664.3688999974984,
+    "answer_cache_hit": false,
+    "input_tokens": 414,
+    "output_tokens": 11,
+    "total_ms": 831.53,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "after the second bell"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q03",
+    "kind": "qa",
+    "arm": "adaptive",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 425,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 161.76,
+    "answer_ms": 515.193500003079,
+    "answer_cache_hit": false,
+    "input_tokens": 437,
+    "output_tokens": 11,
+    "total_ms": 731.92,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "after the second bell"
+    },
+    "evidence_decisions": {
+      "world/3-crossings.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q03",
+    "kind": "qa",
+    "arm": "adaptive_plan",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 425,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 1200.24,
+    "answer_ms": 0.7135000050766394,
+    "answer_cache_hit": true,
+    "input_tokens": 437,
+    "output_tokens": 11,
+    "total_ms": 1204.42,
+    "plan_input_tokens": 368,
+    "plan_output_tokens": 52,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 1.0,
+        "45": 0.95,
+        "32": 0.9,
+        "25": 0.9,
+        "18": 0.9,
+        "10": 0.9
+      },
+      "plan_call_id": "01a21bbf-fd83-7562-99a0-0594fb68a913",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "after the second bell"
+    },
+    "evidence_decisions": {
+      "world/3-crossings.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q03",
+    "kind": "qa",
+    "arm": "adaptive_feedback",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 425,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 110.17,
+    "answer_ms": 0.9424999952898361,
+    "answer_cache_hit": true,
+    "input_tokens": 437,
+    "output_tokens": 11,
+    "total_ms": 111.85,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "after the second bell"
+    },
+    "evidence_decisions": {
+      "world/3-crossings.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q03",
+    "kind": "qa",
+    "arm": "all_text",
+    "gold_conflict": null,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 685,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.01,
+    "answer_ms": 739.2712999935611,
+    "answer_cache_hit": false,
+    "input_tokens": 697,
+    "output_tokens": 11,
+    "total_ms": 805.78,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "after the second bell"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q04",
+    "kind": "qa",
+    "arm": "lorebook",
+    "gold_conflict": null,
+    "context_tokens": 224,
+    "prompt_tokens_estimate": 331,
+    "prefix_fraction": 0.7232,
+    "evidence": {
+      "world/4-signals.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.3,
+    "answer_ms": 566.865399996459,
+    "answer_cache_hit": false,
+    "input_tokens": 343,
+    "output_tokens": 11,
+    "total_ms": 632.1,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "world/4-signals.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "brass lanterns"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q04",
+    "kind": "qa",
+    "arm": "fixed",
+    "gold_conflict": null,
+    "context_tokens": 305,
+    "prompt_tokens_estimate": 412,
+    "prefix_fraction": 0.6,
+    "evidence": {
+      "world/4-signals.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 154.14,
+    "answer_ms": 529.9364000020432,
+    "answer_cache_hit": false,
+    "input_tokens": 424,
+    "output_tokens": 11,
+    "total_ms": 727.26,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "brass lanterns"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q04",
+    "kind": "qa",
+    "arm": "adaptive",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 436,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/4-signals.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 153.21,
+    "answer_ms": 630.7601000007708,
+    "answer_cache_hit": false,
+    "input_tokens": 448,
+    "output_tokens": 11,
+    "total_ms": 1266.19,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "brass lanterns"
+    },
+    "evidence_decisions": {
+      "world/4-signals.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q04",
+    "kind": "qa",
+    "arm": "adaptive_plan",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 436,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/4-signals.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 1216.47,
+    "answer_ms": 0.7145999989006668,
+    "answer_cache_hit": true,
+    "input_tokens": 448,
+    "output_tokens": 11,
+    "total_ms": 1221.17,
+    "plan_input_tokens": 379,
+    "plan_output_tokens": 22,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 0.95
+      },
+      "plan_call_id": "01a21bc0-1002-73cb-bd64-db3745280ed8",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "brass lanterns"
+    },
+    "evidence_decisions": {
+      "world/4-signals.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q04",
+    "kind": "qa",
+    "arm": "adaptive_feedback",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 436,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/4-signals.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 102.41,
+    "answer_ms": 1.2425000022631139,
+    "answer_cache_hit": true,
+    "input_tokens": 448,
+    "output_tokens": 11,
+    "total_ms": 104.19,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "brass lanterns"
+    },
+    "evidence_decisions": {
+      "world/4-signals.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q04",
+    "kind": "qa",
+    "arm": "all_text",
+    "gold_conflict": null,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 696,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/4-signals.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.02,
+    "answer_ms": 712.9010000062408,
+    "answer_cache_hit": false,
+    "input_tokens": 708,
+    "output_tokens": 11,
+    "total_ms": 823.69,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "brass lanterns"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q05",
+    "kind": "qa",
+    "arm": "lorebook",
+    "gold_conflict": null,
+    "context_tokens": 234,
+    "prompt_tokens_estimate": 333,
+    "prefix_fraction": 0.6838,
+    "evidence": {
+      "chapters/3-low-tide.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.33,
+    "answer_ms": 678.4904999949504,
+    "answer_cache_hit": false,
+    "input_tokens": 345,
+    "output_tokens": 11,
+    "total_ms": 696.04,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "chapters/3-low-tide.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Ironsilk Blade"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q05",
+    "kind": "qa",
+    "arm": "fixed",
+    "gold_conflict": null,
+    "context_tokens": 316,
+    "prompt_tokens_estimate": 415,
+    "prefix_fraction": 0.5791,
+    "evidence": {
+      "chapters/3-low-tide.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 124.69,
+    "answer_ms": 545.2076000001398,
+    "answer_cache_hit": false,
+    "input_tokens": 427,
+    "output_tokens": 11,
+    "total_ms": 768.37,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Ironsilk Blade"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q05",
+    "kind": "qa",
+    "arm": "adaptive",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 428,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/3-low-tide.md": false
+    },
+    "all_evidence": false,
+    "allocation_ms": 108.23,
+    "answer_ms": 601.5277999977116,
+    "answer_cache_hit": false,
+    "input_tokens": 440,
+    "output_tokens": 10,
+    "total_ms": 751.52,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "answer": "Ironsilk"
+    },
+    "evidence_decisions": {
+      "chapters/3-low-tide.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q05",
+    "kind": "qa",
+    "arm": "adaptive_plan",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 428,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/3-low-tide.md": false
+    },
+    "all_evidence": false,
+    "allocation_ms": 884.57,
+    "answer_ms": 0.7482000000891276,
+    "answer_cache_hit": true,
+    "input_tokens": 440,
+    "output_tokens": 10,
+    "total_ms": 889.68,
+    "plan_input_tokens": 371,
+    "plan_output_tokens": 28,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 0.95,
+        "45": 0.9
+      },
+      "plan_call_id": "01a21bc0-2115-7782-868d-89a224d68af3",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "answer": "Ironsilk"
+    },
+    "evidence_decisions": {
+      "chapters/3-low-tide.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q05",
+    "kind": "qa",
+    "arm": "adaptive_feedback",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 428,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/3-low-tide.md": false
+    },
+    "all_evidence": false,
+    "allocation_ms": 107.17,
+    "answer_ms": 0.9767000010469928,
+    "answer_cache_hit": true,
+    "input_tokens": 440,
+    "output_tokens": 10,
+    "total_ms": 108.78,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "answer": "Ironsilk"
+    },
+    "evidence_decisions": {
+      "chapters/3-low-tide.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q05",
+    "kind": "qa",
+    "arm": "all_text",
+    "gold_conflict": null,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 688,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/3-low-tide.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.02,
+    "answer_ms": 569.3039999969187,
+    "answer_cache_hit": false,
+    "input_tokens": 700,
+    "output_tokens": 11,
+    "total_ms": 648.34,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Ironsilk Blade"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q06",
+    "kind": "qa",
+    "arm": "lorebook",
+    "gold_conflict": null,
+    "context_tokens": 232,
+    "prompt_tokens_estimate": 333,
+    "prefix_fraction": 0.7026,
+    "evidence": {
+      "chapters/7-high-road.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.7,
+    "answer_ms": 883.9396000039415,
+    "answer_cache_hit": false,
+    "input_tokens": 345,
+    "output_tokens": 10,
+    "total_ms": 962.51,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "chapters/7-high-road.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "the Lantern Archive"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q06",
+    "kind": "qa",
+    "arm": "fixed",
+    "gold_conflict": null,
+    "context_tokens": 309,
+    "prompt_tokens_estimate": 410,
+    "prefix_fraction": 0.5922,
+    "evidence": {
+      "chapters/7-high-road.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 146.13,
+    "answer_ms": 729.3860999998287,
+    "answer_cache_hit": false,
+    "input_tokens": 422,
+    "output_tokens": 10,
+    "total_ms": 954.28,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "the Lantern Archive"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q06",
+    "kind": "qa",
+    "arm": "adaptive",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 430,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/7-high-road.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 118.36,
+    "answer_ms": 555.1803999987897,
+    "answer_cache_hit": false,
+    "input_tokens": 442,
+    "output_tokens": 10,
+    "total_ms": 750.08,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "the Lantern Archive"
+    },
+    "evidence_decisions": {
+      "chapters/7-high-road.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q06",
+    "kind": "qa",
+    "arm": "adaptive_plan",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 430,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/7-high-road.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 2176.32,
+    "answer_ms": 0.763399999414105,
+    "answer_cache_hit": true,
+    "input_tokens": 442,
+    "output_tokens": 10,
+    "total_ms": 2181.54,
+    "plan_input_tokens": 373,
+    "plan_output_tokens": 28,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 0.95,
+        "45": 0.9
+      },
+      "plan_call_id": "01a21bc0-320e-76fe-bbee-5efd4bd2e68a",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "the Lantern Archive"
+    },
+    "evidence_decisions": {
+      "chapters/7-high-road.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q06",
+    "kind": "qa",
+    "arm": "adaptive_feedback",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 430,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/7-high-road.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 104.52,
+    "answer_ms": 0.7547999994130805,
+    "answer_cache_hit": true,
+    "input_tokens": 442,
+    "output_tokens": 10,
+    "total_ms": 105.79,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "the Lantern Archive"
+    },
+    "evidence_decisions": {
+      "chapters/7-high-road.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q06",
+    "kind": "qa",
+    "arm": "all_text",
+    "gold_conflict": null,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 690,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/7-high-road.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.01,
+    "answer_ms": 890.9521999958088,
+    "answer_cache_hit": false,
+    "input_tokens": 702,
+    "output_tokens": 10,
+    "total_ms": 1002.55,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Lantern Archive"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q07",
+    "kind": "qa",
+    "arm": "lorebook",
+    "gold_conflict": null,
+    "context_tokens": 233,
+    "prompt_tokens_estimate": 339,
+    "prefix_fraction": 0.6867,
+    "evidence": {
+      "world/5-pact.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.51,
+    "answer_ms": 515.158900001552,
+    "answer_cache_hit": false,
+    "input_tokens": 351,
+    "output_tokens": 9,
+    "total_ms": 601.55,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "world/5-pact.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "allies"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q07",
+    "kind": "qa",
+    "arm": "fixed",
+    "gold_conflict": null,
+    "context_tokens": 316,
+    "prompt_tokens_estimate": 422,
+    "prefix_fraction": 0.5791,
+    "evidence": {
+      "world/5-pact.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 170.98,
+    "answer_ms": 599.8972000015783,
+    "answer_cache_hit": false,
+    "input_tokens": 434,
+    "output_tokens": 9,
+    "total_ms": 884.39,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "allies"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q07",
+    "kind": "qa",
+    "arm": "adaptive",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 435,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/5-pact.md": false
+    },
+    "all_evidence": false,
+    "allocation_ms": 117.38,
+    "answer_ms": 508.3720999973593,
+    "answer_cache_hit": false,
+    "input_tokens": 447,
+    "output_tokens": 9,
+    "total_ms": 705.72,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "allies"
+    },
+    "evidence_decisions": {
+      "world/5-pact.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q07",
+    "kind": "qa",
+    "arm": "adaptive_plan",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 435,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/5-pact.md": false
+    },
+    "all_evidence": false,
+    "allocation_ms": 985.93,
+    "answer_ms": 1.2600999980350025,
+    "answer_cache_hit": true,
+    "input_tokens": 447,
+    "output_tokens": 9,
+    "total_ms": 992.05,
+    "plan_input_tokens": 378,
+    "plan_output_tokens": 52,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.15,
+        "80": 1.1,
+        "60": 1.0,
+        "45": 0.95,
+        "32": 0.9,
+        "25": 0.85,
+        "18": 0.8,
+        "10": 0.75
+      },
+      "plan_call_id": "01a21bc0-4761-7100-8d8c-8e45a145a097",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "allies"
+    },
+    "evidence_decisions": {
+      "world/5-pact.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q07",
+    "kind": "qa",
+    "arm": "adaptive_feedback",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 435,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/5-pact.md": false
+    },
+    "all_evidence": false,
+    "allocation_ms": 108.28,
+    "answer_ms": 0.716300004569348,
+    "answer_cache_hit": true,
+    "input_tokens": 447,
+    "output_tokens": 9,
+    "total_ms": 109.44,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "allies"
+    },
+    "evidence_decisions": {
+      "world/5-pact.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q07",
+    "kind": "qa",
+    "arm": "all_text",
+    "gold_conflict": null,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 695,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/5-pact.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.01,
+    "answer_ms": 572.9806000017561,
+    "answer_cache_hit": false,
+    "input_tokens": 707,
+    "output_tokens": 9,
+    "total_ms": 614.65,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "allies"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q08",
+    "kind": "qa",
+    "arm": "lorebook",
+    "gold_conflict": null,
+    "context_tokens": 227,
+    "prompt_tokens_estimate": 323,
+    "prefix_fraction": 0.7048,
+    "evidence": {
+      "chapters/9-embassy.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.34,
+    "answer_ms": 638.7625999996089,
+    "answer_cache_hit": false,
+    "input_tokens": 335,
+    "output_tokens": 10,
+    "total_ms": 670.55,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "chapters/9-embassy.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Cliff Station"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q08",
+    "kind": "qa",
+    "arm": "fixed",
+    "gold_conflict": null,
+    "context_tokens": 308,
+    "prompt_tokens_estimate": 404,
+    "prefix_fraction": 0.5942,
+    "evidence": {
+      "chapters/9-embassy.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 142.33,
+    "answer_ms": 633.4578000023612,
+    "answer_cache_hit": false,
+    "input_tokens": 416,
+    "output_tokens": 10,
+    "total_ms": 809.81,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Cliff Station"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "q08",
+    "kind": "qa",
+    "arm": "adaptive",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 425,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/9-embassy.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 119.7,
+    "answer_ms": 612.0907999938936,
+    "answer_cache_hit": false,
+    "input_tokens": 437,
+    "output_tokens": 10,
+    "total_ms": 766.65,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Cliff Station"
+    },
+    "evidence_decisions": {
+      "chapters/9-embassy.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q08",
+    "kind": "qa",
+    "arm": "adaptive_plan",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 425,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/9-embassy.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 930.91,
+    "answer_ms": 0.8340999993379228,
+    "answer_cache_hit": true,
+    "input_tokens": 437,
+    "output_tokens": 10,
+    "total_ms": 937.87,
+    "plan_input_tokens": 368,
+    "plan_output_tokens": 52,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 1.0,
+        "45": 0.95,
+        "32": 0.9,
+        "25": 0.9,
+        "18": 0.9,
+        "10": 0.9
+      },
+      "plan_call_id": "01a21bc0-56e7-750d-bea2-aa65d90a19cd",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Cliff Station"
+    },
+    "evidence_decisions": {
+      "chapters/9-embassy.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q08",
+    "kind": "qa",
+    "arm": "adaptive_feedback",
+    "gold_conflict": null,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 425,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/9-embassy.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 111.84,
+    "answer_ms": 0.7341000018641353,
+    "answer_cache_hit": true,
+    "input_tokens": 437,
+    "output_tokens": 10,
+    "total_ms": 113.06,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Cliff Station"
+    },
+    "evidence_decisions": {
+      "chapters/9-embassy.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "q08",
+    "kind": "qa",
+    "arm": "all_text",
+    "gold_conflict": null,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 685,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/9-embassy.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.01,
+    "answer_ms": 640.9325999993598,
+    "answer_cache_hit": false,
+    "input_tokens": 697,
+    "output_tokens": 10,
+    "total_ms": 660.33,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "answer": "Cliff Station"
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c01",
+    "kind": "conflict",
+    "arm": "lorebook",
+    "gold_conflict": true,
+    "context_tokens": 234,
+    "prompt_tokens_estimate": 340,
+    "prefix_fraction": 0.6966,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.33,
+    "answer_ms": 703.7914000029559,
+    "answer_cache_hit": false,
+    "input_tokens": 353,
+    "output_tokens": 56,
+    "total_ms": 721.1,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "chapters/3-low-tide.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c01",
+    "kind": "conflict",
+    "arm": "fixed",
+    "gold_conflict": true,
+    "context_tokens": 316,
+    "prompt_tokens_estimate": 422,
+    "prefix_fraction": 0.5791,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 183.15,
+    "answer_ms": 865.946800004167,
+    "answer_cache_hit": false,
+    "input_tokens": 435,
+    "output_tokens": 74,
+    "total_ms": 1065.98,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/1-charter.md",
+          "start": 0,
+          "excerpt": "As the red tide rose, Tess opened the north gate and waved the carts through.",
+          "source_excerpt": "During a red tide the north gate must stay closed."
+        }
+      ]
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c01",
+    "kind": "conflict",
+    "arm": "adaptive",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 435,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 162.6,
+    "answer_ms": 897.9559000072186,
+    "answer_cache_hit": false,
+    "input_tokens": 448,
+    "output_tokens": 83,
+    "total_ms": 1077.55,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/1-charter.md",
+          "start": 0,
+          "excerpt": "As the red tide rose, Tess opened the north gate and waved the carts through.",
+          "source_excerpt": "During a red tide the north gate must stay closed."
+        }
+      ]
+    },
+    "evidence_decisions": {
+      "world/1-charter.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "c01",
+    "kind": "conflict",
+    "arm": "adaptive_plan",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 435,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 1155.15,
+    "answer_ms": 1.3381000026129186,
+    "answer_cache_hit": true,
+    "input_tokens": 448,
+    "output_tokens": 83,
+    "total_ms": 1164.6,
+    "plan_input_tokens": 378,
+    "plan_output_tokens": 52,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 0.95,
+        "45": 0.9,
+        "32": 0.85,
+        "25": 0.8,
+        "18": 0.75,
+        "10": 0.7
+      },
+      "plan_call_id": "01a21bc0-68ee-729f-86d0-850c827d0b71",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/1-charter.md",
+          "start": 0,
+          "excerpt": "As the red tide rose, Tess opened the north gate and waved the carts through.",
+          "source_excerpt": "During a red tide the north gate must stay closed."
+        }
+      ]
+    },
+    "evidence_decisions": {
+      "world/1-charter.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "c01",
+    "kind": "conflict",
+    "arm": "adaptive_feedback",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 435,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 149.92,
+    "answer_ms": 1.066600001649931,
+    "answer_cache_hit": true,
+    "input_tokens": 448,
+    "output_tokens": 83,
+    "total_ms": 151.78,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/1-charter.md",
+          "start": 0,
+          "excerpt": "As the red tide rose, Tess opened the north gate and waved the carts through.",
+          "source_excerpt": "During a red tide the north gate must stay closed."
+        }
+      ]
+    },
+    "evidence_decisions": {
+      "world/1-charter.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "c01",
+    "kind": "conflict",
+    "arm": "all_text",
+    "gold_conflict": true,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 695,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.02,
+    "answer_ms": 752.0776000019396,
+    "answer_cache_hit": false,
+    "input_tokens": 708,
+    "output_tokens": 56,
+    "total_ms": 787.78,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c02",
+    "kind": "conflict",
+    "arm": "lorebook",
+    "gold_conflict": true,
+    "context_tokens": 157,
+    "prompt_tokens_estimate": 261,
+    "prefix_fraction": 0.9936,
+    "evidence": {
+      "world/2-council.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.23,
+    "answer_ms": 752.5977999976021,
+    "answer_cache_hit": false,
+    "input_tokens": 274,
+    "output_tokens": 45,
+    "total_ms": 769.66,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c02",
+    "kind": "conflict",
+    "arm": "fixed",
+    "gold_conflict": true,
+    "context_tokens": 308,
+    "prompt_tokens_estimate": 412,
+    "prefix_fraction": 0.5942,
+    "evidence": {
+      "world/2-council.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 193.45,
+    "answer_ms": 683.0802999975276,
+    "answer_cache_hit": false,
+    "input_tokens": 425,
+    "output_tokens": 45,
+    "total_ms": 944.76,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c02",
+    "kind": "conflict",
+    "arm": "adaptive",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 433,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/2-council.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 121.14,
+    "answer_ms": 695.2782999942428,
+    "answer_cache_hit": false,
+    "input_tokens": 446,
+    "output_tokens": 45,
+    "total_ms": 856.15,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": []
+    },
+    "evidence_decisions": {
+      "world/2-council.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "c02",
+    "kind": "conflict",
+    "arm": "adaptive_plan",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 433,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/2-council.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 955.66,
+    "answer_ms": 1.109800003177952,
+    "answer_cache_hit": true,
+    "input_tokens": 446,
+    "output_tokens": 45,
+    "total_ms": 961.8,
+    "plan_input_tokens": 377,
+    "plan_output_tokens": 52,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 1.0,
+        "45": 0.95,
+        "32": 0.9,
+        "25": 0.9,
+        "18": 0.85,
+        "10": 0.85
+      },
+      "plan_call_id": "01a21bc0-7b13-70d5-888f-3794612ba8e2",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": []
+    },
+    "evidence_decisions": {
+      "world/2-council.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "c02",
+    "kind": "conflict",
+    "arm": "adaptive_feedback",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 433,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/2-council.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 142.51,
+    "answer_ms": 1.1261999970884062,
+    "answer_cache_hit": true,
+    "input_tokens": 446,
+    "output_tokens": 45,
+    "total_ms": 144.32,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": []
+    },
+    "evidence_decisions": {
+      "world/2-council.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "c02",
+    "kind": "conflict",
+    "arm": "all_text",
+    "gold_conflict": true,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 693,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/2-council.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.02,
+    "answer_ms": 757.257600002049,
+    "answer_cache_hit": false,
+    "input_tokens": 706,
+    "output_tokens": 45,
+    "total_ms": 837.62,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c03",
+    "kind": "conflict",
+    "arm": "lorebook",
+    "gold_conflict": true,
+    "context_tokens": 224,
+    "prompt_tokens_estimate": 327,
+    "prefix_fraction": 0.6964,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.43,
+    "answer_ms": 1110.2554999961285,
+    "answer_cache_hit": false,
+    "input_tokens": 340,
+    "output_tokens": 44,
+    "total_ms": 1157.47,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "world/3-crossings.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c03",
+    "kind": "conflict",
+    "arm": "fixed",
+    "gold_conflict": true,
+    "context_tokens": 306,
+    "prompt_tokens_estimate": 409,
+    "prefix_fraction": 0.598,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 152.22,
+    "answer_ms": 882.1520999990753,
+    "answer_cache_hit": false,
+    "input_tokens": 422,
+    "output_tokens": 51,
+    "total_ms": 1058.18,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/3-crossings.md",
+          "start": 0,
+          "excerpt": "The South Ferry departed before the first bell, with every ticket sold.",
+          "source_excerpt": "The South Ferry departs after the second bell."
+        }
+      ]
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c03",
+    "kind": "conflict",
+    "arm": "adaptive",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 175.29,
+    "answer_ms": 1074.9857999981032,
+    "answer_cache_hit": false,
+    "input_tokens": 445,
+    "output_tokens": 52,
+    "total_ms": 1286.22,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/3-crossings.md",
+          "start": 0,
+          "excerpt": "The South Ferry departed before the first bell, with every ticket sold.",
+          "source_excerpt": "The South Ferry departs after the second bell"
+        }
+      ]
+    },
+    "evidence_decisions": {
+      "world/3-crossings.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c03",
+    "kind": "conflict",
+    "arm": "adaptive_plan",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 1131.02,
+    "answer_ms": 1.1706000004778616,
+    "answer_cache_hit": true,
+    "input_tokens": 445,
+    "output_tokens": 52,
+    "total_ms": 1139.38,
+    "plan_input_tokens": 375,
+    "plan_output_tokens": 52,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 0.95,
+        "45": 0.9,
+        "32": 0.85,
+        "25": 0.8,
+        "18": 0.75,
+        "10": 0.7
+      },
+      "plan_call_id": "01a21bc0-90ba-768c-a360-d7e2faa5acea",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/3-crossings.md",
+          "start": 0,
+          "excerpt": "The South Ferry departed before the first bell, with every ticket sold.",
+          "source_excerpt": "The South Ferry departs after the second bell"
+        }
+      ]
+    },
+    "evidence_decisions": {
+      "world/3-crossings.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c03",
+    "kind": "conflict",
+    "arm": "adaptive_feedback",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 152.0,
+    "answer_ms": 0.6980999969528057,
+    "answer_cache_hit": true,
+    "input_tokens": 445,
+    "output_tokens": 52,
+    "total_ms": 153.24,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/3-crossings.md",
+          "start": 0,
+          "excerpt": "The South Ferry departed before the first bell, with every ticket sold.",
+          "source_excerpt": "The South Ferry departs after the second bell"
+        }
+      ]
+    },
+    "evidence_decisions": {
+      "world/3-crossings.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c03",
+    "kind": "conflict",
+    "arm": "all_text",
+    "gold_conflict": true,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 692,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.02,
+    "answer_ms": 1164.538300006825,
+    "answer_cache_hit": false,
+    "input_tokens": 705,
+    "output_tokens": 50,
+    "total_ms": 1208.73,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/3-crossings.md",
+          "start": 0,
+          "excerpt": "The South Ferry departed before the first bell, with every ticket sold.",
+          "source_excerpt": "The South Ferry departs after the second bell."
+        }
+      ]
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c04",
+    "kind": "conflict",
+    "arm": "lorebook",
+    "gold_conflict": true,
+    "context_tokens": 224,
+    "prompt_tokens_estimate": 326,
+    "prefix_fraction": 0.7232,
+    "evidence": {
+      "world/4-signals.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.25,
+    "answer_ms": 775.0358999983291,
+    "answer_cache_hit": false,
+    "input_tokens": 339,
+    "output_tokens": 45,
+    "total_ms": 830.8,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "world/4-signals.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c04",
+    "kind": "conflict",
+    "arm": "fixed",
+    "gold_conflict": true,
+    "context_tokens": 305,
+    "prompt_tokens_estimate": 407,
+    "prefix_fraction": 0.6,
+    "evidence": {
+      "world/4-signals.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 134.37,
+    "answer_ms": 891.2089000004926,
+    "answer_cache_hit": false,
+    "input_tokens": 420,
+    "output_tokens": 49,
+    "total_ms": 1083.48,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/4-signals.md",
+          "start": 0,
+          "excerpt": "The entire Silver Watch carried silver lanterns as their standard equipment.",
+          "source_excerpt": "# Silver Watch\nThe Silver Watch carries brass lanterns."
+        }
+      ]
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c04",
+    "kind": "conflict",
+    "arm": "adaptive",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 431,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/4-signals.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 140.07,
+    "answer_ms": 823.3499999987544,
+    "answer_cache_hit": false,
+    "input_tokens": 444,
+    "output_tokens": 60,
+    "total_ms": 1230.93,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/4-signals.md",
+          "start": 0,
+          "excerpt": "The entire Silver Watch carried silver lanterns as their standard equipment.",
+          "source_excerpt": "The Silver Watch carries brass lanterns."
+        }
+      ]
+    },
+    "evidence_decisions": {
+      "world/4-signals.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c04",
+    "kind": "conflict",
+    "arm": "adaptive_plan",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 431,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/4-signals.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 950.37,
+    "answer_ms": 0.5915000001550652,
+    "answer_cache_hit": true,
+    "input_tokens": 444,
+    "output_tokens": 60,
+    "total_ms": 954.63,
+    "plan_input_tokens": 374,
+    "plan_output_tokens": 28,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 0.95,
+        "45": 0.9
+      },
+      "plan_call_id": "01a21bc0-a67f-7526-930d-f6db14b3d172",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/4-signals.md",
+          "start": 0,
+          "excerpt": "The entire Silver Watch carried silver lanterns as their standard equipment.",
+          "source_excerpt": "The Silver Watch carries brass lanterns."
+        }
+      ]
+    },
+    "evidence_decisions": {
+      "world/4-signals.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c04",
+    "kind": "conflict",
+    "arm": "adaptive_feedback",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 431,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/4-signals.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 98.5,
+    "answer_ms": 0.763099997129757,
+    "answer_cache_hit": true,
+    "input_tokens": 444,
+    "output_tokens": 60,
+    "total_ms": 99.69,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/4-signals.md",
+          "start": 0,
+          "excerpt": "The entire Silver Watch carried silver lanterns as their standard equipment.",
+          "source_excerpt": "The Silver Watch carries brass lanterns."
+        }
+      ]
+    },
+    "evidence_decisions": {
+      "world/4-signals.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c04",
+    "kind": "conflict",
+    "arm": "all_text",
+    "gold_conflict": true,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 691,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/4-signals.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.01,
+    "answer_ms": 968.5171000019182,
+    "answer_cache_hit": false,
+    "input_tokens": 704,
+    "output_tokens": 53,
+    "total_ms": 1056.32,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/4-signals.md",
+          "start": 0,
+          "excerpt": "The entire Silver Watch carried silver lanterns as their standard equipment.",
+          "source_excerpt": "The Silver Watch carries brass lanterns."
+        }
+      ]
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c05",
+    "kind": "conflict",
+    "arm": "lorebook",
+    "gold_conflict": true,
+    "context_tokens": 233,
+    "prompt_tokens_estimate": 336,
+    "prefix_fraction": 0.6953,
+    "evidence": {
+      "world/5-pact.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.36,
+    "answer_ms": 806.5223000012338,
+    "answer_cache_hit": false,
+    "input_tokens": 349,
+    "output_tokens": 48,
+    "total_ms": 904.3,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "world/5-pact.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c05",
+    "kind": "conflict",
+    "arm": "fixed",
+    "gold_conflict": true,
+    "context_tokens": 316,
+    "prompt_tokens_estimate": 419,
+    "prefix_fraction": 0.5791,
+    "evidence": {
+      "world/5-pact.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 142.2,
+    "answer_ms": 785.7290000029025,
+    "answer_cache_hit": false,
+    "input_tokens": 432,
+    "output_tokens": 52,
+    "total_ms": 1025.97,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/5-pact.md",
+          "start": 0,
+          "excerpt": "Under the Salt Oath the Moor Guild and Glass Fleet remained enemies.",
+          "source_excerpt": "The Moor Guild and Glass Fleet are allies under the Salt Oath."
+        }
+      ]
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c05",
+    "kind": "conflict",
+    "arm": "adaptive",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/5-pact.md": false
+    },
+    "all_evidence": false,
+    "allocation_ms": 169.12,
+    "answer_ms": 772.6686999958474,
+    "answer_cache_hit": false,
+    "input_tokens": 445,
+    "output_tokens": 59,
+    "total_ms": 971.84,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/5-pact.md",
+          "start": 0,
+          "excerpt": "Under the Salt Oath the Moor Guild and Glass Fleet remained enemies.",
+          "source_excerpt": "The Moor Guild and Glass Fleet are allies under the"
+        }
+      ]
+    },
+    "evidence_decisions": {
+      "world/5-pact.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c05",
+    "kind": "conflict",
+    "arm": "adaptive_plan",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/5-pact.md": false
+    },
+    "all_evidence": false,
+    "allocation_ms": 925.67,
+    "answer_ms": 1.1328000036883168,
+    "answer_cache_hit": true,
+    "input_tokens": 445,
+    "output_tokens": 59,
+    "total_ms": 933.99,
+    "plan_input_tokens": 375,
+    "plan_output_tokens": 28,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 0.95,
+        "45": 0.9
+      },
+      "plan_call_id": "01a21bc0-ba5f-73be-9d74-af5502bd5351",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/5-pact.md",
+          "start": 0,
+          "excerpt": "Under the Salt Oath the Moor Guild and Glass Fleet remained enemies.",
+          "source_excerpt": "The Moor Guild and Glass Fleet are allies under the"
+        }
+      ]
+    },
+    "evidence_decisions": {
+      "world/5-pact.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c05",
+    "kind": "conflict",
+    "arm": "adaptive_feedback",
+    "gold_conflict": true,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/5-pact.md": false
+    },
+    "all_evidence": false,
+    "allocation_ms": 107.93,
+    "answer_ms": 0.9172999998554587,
+    "answer_cache_hit": true,
+    "input_tokens": 445,
+    "output_tokens": 59,
+    "total_ms": 109.51,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/5-pact.md",
+          "start": 0,
+          "excerpt": "Under the Salt Oath the Moor Guild and Glass Fleet remained enemies.",
+          "source_excerpt": "The Moor Guild and Glass Fleet are allies under the"
+        }
+      ]
+    },
+    "evidence_decisions": {
+      "world/5-pact.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c05",
+    "kind": "conflict",
+    "arm": "all_text",
+    "gold_conflict": true,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 692,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/5-pact.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.02,
+    "answer_ms": 710.3951000026427,
+    "answer_cache_hit": false,
+    "input_tokens": 705,
+    "output_tokens": 54,
+    "total_ms": 769.76,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": true,
+      "grounded_findings": 1,
+      "reported": 1,
+      "detected_with_quote": true,
+      "matches": [
+        {
+          "source": "world/5-pact.md",
+          "start": 0,
+          "excerpt": "Under the Salt Oath the Moor Guild and Glass Fleet remained enemies.",
+          "source_excerpt": "The Moor Guild and Glass Fleet are allies under the Salt Oath."
+        }
+      ]
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c06",
+    "kind": "conflict",
+    "arm": "lorebook",
+    "gold_conflict": false,
+    "context_tokens": 234,
+    "prompt_tokens_estimate": 335,
+    "prefix_fraction": 0.6838,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.73,
+    "answer_ms": 848.8187999973889,
+    "answer_cache_hit": false,
+    "input_tokens": 348,
+    "output_tokens": 49,
+    "total_ms": 926.72,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "chapters/3-low-tide.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c06",
+    "kind": "conflict",
+    "arm": "fixed",
+    "gold_conflict": false,
+    "context_tokens": 316,
+    "prompt_tokens_estimate": 417,
+    "prefix_fraction": 0.5791,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 156.92,
+    "answer_ms": 666.2098000015249,
+    "answer_cache_hit": false,
+    "input_tokens": 430,
+    "output_tokens": 42,
+    "total_ms": 913.91,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c06",
+    "kind": "conflict",
+    "arm": "adaptive",
+    "gold_conflict": false,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 430,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 122.31,
+    "answer_ms": 968.8850000020466,
+    "answer_cache_hit": false,
+    "input_tokens": 443,
+    "output_tokens": 42,
+    "total_ms": 1159.12,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {
+      "world/1-charter.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "c06",
+    "kind": "conflict",
+    "arm": "adaptive_plan",
+    "gold_conflict": false,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 430,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 1287.85,
+    "answer_ms": 0.803099996119272,
+    "answer_cache_hit": true,
+    "input_tokens": 443,
+    "output_tokens": 42,
+    "total_ms": 1293.19,
+    "plan_input_tokens": 373,
+    "plan_output_tokens": 28,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 0.95,
+        "45": 0.9
+      },
+      "plan_call_id": "01a21bc0-ccc9-7646-a79b-831f7e5ee4f3",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {
+      "world/1-charter.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "c06",
+    "kind": "conflict",
+    "arm": "adaptive_feedback",
+    "gold_conflict": false,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 430,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 109.63,
+    "answer_ms": 0.6310000026132911,
+    "answer_cache_hit": true,
+    "input_tokens": 443,
+    "output_tokens": 42,
+    "total_ms": 110.73,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {
+      "world/1-charter.md": {
+        "resolution": "full",
+        "decision": "selected",
+        "reason": "fits_budget"
+      }
+    }
+  },
+  {
+    "case": "c06",
+    "kind": "conflict",
+    "arm": "all_text",
+    "gold_conflict": false,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 690,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/1-charter.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.01,
+    "answer_ms": 1066.6869999986375,
+    "answer_cache_hit": false,
+    "input_tokens": 703,
+    "output_tokens": 91,
+    "total_ms": 1157.56,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 2,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c07",
+    "kind": "conflict",
+    "arm": "lorebook",
+    "gold_conflict": false,
+    "context_tokens": 224,
+    "prompt_tokens_estimate": 327,
+    "prefix_fraction": 0.7143,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.79,
+    "answer_ms": 711.6275999942445,
+    "answer_cache_hit": false,
+    "input_tokens": 340,
+    "output_tokens": 50,
+    "total_ms": 1115.13,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "world/3-crossings.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c07",
+    "kind": "conflict",
+    "arm": "fixed",
+    "gold_conflict": false,
+    "context_tokens": 306,
+    "prompt_tokens_estimate": 409,
+    "prefix_fraction": 0.598,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 167.67,
+    "answer_ms": 723.0936999985715,
+    "answer_cache_hit": false,
+    "input_tokens": 422,
+    "output_tokens": 52,
+    "total_ms": 1001.47,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c07",
+    "kind": "conflict",
+    "arm": "adaptive",
+    "gold_conflict": false,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 120.26,
+    "answer_ms": 745.1881000015419,
+    "answer_cache_hit": false,
+    "input_tokens": 445,
+    "output_tokens": 56,
+    "total_ms": 1020.64,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {
+      "world/3-crossings.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c07",
+    "kind": "conflict",
+    "arm": "adaptive_plan",
+    "gold_conflict": false,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 1329.24,
+    "answer_ms": 1.4176999975461513,
+    "answer_cache_hit": true,
+    "input_tokens": 445,
+    "output_tokens": 56,
+    "total_ms": 1335.63,
+    "plan_input_tokens": 375,
+    "plan_output_tokens": 28,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 0.95,
+        "45": 0.9
+      },
+      "plan_call_id": "01a21bc0-e30e-765c-957e-dc75b49a50cf",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {
+      "world/3-crossings.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c07",
+    "kind": "conflict",
+    "arm": "adaptive_feedback",
+    "gold_conflict": false,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 115.95,
+    "answer_ms": 0.7856999945943244,
+    "answer_cache_hit": true,
+    "input_tokens": 445,
+    "output_tokens": 56,
+    "total_ms": 117.31,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {
+      "world/3-crossings.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c07",
+    "kind": "conflict",
+    "arm": "all_text",
+    "gold_conflict": false,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 692,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "world/3-crossings.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.02,
+    "answer_ms": 783.9680000033695,
+    "answer_cache_hit": false,
+    "input_tokens": 705,
+    "output_tokens": 50,
+    "total_ms": 844.35,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c08",
+    "kind": "conflict",
+    "arm": "lorebook",
+    "gold_conflict": false,
+    "context_tokens": 299,
+    "prompt_tokens_estimate": 402,
+    "prefix_fraction": 0.5418,
+    "evidence": {
+      "chapters/7-high-road.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.78,
+    "answer_ms": 689.197100000456,
+    "answer_cache_hit": false,
+    "input_tokens": 415,
+    "output_tokens": 51,
+    "total_ms": 823.43,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "activated": [
+        "world/1-charter.md",
+        "world/2-council.md",
+        "world/4-signals.md",
+        "chapters/7-high-road.md"
+      ]
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c08",
+    "kind": "conflict",
+    "arm": "fixed",
+    "gold_conflict": false,
+    "context_tokens": 309,
+    "prompt_tokens_estimate": 412,
+    "prefix_fraction": 0.5922,
+    "evidence": {
+      "chapters/7-high-road.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 149.16,
+    "answer_ms": 754.0266000069096,
+    "answer_cache_hit": false,
+    "input_tokens": 425,
+    "output_tokens": 49,
+    "total_ms": 1003.5,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  },
+  {
+    "case": "c08",
+    "kind": "conflict",
+    "arm": "adaptive",
+    "gold_conflict": false,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/7-high-road.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 103.91,
+    "answer_ms": 693.1861999983084,
+    "answer_cache_hit": false,
+    "input_tokens": 445,
+    "output_tokens": 51,
+    "total_ms": 904.69,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {
+      "chapters/7-high-road.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c08",
+    "kind": "conflict",
+    "arm": "adaptive_plan",
+    "gold_conflict": false,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/7-high-road.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 1074.95,
+    "answer_ms": 0.822000001790002,
+    "answer_cache_hit": true,
+    "input_tokens": 445,
+    "output_tokens": 51,
+    "total_ms": 1079.72,
+    "plan_input_tokens": 376,
+    "plan_output_tokens": 28,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {
+        "90": 1.1,
+        "80": 1.05,
+        "60": 0.95,
+        "45": 0.9
+      },
+      "plan_call_id": "01a21bc0-f6ba-7562-984a-fd1f26ad682e",
+      "feedback_version": null
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {
+      "chapters/7-high-road.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c08",
+    "kind": "conflict",
+    "arm": "adaptive_feedback",
+    "gold_conflict": false,
+    "context_tokens": 329,
+    "prompt_tokens_estimate": 432,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/7-high-road.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 99.1,
+    "answer_ms": 0.9538000012980774,
+    "answer_cache_hit": true,
+    "input_tokens": 445,
+    "output_tokens": 51,
+    "total_ms": 100.66,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {
+      "plan_coefficients": {},
+      "plan_call_id": "",
+      "feedback_version": 4
+    },
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {
+      "chapters/7-high-road.md": {
+        "resolution": "summary",
+        "decision": "truncated",
+        "reason": "fits_at_reduced_detail"
+      }
+    }
+  },
+  {
+    "case": "c08",
+    "kind": "conflict",
+    "arm": "all_text",
+    "gold_conflict": false,
+    "context_tokens": 589,
+    "prompt_tokens_estimate": 692,
+    "prefix_fraction": 1.0,
+    "evidence": {
+      "chapters/7-high-road.md": true
+    },
+    "all_evidence": true,
+    "allocation_ms": 0.02,
+    "answer_ms": 731.6214000020409,
+    "answer_cache_hit": false,
+    "input_tokens": 705,
+    "output_tokens": 51,
+    "total_ms": 1106.95,
+    "plan_input_tokens": 0,
+    "plan_output_tokens": 0,
+    "plan_error": false,
+    "allocation": {},
+    "grade": {
+      "parsed": true,
+      "correct": false,
+      "grounded_findings": 0,
+      "reported": 1,
+      "detected_with_quote": false,
+      "matches": []
+    },
+    "evidence_decisions": {}
+  }
+]
