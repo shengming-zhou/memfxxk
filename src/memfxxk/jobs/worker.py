@@ -184,6 +184,13 @@ class Worker:
 
             self.register("tier_project", project_tier)
             self.register("tier_summarize", summarize_tier)
+        if service.settings.strategies.reflect == "hindsight":
+            from memfxxk.m2.reflect import refresh
+
+            def update_opinions(batch: list[Job]) -> None:
+                refresh(service, batch[0])
+
+            self.register("opinion_update", update_opinions)
 
     def register(self, kind: str, handler: Callable[[list[Job]], None]) -> None:
         self.handlers[kind] = handler
@@ -211,6 +218,7 @@ class Worker:
                     "sleeptime_consolidate",
                     "tier_project",
                     "tier_summarize",
+                    "opinion_update",
                 )
                 else None,
             )

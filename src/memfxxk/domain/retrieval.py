@@ -6,9 +6,9 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validato
 from memfxxk.domain import Actor, Scope
 from memfxxk.domain.notes import NoteProjection
 
-MemoryType = Literal["turn", "note", "fact", "summary", "lesson", "doc_chunk"]
+MemoryType = Literal["turn", "note", "fact", "summary", "lesson", "doc_chunk", "opinion"]
 MemoryMark = Literal["important", "pinned"]
-SearchChannel = Literal["lexical", "vector", "important"]
+SearchChannel = Literal["lexical", "vector", "important", "time"]
 
 
 class SearchRequest(BaseModel):
@@ -26,6 +26,7 @@ class SearchRequest(BaseModel):
     tags: list[str] = Field(default_factory=list, max_length=32)
     as_of_valid: AwareDatetime | None = None
     as_of_recorded: AwareDatetime | None = None
+    query_time: AwareDatetime | None = None
     channels: list[SearchChannel] = Field(
         default_factory=lambda: ["lexical", "vector", "important"]
     )
@@ -54,6 +55,10 @@ class ScoreDetails(BaseModel):
     fact_entity_boost: float | None = None
     note_rank: int | None = None
     note_similarity: float | None = None
+    time_rank: int | None = None
+    time_score: float | None = None
+    graph_rank: int | None = None
+    rerank_position: int | None = None
 
 
 class RelatedMemory(BaseModel):
@@ -109,6 +114,8 @@ class SearchTimings(BaseModel):
     fuse: float = 0
     expand: float = 0
     graph: float = 0
+    time: float = 0
+    rerank: float = 0
     total: float = 0
 
 
@@ -145,3 +152,4 @@ class MemoryResponse(MemoryNeighbor):
     neighbors: MemoryNeighbors
     priority: int | None = None
     tags: list[str] = Field(default_factory=list)
+    confidence: float | None = None

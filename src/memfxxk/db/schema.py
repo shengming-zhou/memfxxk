@@ -169,7 +169,8 @@ records = sa.Table(
     sa.Column("metadata", JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")),
     sa.UniqueConstraint("memory_id", "version", name="uq_records_memory_version"),
     sa.CheckConstraint(
-        "type IN ('turn', 'note', 'fact', 'summary', 'lesson', 'doc_chunk')", name="ck_records_type"
+        "type IN ('turn', 'note', 'fact', 'summary', 'lesson', 'doc_chunk', 'opinion')",
+        name="ck_records_type",
     ),
     sa.CheckConstraint(
         "origin IN ('user_explicit', 'auto_index', 'auto_extract', 'import')",

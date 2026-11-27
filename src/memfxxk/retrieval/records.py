@@ -219,6 +219,7 @@ def read_memory(
         status=row["status"],
         confirmed=row["confirmed"],
         note_attributes=row["metadata"].get("amem"),
+        confidence=row["metadata"].get("confidence") if row["type"] == "opinion" else None,
         content=row["content"],
         source_event_ids=row["source_event_ids"],
         marks=marks_for(connection, ctx, [memory_id]).get(memory_id, []),

@@ -41,6 +41,7 @@ from memfxxk.domain.manage import (
     SaveLessonRequest,
 )
 from memfxxk.domain.notes import NoteHistoryEntry, NoteProjection, RollbackNote
+from memfxxk.domain.reflect import ReflectRequest, ReflectResult
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 from memfxxk.domain.sessions import PutSessionState, SessionState
 from memfxxk.domain.workspace import (
@@ -183,6 +184,8 @@ class BoundService:
                 kinds.append("sleeptime_consolidate")
             if self.settings.strategies.tiers == "memoryos":
                 kinds.append("tier_project")
+            if self.settings.strategies.reflect == "hindsight":
+                kinds.append("opinion_update")
             if kinds:
                 from memfxxk.m2.facts import enqueue_closed_turns
 
@@ -335,6 +338,11 @@ class BoundService:
 
     def build_context(self, request: BuildContextRequest) -> ContextBundle:
         return context.build_context(self, request)
+
+    def reflect(self, request: "ReflectRequest") -> "ReflectResult":
+        from memfxxk.m2.reflect import run
+
+        return run(self, request)
 
     def prepare_compaction(self, request: PrepareCompaction) -> CompactionDraft:
         from memfxxk.m2.compaction import prepare

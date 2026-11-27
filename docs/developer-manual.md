@@ -356,6 +356,34 @@ Agent 先读到交接块第 1 版。调用 MCP `memory_block_edit`，传 `{"bloc
 
 使用 BGE-small-en-v1.5、`deepseek-flash` 加工和 `gpt-5.4-mini` 答题及评分。固定长对话从 4/4 降到 3/4，分层组少装入一道偏好题的原文。LoCoMo 214 轮八题从 2/8 降到 1/8，标准原文引用命中从 4/15 降到 3/15。长对话的混合与分层装载 p95 为 194 / 251 ms，LoCoMo 为 229 / 303 ms。两组分层写入各合并成一次模型调用，输入 21,426、输出 946 token，折算约每千轮 80,475 token。答题和评分共用 35,984 token，总计 58,356。批量写入合并了旧版本。真实连续写入成本取决于段更新的频率。分层装载维持关闭。
 
+## T16 P7 Hindsight 检索与反思 {#t16-hindsight}
+
+### 原版怎么做 {#hindsight-upstream}
+
+Hindsight 从输入提取自包含的叙述事实，区分世界事实、Agent 经历、观察和观点。召回融合语义、BM25、图和时间信号，交叉编码器做二次排序。反思分层看心智模型、观察、事实，再返回有引用的答案。论文的意见更新按支持、削弱、矛盾、无关调整置信度。 [Hindsight 论文 §4–5](https://arxiv.org/html/2512.12818v1) [MIT 实现](https://github.com/vectorize-io/hindsight)
+
+### 这里怎么做 {#hindsight-implementation}
+
+`retrieval/temporal.py` 解析中英文日期和相对时间。它使用 `query_time`、`as_of_valid` 或当前时间作为参考，优先匹配区间，再看距离。该通道可独立选用。Hindsight 还让已有图从语义命中点扩展，把图和时间加入现有关键词及向量的 RRF。默认 `rrf_k=60`。可配置 `MEMFXXK_SEARCH__RERANKER=llm`，用 `rerank` 重排前 20 个候选。响应的 `score.time_rank`、`graph_rank` 和 `rerank_position` 可检查各阶段。模型重排失败时保留原排序。
+
+`POST /v1/reflect`、同步与异步 SDK `reflect(ReflectRequest(...))`、MCP `memory_reflect` 接受 `query`、`max_tokens`、`max_rounds`、可选的 `query_time`、`store_opinions` 和 `disposition`。倾向包括 `skepticism`、`literalness`、`empathy` 和 `mission`。最多十次模型回合，按块、观察、原始证据的顺序查找。返回 `answer`、`citations`、`rejected_citations`、`proposals`、`opinion_changes`、`bundle_ids` 和 `rounds`。服务端核对引用是否来自本轮查询且仍可见。写观点需写权限。
+
+迁移 `0013` 扩展 `records.type`。观点的置信度和提示词版本放在 `metadata`，按记录版本保存历史。闭合轮次投递 `opinion_update`，仅当找到相关观点才调用模型。锁定作业、原文代次和观点版本，通过后按 +0.1、−0.1、−0.2 或不变更新，范围是 0 到 1。手工标记与已确认的记录受保护。 [观点类型决策](/decisions/0003-opinion-records)
+
+### 和原版的差异 {#hindsight-differences}
+
+沿用现有 PostgreSQL 原文、事实、块、摘要和图。观察来源是可见的摘要与笔记，图传播复用已有图策略。重排选用了可配的 LLM。反思各轮共用调用方提供的证据上限。观点进共享候选，同样记录 ID、类型、相关度、token 和装载决定。每次观点写入记录该调用看到的来源，忘记来源会移除依赖版本。观点更新有新增轮次才触发，六题运行采用只读反思，因此每千轮自动观点更新成本仍需用代表性流量测量。
+
+### 一个具体例子 {#hindsight-example}
+
+早期对话中 Robin 表示上午开会有助于集中。反思拿到原轮引用，建议「Robin 可能偏好上午会议」，初始置信度 0.7。宿主选择保存后，新对话明确更正为下午，后台判为矛盾，写第 2 版，置信度变为 0.5。通过 `get_memory(id, version=1)` 仍可查看 0.7 的版本。
+
+### 评测结果 {#hindsight-evaluation}
+
+`uv run python eval/run_t16_reflect.py --output eval/results/t16/p7-smoke` 跑三道时间题和三道多会话题。两组共用相同 LongMemEval Oracle 原文和 1,500 token 预算。BGE-small-en-v1.5 负责语义检索，`deepseek-flash` 重排，`gpt-5.4-mini` 答题、反思与判分。
+
+混合检索答对 1/6，其中多会话 1/3、时间 0/3。Hindsight 答对 3/6，其中多会话 2/3、时间 1/3。至少找到一条标准原文从 5/6 提升到 6/6。反思组 6/6 引用至少一条标准原文。检索与答题总耗时 p50 / p95 分别为 1.11 / 1.57 秒与 3.48 / 4.15 秒。两组正式运行分别用 10,503 和 24,430 token，含评分。小样本仅用于功能验收，默认仍关闭。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

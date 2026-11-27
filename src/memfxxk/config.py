@@ -31,6 +31,10 @@ class SearchSettings(BaseModel):
     important_boost: float = Field(default=1.5, ge=0)
     important_min_sim: float = Field(default=0.35, ge=-1, le=1)
     max_related: int = Field(default=3, ge=0)
+    n_time: int = Field(default=25, gt=0, le=200)
+    time_weight: float = Field(default=1.0, ge=0)
+    reranker: Literal["off", "llm"] = "off"
+    rerank_candidates: int = Field(default=20, ge=2, le=100)
 
 
 class QdrantSettings(BaseModel):
@@ -99,6 +103,8 @@ class StrategiesSettings(BaseModel):
     notes: Literal["off", "amem"] = "off"
     blocks: Literal["off", "letta"] = "off"
     tiers: Literal["off", "memoryos"] = "off"
+    recall: Literal["off", "hindsight"] = "off"
+    reflect: Literal["off", "hindsight"] = "off"
 
 
 class SleeptimeSettings(BaseModel):
@@ -181,4 +187,11 @@ class Settings(BaseSettings):
             and not self.task_model("persona_update").model.strip()
         ):
             raise ValueError("MemoryOS requires a configured persona_update model")
+        if self.search.reranker == "llm" and not self.task_model("rerank").model.strip():
+            raise ValueError("LLM reranking requires a configured rerank model")
+        if self.strategies.reflect == "hindsight" and (
+            not self.task_model("reflect").model.strip()
+            or not self.task_model("opinion_update").model.strip()
+        ):
+            raise ValueError("Hindsight reflect requires reflect and opinion_update models")
         return self

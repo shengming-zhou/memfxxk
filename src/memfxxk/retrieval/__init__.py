@@ -1,13 +1,16 @@
 import re
+from datetime import UTC, datetime
 from time import perf_counter
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import Connection, select
+from sqlalchemy import ColumnElement, Connection, select
+from sqlalchemy.engine import RowMapping
 
 from memfxxk.db import memory_marks
 from memfxxk.db import records as record_table
 from memfxxk.domain.retrieval import (
+    GraphFact,
     MemoryResponse,
     ScoreDetails,
     SearchHit,
@@ -28,6 +31,7 @@ from memfxxk.retrieval.channels import (
 from memfxxk.retrieval.fusion import NoopReranker, Reranker, fuse
 from memfxxk.retrieval.graph import graph_neighbors
 from memfxxk.retrieval.records import marks_for, read_memory, reference, related_for, snippet
+from memfxxk.retrieval.temporal import search_time
 from memfxxk.scope import visible_filter
 from memfxxk.text import MixedTokenizer
 
@@ -76,7 +80,18 @@ def search(
     vector_candidates: list[Candidate] = []
     important_candidates: list[Candidate] = []
     note_candidates: list[Candidate] = []
+    time_candidates: list[Candidate] = []
     with service.engine.connect() as connection:
+        if "time" in channels or service.settings.strategies.recall == "hindsight":
+            stage = perf_counter()
+            time_candidates = search_time(
+                connection,
+                request.query,
+                request.query_time or request.as_of_valid or datetime.now(UTC),
+                filters,
+                settings.n_time,
+            )
+            timings.time = _milliseconds(stage)
         if "lexical" in channels:
             stage = perf_counter()
             lexical_candidates = PgTsLexical().search(
@@ -131,6 +146,10 @@ def search(
                 ]
                 timings.important += _milliseconds(stage)
 
+        if reranker is None and settings.reranker == "llm":
+            from memfxxk.retrieval.model_reranker import ModelReranker
+
+            reranker = ModelReranker(service)
         hits = _build_hits(
             connection,
             service,
@@ -143,6 +162,7 @@ def search(
             important_candidates,
             note_candidates,
             vector,
+            time_candidates,
         )
 
     timings.total = max(0, _milliseconds(started) - timings.embed)
@@ -161,9 +181,15 @@ def _build_hits(
     important: list[Candidate],
     notes: list[Candidate],
     query_vector: list[float],
+    time_candidates: list[Candidate],
 ) -> list[SearchHit]:
-    ids = {candidate.id for group in (lexical, vector, important, notes) for candidate in group}
+    ids = {
+        candidate.id
+        for group in (lexical, vector, important, notes, time_candidates)
+        for candidate in group
+    }
     graph = service.settings.strategies.graph
+    hindsight = service.settings.strategies.recall == "hindsight"
     if not ids and not (graph == "graphiti" and request.graph_hops):
         return []
 
@@ -181,12 +207,33 @@ def _build_hits(
 
     settings = service.settings.search
     scores = fuse(fresh(lexical), fresh(vector), fresh(important), settings)
+    graph_hits = {}
+
+    def add_rank(key: UUID, weight: float, rank: int) -> ScoreDetails:
+        score = scores.setdefault(key, ScoreDetails(rrf=0, boost=1, final=0))
+        score.rrf += weight / (settings.rrf_k + rank)
+        score.final = score.rrf * score.boost
+        return score
+
+    for rank, candidate in enumerate(fresh(time_candidates), start=1):
+        score = add_rank(candidate.id, settings.time_weight, rank)
+        score.time_rank, score.time_score = rank, candidate.score
     for rank, candidate in enumerate(fresh(notes), start=1):
-        score = scores.setdefault(candidate.id, ScoreDetails(rrf=0, boost=1, final=0))
+        score = add_rank(candidate.id, settings.vector_weight, rank)
         score.note_rank = rank
         score.note_similarity = candidate.score
-        score.rrf += settings.vector_weight / (settings.rrf_k + rank)
-        score.final = score.rrf * score.boost
+    if hindsight and graph != "off" and query_vector:
+        start_graph = perf_counter()
+        seeds = [rows[candidate.id] for candidate in fresh(vector)[:4]]
+        graph_request = request.model_copy(update={"graph_hops": request.graph_hops or 1})
+        for rank, (row, path, fact) in enumerate(
+            _graph_rows(connection, service, graph_request, seeds, filters, tokens, query_vector),
+            start=1,
+        ):
+            rows[row["id"]] = row
+            graph_hits[row["id"]] = (path, fact)
+            add_rank(row["id"], settings.vector_weight, rank).graph_rank = rank
+        timings.graph = _milliseconds(start_graph)
     if service.settings.strategies.mem0_additive_ranking:
         from memfxxk.m2.mem0_ranking import apply_additive_weights
 
@@ -212,6 +259,7 @@ def _build_hits(
         content = row["content"]
         excerpt = snippet(content, matches)
         priority, tags = preferences.get(row["memory_id"], (None, []))
+        path, graph_fact = graph_hits.get(key, ([], None))
         hits.append(
             SearchHit(
                 **reference(row).model_dump(),
@@ -221,40 +269,37 @@ def _build_hits(
                 priority=priority,
                 tags=tags,
                 score=scores[key],
+                graph_path=path,
+                graph_fact=graph_fact,
             )
         )
     by_memory_id = {hit.memory_id: key for hit, key in zip(hits, ranked, strict=True)}
-    selected = reranker.rerank(request, hits)[: request.k]
     timings.fuse = _milliseconds(stage)
     stage = perf_counter()
+    selected = reranker.rerank(request, hits)[: request.k]
+    timings.rerank = _milliseconds(stage)
+    stage = perf_counter()
     if (
-        request.graph_hops
+        not hindsight
+        and request.graph_hops
         and request.k > 1
         and graph != "off"
         and (selected or graph == "graphiti")
     ):
         keep = selected[: max(1, request.k // 2)]
         seeds = [rows[by_memory_id[hit.memory_id]] for hit in keep]
-        if graph == "graphiti":
-            from memfxxk.m2.temporal_graph.search import graph_matches
-
-            graph_results = graph_matches(
-                connection, service, request, seeds, filters, tokens, query_vector
-            )
-            matched_facts = {item.row["memory_id"]: item.fact for item in graph_results}
-            for hit in keep:
-                hit.graph_fact = matched_facts.get(hit.memory_id)
-            kept_ids = {hit.memory_id for hit in keep}
-            neighbors = [
-                (item.row, item.path, item.fact)
-                for item in graph_results
-                if item.row["memory_id"] not in kept_ids
-            ]
-        else:
-            neighbors = [
-                (row, path, None)
-                for row, path in graph_neighbors(connection, service.ctx, request, seeds, filters)
-            ]
+        graph_results = _graph_rows(
+            connection, service, request, seeds, filters, tokens, query_vector
+        )
+        matched_facts = {row["memory_id"]: fact for row, _, fact in graph_results}
+        for hit in keep:
+            hit.graph_fact = matched_facts.get(hit.memory_id)
+        kept_ids = {hit.memory_id for hit in keep}
+        neighbors = [
+            (row, path, fact)
+            for row, path, fact in graph_results
+            if row["memory_id"] not in kept_ids
+        ]
         graph_ids = [row["memory_id"] for row, _, _ in neighbors]
         graph_marks = marks_for(connection, service.ctx, graph_ids)
         graph_preferences = preferences_for(connection, service.ctx, graph_ids)
@@ -326,6 +371,30 @@ def _build_hits(
         hit
         for hit in selected
         if all(by_memory_id[item] in fresh_ids for item in [hit.memory_id, *hit.graph_path])
+    ]
+
+
+def _graph_rows(
+    connection: Connection,
+    service: "BoundService",
+    request: SearchRequest,
+    seeds: list[RowMapping],
+    filters: list[ColumnElement[bool]],
+    tokens: list[str],
+    query_vector: list[float],
+) -> list[tuple[RowMapping, list[UUID], GraphFact | None]]:
+    if service.settings.strategies.graph == "graphiti":
+        from memfxxk.m2.temporal_graph.search import graph_matches
+
+        return [
+            (item.row, item.path, item.fact)
+            for item in graph_matches(
+                connection, service, request, seeds, filters, tokens, query_vector
+            )
+        ]
+    return [
+        (row, path, None)
+        for row, path in graph_neighbors(connection, service.ctx, request, seeds, filters)
     ]
 
 

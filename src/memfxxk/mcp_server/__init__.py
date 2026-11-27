@@ -14,6 +14,7 @@ from memfxxk.domain.blocks import EditBlock
 from memfxxk.domain.context import BuildContextRequest, CommitCompaction, PrepareCompaction
 from memfxxk.domain.events import IngestEvent
 from memfxxk.domain.manage import LinkRequest, Mark, PatchRequest, SaveLessonRequest
+from memfxxk.domain.reflect import ReflectRequest
 from memfxxk.m2.prompts import HOST
 from memfxxk.tools import TOOL_SPECS, HttpBackend, dispatch
 
@@ -148,6 +149,11 @@ def make_server(
         else {}
     )
     if enable_manage:
+        structured_tools["memory_reflect"] = (
+            "Answer from visible memory with verified citations. Opinion writes are opt-in.",
+            ReflectRequest,
+            lambda req: client.reflect(req).model_dump(mode="json"),
+        )
         structured_tools["memory_block_list"] = (
             "List visible memory blocks, their owners, and current revisions.",
             _BlockListArguments,

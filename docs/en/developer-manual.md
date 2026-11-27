@@ -350,6 +350,34 @@ Run `uv run python eval/run_t16_tiers.py --output eval/results/t16/p6-tiers` for
 
 The live run used BGE-small-en-v1.5, `deepseek-flash` for writes, and `gpt-5.4-mini` for answering and grading. The long dialogue fell from 4/4 to 3/4, with tiers missing one original preference message. On the 214-turn LoCoMo conversation, results fell from 2/8 to 1/8 and gold source hits from 4/15 to 3/15. Hybrid and tier assembly p95 was 194 / 251 ms for the long dialogue and 229 / 303 ms for LoCoMo. Each tier replay coalesced its writes into one model call, for 21,426 input and 946 output tokens combined, or about 80,475 tokens per 1,000 turns. Answering and grading used 35,984 tokens for a total of 58,356. Live incremental cost depends on how often segment updates run. Tier loading remains off by default.
 
+## T16 P7 Hindsight retrieval and reflection {#t16-hindsight}
+
+### Upstream behavior {#hindsight-upstream}
+
+Hindsight extracts standalone narrative facts and distinguishes world facts, agent experiences, observations, and opinions. Recall fuses semantic, BM25, graph, and time signals before cross-encoder reranking. Reflect consults mental models, observations, and facts in that order, then returns an answer with references. Evidence can strengthen, weaken, or contradict an opinion. [Hindsight paper sections 4 and 5](https://arxiv.org/html/2512.12818v1) [MIT implementation](https://github.com/vectorize-io/hindsight)
+
+### Implementation {#hindsight-implementation}
+
+`retrieval/temporal.py` parses English and Chinese dates and relative expressions. It anchors them to `query_time`, `as_of_valid`, or the current time, and ranks records by interval membership and distance. You can request this channel independently. Hindsight recall also expands the configured graph from semantic hits and fuses graph and time ranks with lexical and vector evidence. The default RRF constant is 60. Set `MEMFXXK_SEARCH__RERANKER=llm` to rerank the first 20 candidates with `rerank`. Inspect `score.time_rank`, `graph_rank`, and `rerank_position` in results. Model failure keeps the initial ranking.
+
+`POST /v1/reflect`, synchronous and asynchronous `reflect(ReflectRequest(...))`, and managed MCP `memory_reflect` accept `query`, `max_tokens`, `max_rounds`, optional `query_time`, `store_opinions`, and `disposition`. The disposition contains `skepticism`, `literalness`, `empathy`, and `mission`. Up to ten model rounds consult blocks, observations, and original evidence. The response contains `answer`, `citations`, `rejected_citations`, `proposals`, `opinion_changes`, `bundle_ids`, and `rounds`. The service checks that cited items came from this retrieval and remain visible. Storing opinions requires write access.
+
+Migration `0013` extends `records.type`. Confidence and prompt version live in `metadata`, with history in record versions. A completed turn queues `opinion_update`. It calls the model only when related opinions are found. After verifying the claim, original generation, and current opinion version, it applies +0.1, −0.1, −0.2, or no change, clamped to the interval from zero to one. User-marked and confirmed records remain protected.
+
+### Differences from upstream {#hindsight-differences}
+
+This implementation uses existing PostgreSQL turns, facts, blocks, summaries, and graph projections. Observations come from visible notes and summaries, and graph propagation follows the configured graph strategy. Reranking uses a configurable LLM. All reflection rounds share the request's evidence limit. Opinions enter the shared candidate path with ID, type, relevance, tokens, and decisions. Each write records the sources used by its call. Forgetting a source removes dependent records. The read-only six-question run did not measure representative per-thousand-turn opinion maintenance costs.
+
+### Worked example {#hindsight-example}
+
+Robin says morning meetings make it easier to concentrate. Reflect cites the source turn and suggests that Robin probably prefers morning meetings, with confidence 0.7. The host stores the opinion. Robin later corrects the preference to afternoons. The background job classifies the correction as a contradiction and writes version 2 with confidence 0.5. Read version 1 to inspect the earlier estimate.
+
+### Evaluation {#hindsight-evaluation}
+
+Run `uv run python eval/run_t16_reflect.py --output eval/results/t16/p7-smoke` for three temporal and three multi-session questions. The arms use the same LongMemEval Oracle histories and 1,500-token memory limit, with BGE-small-en-v1.5 embeddings, `deepseek-flash` reranking, and `gpt-5.4-mini` for answers, reflection, and grading.
+
+Hybrid answered 1/6, with 1/3 multi-session and 0/3 temporal. Hindsight answered 3/6, with 2/3 multi-session and 1/3 temporal. At least one gold original was loaded in 5/6 for hybrid and 6/6 for Hindsight. Reflect cited a gold source in all six. Retrieval and answering p50 / p95 was 1.11 / 1.57 seconds and 3.48 / 4.15 seconds respectively. The formal run used 10,503 tokens for hybrid and 24,430 for Hindsight including grading. Default settings remain unchanged after this smoke test.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

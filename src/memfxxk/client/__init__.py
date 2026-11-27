@@ -57,6 +57,7 @@ from memfxxk.domain.manage import (
     SaveLessonRequest,
 )
 from memfxxk.domain.notes import NoteHistoryEntry, NoteProjection, RollbackNote
+from memfxxk.domain.reflect import ReflectRequest, ReflectResult
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 from memfxxk.domain.sessions import PutSessionState, SessionState
 from memfxxk.domain.workspace import (
@@ -299,6 +300,9 @@ class MemfxxkClient(ClientContext):
 
     def get_bundle(self, bundle_id: UUID | str) -> BundleMetadata:
         return self._request("GET", f"context/bundles/{segment(bundle_id)}", BundleMetadata)
+
+    def reflect(self, request: ReflectRequest) -> ReflectResult:
+        return self._request("POST", "reflect", ReflectResult, body=request)
 
     def build_context(
         self,
@@ -571,6 +575,9 @@ class AsyncMemfxxkClient(ClientContext):
 
     async def get_bundle(self, bundle_id: UUID | str) -> BundleMetadata:
         return await self._request("GET", f"context/bundles/{segment(bundle_id)}", BundleMetadata)
+
+    async def reflect(self, request: ReflectRequest) -> ReflectResult:
+        return await self._request("POST", "reflect", ReflectResult, body=request)
 
     async def build_context(
         self,

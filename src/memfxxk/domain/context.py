@@ -24,6 +24,7 @@ class SearchFilters(BaseModel):
     tags: list[str] = Field(default_factory=list, max_length=32)
     as_of_valid: AwareDatetime | None = None
     as_of_recorded: AwareDatetime | None = None
+    query_time: AwareDatetime | None = None
 
     @model_validator(mode="after")
     def ordered_dates(self) -> Self:

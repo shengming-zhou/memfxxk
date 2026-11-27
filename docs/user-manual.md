@@ -228,6 +228,14 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 如果希望系统建议长期修改，可先创建 `user_profile`、`user_knowledge` 或 `agent_traits` 块并启用块装载。主题积累到热度阈值时，Worker 可能创建修改提议。可以在 `GET /v1/block-proposals` 检查和采纳，用户原有设置仍由用户确认。在一次批量回放中，写入按每千轮折算约 8 万 token。分批写入的调用频率可能更高。两组测试中分层装载都少答对一题，功能默认关闭。 [实现、配置和实测成本](/developer-manual/#t16-memoryos)
 
+### 按日期检索并拿到带引用的答案 {#hindsight-usage}
+
+在搜索请求的 `channels` 里加入 `time` 可使用「上个月」「三月初」或 `last Tuesday` 等表达。传带时区的 `query_time` 可以指定这些相对日期从哪天算。设置 `MEMFXXK_STRATEGIES__RECALL=hindsight` 会自动加时间排序，并让已启用的关系图一同参与评分。
+
+启用 `MEMFXXK_STRATEGIES__REFLECT=hindsight` 并配置 `reflect`、`opinion_update` 后，可通过 `POST /v1/reflect` 或 MCP 管理工具 `memory_reflect` 请求带引用的答案。默认只返回答案和建议，只有提交 `store_opinions=true` 才会把有证据的判断存成观点。以往的判断和置信度可按版本回查。
+
+六题验收中，反思加重排平均每题约用 4,072 token，混合组约 1,751，均包含答题和评分。不开启反思重排时，时间通道只做本地计算。反思和模型重排默认关闭。 [API、模型用量和实测结果](/developer-manual/#t16-hindsight)
+
 ## 查看证据评测 {#evidence-evaluation}
 
 证据评测检查记忆库能否找回支持答案的历史，并记录查询延时。要复跑，可在独立的评测数据库使用固定的 LongMemEval_S 题集。这一步无需配置聊天模型。 [开发手册的评测步骤](https://shengming-zhou.github.io/memfxxk/developer-manual/#evidence-comparison)

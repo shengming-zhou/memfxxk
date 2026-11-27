@@ -43,6 +43,7 @@ _MANAGEMENT_TOOLS = frozenset(
         "memory_block_list",
         "memory_block_get",
         "memory_block_edit",
+        "memory_reflect",
     )
 )
 _HOST_TOOLS = (

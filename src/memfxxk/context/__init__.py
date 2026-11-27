@@ -516,7 +516,14 @@ def _evidence(
     working: tuple[int, int] | None,
 ) -> tuple[list[_Candidate], SearchTimings]:
     filters = request.search_filters.model_dump(exclude_none=True)
-    filters.setdefault("types", _DEFAULT_EVIDENCE_TYPES)
+    filters.setdefault(
+        "types",
+        [
+            kind
+            for kind in _DEFAULT_EVIDENCE_TYPES
+            if kind != "opinion" or service.settings.strategies.reflect == "hindsight"
+        ],
+    )
     search_request = SearchRequest(query=request.query or "", k=request.k, **filters)
     response = service.search(search_request)
     rows = connection.execute(
@@ -592,7 +599,13 @@ def _evidence(
                 graph=bool(hit.graph_path),
                 graph_fact=hit.graph_fact,
                 excluded_reason=excluded,
-                strategy="amem" if hit.score.note_rank is not None else None,
+                strategy=(
+                    "hindsight"
+                    if hit.score.time_rank is not None or hit.score.graph_rank is not None
+                    else "amem"
+                    if hit.score.note_rank is not None
+                    else None
+                ),
             )
         )
     return candidates, response.timings_ms

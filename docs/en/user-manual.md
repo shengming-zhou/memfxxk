@@ -220,6 +220,14 @@ Hybrid search runs keyword and semantic search over the original turns. With `ME
 
 To receive suggested long-term edits, create blocks labeled `user_profile`, `user_knowledge`, or `agent_traits` and enable block loading. A segment must reach its heat threshold before the worker can propose changes. Review them through `GET /v1/block-proposals` and approve those you want to keep. One batch replay scaled to about 80,000 write tokens per 1,000 turns. Incremental writes may call the model more often. Tiers answered one fewer question in each comparison and remain off by default. [Implementation, configuration, and measured cost](/en/developer-manual/#t16-memoryos)
 
+### Search by date and get answers with citations {#hindsight-usage}
+
+Add `time` to search `channels` to resolve expressions such as “last month,” “early March,” or “last Tuesday.” An optional zoned `query_time` anchors relative dates. With `MEMFXXK_STRATEGIES__RECALL=hindsight`, time matching is enabled automatically and the configured graph contributes to retrieval scoring.
+
+Enable `MEMFXXK_STRATEGIES__REFLECT=hindsight` and configure the `reflect` and `opinion_update` models to use `POST /v1/reflect` or the managed MCP tool `memory_reflect`. By default, you get a cited answer and suggestions. Set `store_opinions=true` to save supported inferences as opinions whose confidence can change with new evidence. Inspect earlier versions through memory retrieval.
+
+The six-question check averaged about 4,072 tokens per question with reflection and reranking and 1,751 for hybrid, including grading. The time channel itself runs locally. Reflection and model reranking are off by default. [API, model usage, and evaluation](/en/developer-manual/#t16-hindsight)
+
 ## Check evidence evaluation {#evidence-evaluation}
 
 Evidence evaluation measures whether a memory backend retrieves the history that supports an answer and tracks query latency. Reproduce it with the frozen LongMemEval_S suite in a dedicated evaluation database. This step requires no chat model. [Evaluation steps in the developer manual](https://shengming-zhou.github.io/memfxxk/en/developer-manual/#evidence-comparison)

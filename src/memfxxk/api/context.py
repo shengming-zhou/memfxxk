@@ -14,6 +14,7 @@ from memfxxk.domain.context import (
     PrepareCompaction,
 )
 from memfxxk.domain.documents import Document, DocumentInfo, DocumentRevision, PutDocumentRequest
+from memfxxk.domain.reflect import ReflectRequest, ReflectResult
 from memfxxk.domain.sessions import PutSessionState, SessionState
 from memfxxk.domain.workspace import (
     ImportWorkspaceRequest,
@@ -83,6 +84,11 @@ def put_state(session_id: str, request: PutSessionState, service: RequestService
 @router.post("/context/build")
 def build_context(request: BuildContextRequest, service: RequestService) -> ContextBundle:
     return service.build_context(request)
+
+
+@router.post("/reflect")
+def reflect(request: ReflectRequest, service: RequestService) -> ReflectResult:
+    return service.reflect(request)
 
 
 @router.post("/context/compactions")

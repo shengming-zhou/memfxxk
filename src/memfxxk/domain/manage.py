@@ -4,8 +4,8 @@ from uuid import UUID
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from memfxxk.domain import Scope
+from memfxxk.domain.retrieval import MemoryType as MemoryType
 
-MemoryType = Literal["turn", "note", "fact", "summary", "lesson", "doc_chunk"]
 Origin = Literal["user_explicit", "auto_index", "auto_extract", "import"]
 Mark = Literal["important", "pinned"]
 Status = Literal["active", "inactive"]
