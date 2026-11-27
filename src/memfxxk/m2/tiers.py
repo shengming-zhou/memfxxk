@@ -144,7 +144,7 @@ def _assign(
                     embedding=vector,
                     model=model,
                     unpromoted_pages=1,
-                    last_access=now,
+                    last_access=old["event_time"],
                 )
                 .returning(tier_segments)
             )
