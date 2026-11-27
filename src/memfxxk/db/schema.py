@@ -41,6 +41,7 @@ tier_segments = sa.Table(
     sa.Column("source_event_ids", ARRAY(UUID), nullable=False, server_default="{}"),
     sa.Column("generation", sa.Integer, nullable=False, server_default="1"),
     sa.Column("summarized_generation", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("metadata", JSONB, nullable=False, server_default="{}"),
     sa.Column("visits", sa.Integer, nullable=False, server_default="0"),
     sa.Column("unpromoted_pages", sa.Integer, nullable=False, server_default="0"),
     sa.Column("promotion_epoch", sa.Integer, nullable=False, server_default="0"),
@@ -485,6 +486,7 @@ entity_edges = sa.Table(
     sa.Column("asserted_at", sa.DateTime(timezone=True), nullable=False),
     sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
     sa.Column("supports", JSONB, nullable=False),
+    sa.Column("metadata", JSONB, nullable=False, server_default="{}"),
     sa.Column(
         "invalidation_event_ids", ARRAY(UUID), nullable=False, server_default=sa.text("'{}'")
     ),
@@ -528,6 +530,7 @@ amem_revisions = sa.Table(
     sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
     sa.Column("operation", sa.Text, nullable=False),
     sa.Column("llm_call_id", UUID),
+    sa.Column("metadata", JSONB, nullable=False, server_default="{}"),
     timestamp("created_at"),
 )
 index_scope(amem_revisions)
@@ -586,6 +589,7 @@ block_revisions = sa.Table(
     sa.Column("value", sa.Text, nullable=False),
     sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
     sa.Column("actor", JSONB, nullable=False),
+    sa.Column("metadata", JSONB, nullable=False, server_default="{}"),
     timestamp("created_at"),
 )
 sa.Index("ix_block_revisions_sources", block_revisions.c.source_event_ids, postgresql_using="gin")
@@ -603,6 +607,7 @@ block_proposals = sa.Table(
     sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
     sa.Column("status", sa.Text, nullable=False, server_default="pending"),
     sa.Column("adopted_revision", sa.Integer),
+    sa.Column("metadata", JSONB, nullable=False, server_default="{}"),
     timestamp("created_at"),
 )
 index_scope(block_proposals)

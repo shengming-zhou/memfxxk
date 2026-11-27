@@ -234,6 +234,12 @@ Set `MEMFXXK_STRATEGIES__LESSONS=reasoningbank` to distill from successes and fa
 
 After saving the final tool result, call `POST /v1/sessions/{id}/finish-task` or the host MCP tool `session_finish_task`. Review drafts through `GET /v1/lesson-proposals`. Approved lessons can load into subsequent tasks. With `MEMFXXK_STRATEGIES__LESSON_VISIBILITY=searchable`, drafts are available to explicit search while automatic loading requires approval. Existing manually saved lessons remain available. In the smoke test, distillation averaged about 11,400 to 16,600 write tokens per task. Cost varies with trajectory length. Both automatic strategies are off by default. [Usage and measured costs](/en/developer-manual/#t16-automatic-lessons)
 
+### Start from a preset {#strategy-presets}
+
+Set `MEMFXXK_PRESET` in the API and worker environment, then restart them. Choose `baseline` for hybrid retrieval, `mem0` for automatic facts, `graphiti` for the temporal graph, `letta` for blocks and background consolidation, or `full` for the combined experimental strategies. Explicit `MEMFXXK_STRATEGIES__*` and model settings override preset defaults. Leaving the preset unset preserves the current configuration.
+
+`full` enables several model-based write paths and query-time reranking. Try it in a dedicated scope. Use `GET /v1/context/bundles/{id}` to inspect each candidate's strategies, token counts, and loading decision. [Measured preset results](/en/memory-strategy-results/)
+
 ## Check evidence evaluation {#evidence-evaluation}
 
 Evidence evaluation measures whether a memory backend retrieves the history that supports an answer and tracks query latency. Reproduce it with the frozen LongMemEval_S suite in a dedicated evaluation database. This step requires no chat model. [Evaluation steps in the developer manual](https://shengming-zhou.github.io/memfxxk/en/developer-manual/#evidence-comparison)

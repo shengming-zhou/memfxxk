@@ -649,6 +649,15 @@ def _adopt_edge(conn: Connection, episode: Episode, edge: Edge, model: str) -> N
             expired_at=func.now() if expires_from else None,
             source_event_ids=list(dict.fromkeys(draft.source_event_ids)),
             supports=supports,
+            metadata={
+                "strategy": "graphiti",
+                "prompt_versions": [
+                    entity_extract.VERSION,
+                    entity_resolve.VERSION,
+                    edge_extract.VERSION,
+                    edge_resolve.VERSION,
+                ],
+            },
             invalidation_event_ids=expires_from,
         )
         .on_conflict_do_nothing()

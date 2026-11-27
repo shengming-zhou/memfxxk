@@ -308,6 +308,7 @@ def graph_matches(
             invalid_at=edge["effective_invalid_at"],
             source_event_ids=sorted({UUID(key) for group in support.values() for key in group}),
             generation=edge["generation"],
+            prompt_versions=edge["metadata"].get("prompt_versions", []),
         )
         seed = seed_by_entity.get(edge["source_id"]) or seed_by_entity.get(edge["target_id"])
         for episode_id in support:

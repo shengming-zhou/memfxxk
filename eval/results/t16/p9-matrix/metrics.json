@@ -1,0 +1,746 @@
+{
+  "baseline": {
+    "correct": 7,
+    "questions": 11,
+    "per_type": {
+      "knowledge-update": [
+        2,
+        2
+      ],
+      "multi-session": [
+        1,
+        1
+      ],
+      "open-domain": [
+        0,
+        1
+      ],
+      "repeat-task": [
+        1,
+        1
+      ],
+      "single-session-assistant": [
+        1,
+        1
+      ],
+      "single-session-preference": [
+        1,
+        2
+      ],
+      "single-session-user": [
+        0,
+        1
+      ],
+      "temporal": [
+        0,
+        1
+      ],
+      "temporal-reasoning": [
+        1,
+        1
+      ]
+    },
+    "gold": 13,
+    "seen_gold": 13,
+    "packed_gold": 11,
+    "write_tokens": 0,
+    "write_tokens_per_1000_turns": 0.0,
+    "query_tokens": 14840,
+    "query_tokens_per_request": 1349.09,
+    "write_ms": {
+      "p50": 461.0,
+      "p95": 1326.46
+    },
+    "query_ms": {
+      "p50": 861.06,
+      "p95": 1217.25
+    },
+    "query_failure_rate": 0.0,
+    "write_failed_calls": 0,
+    "write_failure_rate": 0,
+    "write_errors": [],
+    "write_unfinished_jobs": 0
+  },
+  "compaction": {
+    "correct": 9,
+    "questions": 11,
+    "per_type": {
+      "knowledge-update": [
+        2,
+        2
+      ],
+      "multi-session": [
+        1,
+        1
+      ],
+      "open-domain": [
+        1,
+        1
+      ],
+      "repeat-task": [
+        1,
+        1
+      ],
+      "single-session-assistant": [
+        1,
+        1
+      ],
+      "single-session-preference": [
+        1,
+        2
+      ],
+      "single-session-user": [
+        1,
+        1
+      ],
+      "temporal": [
+        1,
+        1
+      ],
+      "temporal-reasoning": [
+        0,
+        1
+      ]
+    },
+    "gold": 13,
+    "seen_gold": 13,
+    "packed_gold": 10,
+    "write_tokens": 20226,
+    "write_tokens_per_1000_turns": 722357.14,
+    "query_tokens": 15317,
+    "query_tokens_per_request": 1392.45,
+    "write_ms": {
+      "p50": 2942.51,
+      "p95": 3665.48
+    },
+    "query_ms": {
+      "p50": 947.86,
+      "p95": 1020.15
+    },
+    "query_failure_rate": 0.0,
+    "write_failed_calls": 0,
+    "write_failure_rate": 0.0,
+    "write_errors": [],
+    "write_unfinished_jobs": 0
+  },
+  "mem0_classic": {
+    "correct": 8,
+    "questions": 11,
+    "per_type": {
+      "knowledge-update": [
+        2,
+        2
+      ],
+      "multi-session": [
+        1,
+        1
+      ],
+      "open-domain": [
+        0,
+        1
+      ],
+      "repeat-task": [
+        1,
+        1
+      ],
+      "single-session-assistant": [
+        1,
+        1
+      ],
+      "single-session-preference": [
+        1,
+        2
+      ],
+      "single-session-user": [
+        1,
+        1
+      ],
+      "temporal": [
+        0,
+        1
+      ],
+      "temporal-reasoning": [
+        1,
+        1
+      ]
+    },
+    "gold": 13,
+    "seen_gold": 13,
+    "packed_gold": 12,
+    "write_tokens": 54517,
+    "write_tokens_per_1000_turns": 1947035.71,
+    "query_tokens": 14560,
+    "query_tokens_per_request": 1323.64,
+    "write_ms": {
+      "p50": 6211.11,
+      "p95": 16595.7
+    },
+    "query_ms": {
+      "p50": 927.23,
+      "p95": 1203.97
+    },
+    "query_failure_rate": 0.0,
+    "write_failed_calls": 0,
+    "write_failure_rate": 0.0,
+    "write_errors": [],
+    "write_unfinished_jobs": 0
+  },
+  "mem0": {
+    "correct": 10,
+    "questions": 11,
+    "per_type": {
+      "knowledge-update": [
+        2,
+        2
+      ],
+      "multi-session": [
+        1,
+        1
+      ],
+      "open-domain": [
+        1,
+        1
+      ],
+      "repeat-task": [
+        1,
+        1
+      ],
+      "single-session-assistant": [
+        1,
+        1
+      ],
+      "single-session-preference": [
+        2,
+        2
+      ],
+      "single-session-user": [
+        0,
+        1
+      ],
+      "temporal": [
+        1,
+        1
+      ],
+      "temporal-reasoning": [
+        1,
+        1
+      ]
+    },
+    "gold": 13,
+    "seen_gold": 13,
+    "packed_gold": 13,
+    "write_tokens": 47805,
+    "write_tokens_per_1000_turns": 1707321.43,
+    "query_tokens": 14294,
+    "query_tokens_per_request": 1299.45,
+    "write_ms": {
+      "p50": 8601.61,
+      "p95": 11429.97
+    },
+    "query_ms": {
+      "p50": 958.02,
+      "p95": 1168.07
+    },
+    "query_failure_rate": 0.0,
+    "write_failed_calls": 1,
+    "write_failure_rate": 0.034482758620689655,
+    "write_errors": [],
+    "write_unfinished_jobs": 0
+  },
+  "graphiti": {
+    "correct": 6,
+    "questions": 11,
+    "per_type": {
+      "knowledge-update": [
+        2,
+        2
+      ],
+      "multi-session": [
+        1,
+        1
+      ],
+      "open-domain": [
+        0,
+        1
+      ],
+      "repeat-task": [
+        1,
+        1
+      ],
+      "single-session-assistant": [
+        1,
+        1
+      ],
+      "single-session-preference": [
+        1,
+        2
+      ],
+      "single-session-user": [
+        0,
+        1
+      ],
+      "temporal": [
+        0,
+        1
+      ],
+      "temporal-reasoning": [
+        0,
+        1
+      ]
+    },
+    "gold": 13,
+    "seen_gold": 13,
+    "packed_gold": 11,
+    "write_tokens": 150248,
+    "write_tokens_per_1000_turns": 5366000.0,
+    "query_tokens": 15003,
+    "query_tokens_per_request": 1363.91,
+    "write_ms": {
+      "p50": 20296.11,
+      "p95": 35380.0
+    },
+    "query_ms": {
+      "p50": 969.97,
+      "p95": 1299.25
+    },
+    "query_failure_rate": 0.0,
+    "write_failed_calls": 0,
+    "write_failure_rate": 0.0,
+    "write_errors": [],
+    "write_unfinished_jobs": 0
+  },
+  "amem": {
+    "correct": 7,
+    "questions": 11,
+    "per_type": {
+      "knowledge-update": [
+        2,
+        2
+      ],
+      "multi-session": [
+        0,
+        1
+      ],
+      "open-domain": [
+        0,
+        1
+      ],
+      "repeat-task": [
+        1,
+        1
+      ],
+      "single-session-assistant": [
+        1,
+        1
+      ],
+      "single-session-preference": [
+        1,
+        2
+      ],
+      "single-session-user": [
+        1,
+        1
+      ],
+      "temporal": [
+        0,
+        1
+      ],
+      "temporal-reasoning": [
+        1,
+        1
+      ]
+    },
+    "gold": 13,
+    "seen_gold": 13,
+    "packed_gold": 10,
+    "write_tokens": 35024,
+    "write_tokens_per_1000_turns": 1250857.14,
+    "query_tokens": 15011,
+    "query_tokens_per_request": 1364.64,
+    "write_ms": {
+      "p50": 5110.87,
+      "p95": 5794.7
+    },
+    "query_ms": {
+      "p50": 923.16,
+      "p95": 1205.98
+    },
+    "query_failure_rate": 0.0,
+    "write_failed_calls": 0,
+    "write_failure_rate": 0.0,
+    "write_errors": [],
+    "write_unfinished_jobs": 0
+  },
+  "letta": {
+    "correct": 10,
+    "questions": 11,
+    "per_type": {
+      "knowledge-update": [
+        2,
+        2
+      ],
+      "multi-session": [
+        1,
+        1
+      ],
+      "open-domain": [
+        0,
+        1
+      ],
+      "repeat-task": [
+        1,
+        1
+      ],
+      "single-session-assistant": [
+        1,
+        1
+      ],
+      "single-session-preference": [
+        2,
+        2
+      ],
+      "single-session-user": [
+        1,
+        1
+      ],
+      "temporal": [
+        1,
+        1
+      ],
+      "temporal-reasoning": [
+        1,
+        1
+      ]
+    },
+    "gold": 13,
+    "seen_gold": 13,
+    "packed_gold": 10,
+    "write_tokens": 41157,
+    "write_tokens_per_1000_turns": 1469892.86,
+    "query_tokens": 16765,
+    "query_tokens_per_request": 1524.09,
+    "write_ms": {
+      "p50": 4496.74,
+      "p95": 7853.31
+    },
+    "query_ms": {
+      "p50": 865.92,
+      "p95": 1254.48
+    },
+    "query_failure_rate": 0.0,
+    "write_failed_calls": 0,
+    "write_failure_rate": 0.0,
+    "write_errors": [],
+    "write_unfinished_jobs": 0
+  },
+  "memoryos": {
+    "correct": 8,
+    "questions": 11,
+    "per_type": {
+      "knowledge-update": [
+        2,
+        2
+      ],
+      "multi-session": [
+        1,
+        1
+      ],
+      "open-domain": [
+        0,
+        1
+      ],
+      "repeat-task": [
+        1,
+        1
+      ],
+      "single-session-assistant": [
+        1,
+        1
+      ],
+      "single-session-preference": [
+        1,
+        2
+      ],
+      "single-session-user": [
+        1,
+        1
+      ],
+      "temporal": [
+        0,
+        1
+      ],
+      "temporal-reasoning": [
+        1,
+        1
+      ]
+    },
+    "gold": 13,
+    "seen_gold": 13,
+    "packed_gold": 13,
+    "write_tokens": 460,
+    "write_tokens_per_1000_turns": 16428.57,
+    "query_tokens": 16094,
+    "query_tokens_per_request": 1463.09,
+    "write_ms": {
+      "p50": 593.92,
+      "p95": 1172.23
+    },
+    "query_ms": {
+      "p50": 937.77,
+      "p95": 991.65
+    },
+    "query_failure_rate": 0.0,
+    "write_failed_calls": 0,
+    "write_failure_rate": 0.0,
+    "write_errors": [],
+    "write_unfinished_jobs": 0
+  },
+  "hindsight": {
+    "correct": 10,
+    "questions": 11,
+    "per_type": {
+      "knowledge-update": [
+        2,
+        2
+      ],
+      "multi-session": [
+        0,
+        1
+      ],
+      "open-domain": [
+        1,
+        1
+      ],
+      "repeat-task": [
+        1,
+        1
+      ],
+      "single-session-assistant": [
+        1,
+        1
+      ],
+      "single-session-preference": [
+        2,
+        2
+      ],
+      "single-session-user": [
+        1,
+        1
+      ],
+      "temporal": [
+        1,
+        1
+      ],
+      "temporal-reasoning": [
+        1,
+        1
+      ]
+    },
+    "gold": 13,
+    "seen_gold": 13,
+    "packed_gold": 11,
+    "write_tokens": 0,
+    "write_tokens_per_1000_turns": 0.0,
+    "query_tokens": 29393,
+    "query_tokens_per_request": 2672.09,
+    "write_ms": {
+      "p50": 448.31,
+      "p95": 564.01
+    },
+    "query_ms": {
+      "p50": 3543.59,
+      "p95": 4190.88
+    },
+    "query_failure_rate": 0.0,
+    "write_failed_calls": 0,
+    "write_failure_rate": 0,
+    "write_errors": [],
+    "write_unfinished_jobs": 0
+  },
+  "reasoningbank": {
+    "correct": 7,
+    "questions": 11,
+    "per_type": {
+      "knowledge-update": [
+        2,
+        2
+      ],
+      "multi-session": [
+        1,
+        1
+      ],
+      "open-domain": [
+        0,
+        1
+      ],
+      "repeat-task": [
+        1,
+        1
+      ],
+      "single-session-assistant": [
+        1,
+        1
+      ],
+      "single-session-preference": [
+        1,
+        2
+      ],
+      "single-session-user": [
+        1,
+        1
+      ],
+      "temporal": [
+        0,
+        1
+      ],
+      "temporal-reasoning": [
+        0,
+        1
+      ]
+    },
+    "gold": 13,
+    "seen_gold": 13,
+    "packed_gold": 11,
+    "write_tokens": 2537,
+    "write_tokens_per_1000_turns": 90607.14,
+    "query_tokens": 15061,
+    "query_tokens_per_request": 1369.18,
+    "write_ms": {
+      "p50": 381.42,
+      "p95": 3837.33
+    },
+    "query_ms": {
+      "p50": 900.33,
+      "p95": 1030.55
+    },
+    "query_failure_rate": 0.0,
+    "write_failed_calls": 1,
+    "write_failure_rate": 0.3333333333333333,
+    "write_errors": [],
+    "write_unfinished_jobs": 0
+  },
+  "awm": {
+    "correct": 7,
+    "questions": 11,
+    "per_type": {
+      "knowledge-update": [
+        2,
+        2
+      ],
+      "multi-session": [
+        1,
+        1
+      ],
+      "open-domain": [
+        0,
+        1
+      ],
+      "repeat-task": [
+        1,
+        1
+      ],
+      "single-session-assistant": [
+        1,
+        1
+      ],
+      "single-session-preference": [
+        1,
+        2
+      ],
+      "single-session-user": [
+        1,
+        1
+      ],
+      "temporal": [
+        0,
+        1
+      ],
+      "temporal-reasoning": [
+        0,
+        1
+      ]
+    },
+    "gold": 13,
+    "seen_gold": 13,
+    "packed_gold": 11,
+    "write_tokens": 2461,
+    "write_tokens_per_1000_turns": 87892.86,
+    "query_tokens": 14970,
+    "query_tokens_per_request": 1360.91,
+    "write_ms": {
+      "p50": 387.83,
+      "p95": 3330.15
+    },
+    "query_ms": {
+      "p50": 929.15,
+      "p95": 1610.78
+    },
+    "query_failure_rate": 0.0,
+    "write_failed_calls": 1,
+    "write_failure_rate": 0.3333333333333333,
+    "write_errors": [],
+    "write_unfinished_jobs": 0
+  },
+  "full": {
+    "correct": 11,
+    "questions": 11,
+    "per_type": {
+      "knowledge-update": [
+        2,
+        2
+      ],
+      "multi-session": [
+        1,
+        1
+      ],
+      "open-domain": [
+        1,
+        1
+      ],
+      "repeat-task": [
+        1,
+        1
+      ],
+      "single-session-assistant": [
+        1,
+        1
+      ],
+      "single-session-preference": [
+        2,
+        2
+      ],
+      "single-session-user": [
+        1,
+        1
+      ],
+      "temporal": [
+        1,
+        1
+      ],
+      "temporal-reasoning": [
+        1,
+        1
+      ]
+    },
+    "gold": 13,
+    "seen_gold": 13,
+    "packed_gold": 13,
+    "write_tokens": 291437,
+    "write_tokens_per_1000_turns": 10408464.29,
+    "query_tokens": 38403,
+    "query_tokens_per_request": 3491.18,
+    "write_ms": {
+      "p50": 39001.77,
+      "p95": 58330.31
+    },
+    "query_ms": {
+      "p50": 3799.17,
+      "p95": 4505.96
+    },
+    "query_failure_rate": 0.0,
+    "write_failed_calls": 3,
+    "write_failure_rate": 0.015625,
+    "write_errors": [],
+    "write_unfinished_jobs": 0
+  }
+}

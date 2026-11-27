@@ -1,0 +1,662 @@
+{
+  "histories": "focused",
+  "profiles": [
+    "baseline",
+    "compaction",
+    "mem0_classic",
+    "mem0",
+    "graphiti",
+    "amem",
+    "letta",
+    "memoryos",
+    "hindsight",
+    "reasoningbank",
+    "awm",
+    "full"
+  ],
+  "memory_tokens": 1500,
+  "embedding": "BAAI/bge-small-en-v1.5",
+  "answer": "gpt-5.4-mini",
+  "judge": "gpt-5.4-mini",
+  "model_default": "deepseek-flash",
+  "prompt_versions": {
+    "answer": "answer-v1.txt",
+    "judge": "judge-v1.txt",
+    "compact": "compact-v1",
+    "extract_classic": "mem0-classic-extract-v1",
+    "extract_additive": "mem0-additive-extract-v2",
+    "reconcile": "mem0-classic-reconcile-v1",
+    "entity_extract": "graphiti-entity-extract-v1",
+    "entity_resolve": "graphiti-entity-resolve-v1",
+    "edge_extract": "graphiti-edge-extract-v1",
+    "edge_resolve": "graphiti-edge-resolve-v1",
+    "node_summary": "graphiti-node-summary-v1",
+    "note_enrich": "amem-note-enrich-v1",
+    "note_link": "amem-note-link-v1",
+    "note_evolve": "amem-note-evolve-v1",
+    "sleeptime": "letta-sleeptime-v1",
+    "persona_update": "memoryos-segment-v1",
+    "reflect": "hindsight-reflect-v1",
+    "opinion_update": "hindsight-opinion-update-v1",
+    "rerank": "relevance-rerank-v1",
+    "trajectory_judge": "trajectory-judge-v1",
+    "lesson_distill": "reasoningbank-lessons-v1",
+    "workflow_induce": "awm-workflows-v1"
+  },
+  "configurations": {
+    "baseline": {
+      "search": {
+        "vector_backend": "pgvector",
+        "n_lexical": 50,
+        "n_vector": 50,
+        "m_important": 10,
+        "hnsw_ef_search": 100,
+        "rrf_k": 60,
+        "lexical_weight": 1.0,
+        "vector_weight": 1.0,
+        "important_boost": 1.5,
+        "important_min_sim": 0.35,
+        "max_related": 3,
+        "n_time": 25,
+        "time_weight": 1.0,
+        "reranker": "off",
+        "rerank_candidates": 20
+      },
+      "strategies": {
+        "facts": "off",
+        "mem0_additive_ranking": false,
+        "graph": "off",
+        "auto_graph_hops": 0,
+        "graph_reranker": "rrf",
+        "notes": "off",
+        "amem_enrich_mem0_facts": true,
+        "blocks": "off",
+        "tiers": "off",
+        "recall": "off",
+        "reflect": "off",
+        "lessons": "off",
+        "lesson_visibility": "pending"
+      },
+      "sleeptime": {
+        "every_turns": 0,
+        "after_compaction": false,
+        "recent_turns": 12
+      },
+      "tiers": {
+        "short_capacity": 7,
+        "segment_capacity": 200,
+        "segment_threshold": 0.6,
+        "promotion_heat": 5.0
+      }
+    },
+    "compaction": {
+      "search": {
+        "vector_backend": "pgvector",
+        "n_lexical": 50,
+        "n_vector": 50,
+        "m_important": 10,
+        "hnsw_ef_search": 100,
+        "rrf_k": 60,
+        "lexical_weight": 1.0,
+        "vector_weight": 1.0,
+        "important_boost": 1.5,
+        "important_min_sim": 0.35,
+        "max_related": 3,
+        "n_time": 25,
+        "time_weight": 1.0,
+        "reranker": "off",
+        "rerank_candidates": 20
+      },
+      "strategies": {
+        "facts": "off",
+        "mem0_additive_ranking": false,
+        "graph": "off",
+        "auto_graph_hops": 0,
+        "graph_reranker": "rrf",
+        "notes": "off",
+        "amem_enrich_mem0_facts": true,
+        "blocks": "off",
+        "tiers": "off",
+        "recall": "off",
+        "reflect": "off",
+        "lessons": "off",
+        "lesson_visibility": "pending"
+      },
+      "sleeptime": {
+        "every_turns": 0,
+        "after_compaction": false,
+        "recent_turns": 12
+      },
+      "tiers": {
+        "short_capacity": 7,
+        "segment_capacity": 200,
+        "segment_threshold": 0.6,
+        "promotion_heat": 5.0
+      }
+    },
+    "mem0_classic": {
+      "search": {
+        "vector_backend": "pgvector",
+        "n_lexical": 50,
+        "n_vector": 50,
+        "m_important": 10,
+        "hnsw_ef_search": 100,
+        "rrf_k": 60,
+        "lexical_weight": 1.0,
+        "vector_weight": 1.0,
+        "important_boost": 1.5,
+        "important_min_sim": 0.35,
+        "max_related": 3,
+        "n_time": 25,
+        "time_weight": 1.0,
+        "reranker": "off",
+        "rerank_candidates": 20
+      },
+      "strategies": {
+        "facts": "mem0_classic",
+        "mem0_additive_ranking": false,
+        "graph": "off",
+        "auto_graph_hops": 0,
+        "graph_reranker": "rrf",
+        "notes": "off",
+        "amem_enrich_mem0_facts": true,
+        "blocks": "off",
+        "tiers": "off",
+        "recall": "off",
+        "reflect": "off",
+        "lessons": "off",
+        "lesson_visibility": "pending"
+      },
+      "sleeptime": {
+        "every_turns": 0,
+        "after_compaction": false,
+        "recent_turns": 12
+      },
+      "tiers": {
+        "short_capacity": 7,
+        "segment_capacity": 200,
+        "segment_threshold": 0.6,
+        "promotion_heat": 5.0
+      }
+    },
+    "mem0": {
+      "search": {
+        "vector_backend": "pgvector",
+        "n_lexical": 50,
+        "n_vector": 50,
+        "m_important": 10,
+        "hnsw_ef_search": 100,
+        "rrf_k": 60,
+        "lexical_weight": 1.0,
+        "vector_weight": 1.0,
+        "important_boost": 1.5,
+        "important_min_sim": 0.35,
+        "max_related": 3,
+        "n_time": 25,
+        "time_weight": 1.0,
+        "reranker": "off",
+        "rerank_candidates": 20
+      },
+      "strategies": {
+        "facts": "mem0_additive",
+        "mem0_additive_ranking": true,
+        "graph": "off",
+        "auto_graph_hops": 0,
+        "graph_reranker": "rrf",
+        "notes": "off",
+        "amem_enrich_mem0_facts": true,
+        "blocks": "off",
+        "tiers": "off",
+        "recall": "off",
+        "reflect": "off",
+        "lessons": "off",
+        "lesson_visibility": "pending"
+      },
+      "sleeptime": {
+        "every_turns": 0,
+        "after_compaction": false,
+        "recent_turns": 12
+      },
+      "tiers": {
+        "short_capacity": 7,
+        "segment_capacity": 200,
+        "segment_threshold": 0.6,
+        "promotion_heat": 5.0
+      }
+    },
+    "graphiti": {
+      "search": {
+        "vector_backend": "pgvector",
+        "n_lexical": 50,
+        "n_vector": 50,
+        "m_important": 10,
+        "hnsw_ef_search": 100,
+        "rrf_k": 60,
+        "lexical_weight": 1.0,
+        "vector_weight": 1.0,
+        "important_boost": 1.5,
+        "important_min_sim": 0.35,
+        "max_related": 3,
+        "n_time": 25,
+        "time_weight": 1.0,
+        "reranker": "off",
+        "rerank_candidates": 20
+      },
+      "strategies": {
+        "facts": "off",
+        "mem0_additive_ranking": false,
+        "graph": "graphiti",
+        "auto_graph_hops": 1,
+        "graph_reranker": "rrf",
+        "notes": "off",
+        "amem_enrich_mem0_facts": true,
+        "blocks": "off",
+        "tiers": "off",
+        "recall": "off",
+        "reflect": "off",
+        "lessons": "off",
+        "lesson_visibility": "pending"
+      },
+      "sleeptime": {
+        "every_turns": 0,
+        "after_compaction": false,
+        "recent_turns": 12
+      },
+      "tiers": {
+        "short_capacity": 7,
+        "segment_capacity": 200,
+        "segment_threshold": 0.6,
+        "promotion_heat": 5.0
+      }
+    },
+    "amem": {
+      "search": {
+        "vector_backend": "pgvector",
+        "n_lexical": 50,
+        "n_vector": 50,
+        "m_important": 10,
+        "hnsw_ef_search": 100,
+        "rrf_k": 60,
+        "lexical_weight": 1.0,
+        "vector_weight": 1.0,
+        "important_boost": 1.5,
+        "important_min_sim": 0.35,
+        "max_related": 3,
+        "n_time": 25,
+        "time_weight": 1.0,
+        "reranker": "off",
+        "rerank_candidates": 20
+      },
+      "strategies": {
+        "facts": "off",
+        "mem0_additive_ranking": false,
+        "graph": "off",
+        "auto_graph_hops": 0,
+        "graph_reranker": "rrf",
+        "notes": "amem",
+        "amem_enrich_mem0_facts": true,
+        "blocks": "off",
+        "tiers": "off",
+        "recall": "off",
+        "reflect": "off",
+        "lessons": "off",
+        "lesson_visibility": "pending"
+      },
+      "sleeptime": {
+        "every_turns": 0,
+        "after_compaction": false,
+        "recent_turns": 12
+      },
+      "tiers": {
+        "short_capacity": 7,
+        "segment_capacity": 200,
+        "segment_threshold": 0.6,
+        "promotion_heat": 5.0
+      }
+    },
+    "letta": {
+      "search": {
+        "vector_backend": "pgvector",
+        "n_lexical": 50,
+        "n_vector": 50,
+        "m_important": 10,
+        "hnsw_ef_search": 100,
+        "rrf_k": 60,
+        "lexical_weight": 1.0,
+        "vector_weight": 1.0,
+        "important_boost": 1.5,
+        "important_min_sim": 0.35,
+        "max_related": 3,
+        "n_time": 25,
+        "time_weight": 1.0,
+        "reranker": "off",
+        "rerank_candidates": 20
+      },
+      "strategies": {
+        "facts": "off",
+        "mem0_additive_ranking": false,
+        "graph": "off",
+        "auto_graph_hops": 0,
+        "graph_reranker": "rrf",
+        "notes": "off",
+        "amem_enrich_mem0_facts": true,
+        "blocks": "letta",
+        "tiers": "off",
+        "recall": "off",
+        "reflect": "off",
+        "lessons": "off",
+        "lesson_visibility": "pending"
+      },
+      "sleeptime": {
+        "every_turns": 16,
+        "after_compaction": true,
+        "recent_turns": 12
+      },
+      "tiers": {
+        "short_capacity": 7,
+        "segment_capacity": 200,
+        "segment_threshold": 0.6,
+        "promotion_heat": 5.0
+      }
+    },
+    "memoryos": {
+      "search": {
+        "vector_backend": "pgvector",
+        "n_lexical": 50,
+        "n_vector": 50,
+        "m_important": 10,
+        "hnsw_ef_search": 100,
+        "rrf_k": 60,
+        "lexical_weight": 1.0,
+        "vector_weight": 1.0,
+        "important_boost": 1.5,
+        "important_min_sim": 0.35,
+        "max_related": 3,
+        "n_time": 25,
+        "time_weight": 1.0,
+        "reranker": "off",
+        "rerank_candidates": 20
+      },
+      "strategies": {
+        "facts": "off",
+        "mem0_additive_ranking": false,
+        "graph": "off",
+        "auto_graph_hops": 0,
+        "graph_reranker": "rrf",
+        "notes": "off",
+        "amem_enrich_mem0_facts": true,
+        "blocks": "letta",
+        "tiers": "memoryos",
+        "recall": "off",
+        "reflect": "off",
+        "lessons": "off",
+        "lesson_visibility": "pending"
+      },
+      "sleeptime": {
+        "every_turns": 0,
+        "after_compaction": false,
+        "recent_turns": 12
+      },
+      "tiers": {
+        "short_capacity": 7,
+        "segment_capacity": 200,
+        "segment_threshold": 0.6,
+        "promotion_heat": 5.0
+      }
+    },
+    "hindsight": {
+      "search": {
+        "vector_backend": "pgvector",
+        "n_lexical": 50,
+        "n_vector": 50,
+        "m_important": 10,
+        "hnsw_ef_search": 100,
+        "rrf_k": 60,
+        "lexical_weight": 1.0,
+        "vector_weight": 1.0,
+        "important_boost": 1.5,
+        "important_min_sim": 0.35,
+        "max_related": 3,
+        "n_time": 25,
+        "time_weight": 1.0,
+        "reranker": "llm",
+        "rerank_candidates": 20
+      },
+      "strategies": {
+        "facts": "off",
+        "mem0_additive_ranking": false,
+        "graph": "links",
+        "auto_graph_hops": 0,
+        "graph_reranker": "rrf",
+        "notes": "off",
+        "amem_enrich_mem0_facts": true,
+        "blocks": "off",
+        "tiers": "off",
+        "recall": "hindsight",
+        "reflect": "hindsight",
+        "lessons": "off",
+        "lesson_visibility": "pending"
+      },
+      "sleeptime": {
+        "every_turns": 0,
+        "after_compaction": false,
+        "recent_turns": 12
+      },
+      "tiers": {
+        "short_capacity": 7,
+        "segment_capacity": 200,
+        "segment_threshold": 0.6,
+        "promotion_heat": 5.0
+      }
+    },
+    "reasoningbank": {
+      "search": {
+        "vector_backend": "pgvector",
+        "n_lexical": 50,
+        "n_vector": 50,
+        "m_important": 10,
+        "hnsw_ef_search": 100,
+        "rrf_k": 60,
+        "lexical_weight": 1.0,
+        "vector_weight": 1.0,
+        "important_boost": 1.5,
+        "important_min_sim": 0.35,
+        "max_related": 3,
+        "n_time": 25,
+        "time_weight": 1.0,
+        "reranker": "off",
+        "rerank_candidates": 20
+      },
+      "strategies": {
+        "facts": "off",
+        "mem0_additive_ranking": false,
+        "graph": "off",
+        "auto_graph_hops": 0,
+        "graph_reranker": "rrf",
+        "notes": "off",
+        "amem_enrich_mem0_facts": true,
+        "blocks": "off",
+        "tiers": "off",
+        "recall": "off",
+        "reflect": "off",
+        "lessons": "reasoningbank",
+        "lesson_visibility": "pending"
+      },
+      "sleeptime": {
+        "every_turns": 0,
+        "after_compaction": false,
+        "recent_turns": 12
+      },
+      "tiers": {
+        "short_capacity": 7,
+        "segment_capacity": 200,
+        "segment_threshold": 0.6,
+        "promotion_heat": 5.0
+      }
+    },
+    "awm": {
+      "search": {
+        "vector_backend": "pgvector",
+        "n_lexical": 50,
+        "n_vector": 50,
+        "m_important": 10,
+        "hnsw_ef_search": 100,
+        "rrf_k": 60,
+        "lexical_weight": 1.0,
+        "vector_weight": 1.0,
+        "important_boost": 1.5,
+        "important_min_sim": 0.35,
+        "max_related": 3,
+        "n_time": 25,
+        "time_weight": 1.0,
+        "reranker": "off",
+        "rerank_candidates": 20
+      },
+      "strategies": {
+        "facts": "off",
+        "mem0_additive_ranking": false,
+        "graph": "off",
+        "auto_graph_hops": 0,
+        "graph_reranker": "rrf",
+        "notes": "off",
+        "amem_enrich_mem0_facts": true,
+        "blocks": "off",
+        "tiers": "off",
+        "recall": "off",
+        "reflect": "off",
+        "lessons": "awm",
+        "lesson_visibility": "pending"
+      },
+      "sleeptime": {
+        "every_turns": 0,
+        "after_compaction": false,
+        "recent_turns": 12
+      },
+      "tiers": {
+        "short_capacity": 7,
+        "segment_capacity": 200,
+        "segment_threshold": 0.6,
+        "promotion_heat": 5.0
+      }
+    },
+    "full": {
+      "search": {
+        "vector_backend": "pgvector",
+        "n_lexical": 50,
+        "n_vector": 50,
+        "m_important": 10,
+        "hnsw_ef_search": 100,
+        "rrf_k": 60,
+        "lexical_weight": 1.0,
+        "vector_weight": 1.0,
+        "important_boost": 1.5,
+        "important_min_sim": 0.35,
+        "max_related": 3,
+        "n_time": 25,
+        "time_weight": 1.0,
+        "reranker": "llm",
+        "rerank_candidates": 20
+      },
+      "strategies": {
+        "facts": "mem0_additive",
+        "mem0_additive_ranking": true,
+        "graph": "graphiti",
+        "auto_graph_hops": 1,
+        "graph_reranker": "rrf",
+        "notes": "amem",
+        "amem_enrich_mem0_facts": false,
+        "blocks": "letta",
+        "tiers": "memoryos",
+        "recall": "hindsight",
+        "reflect": "hindsight",
+        "lessons": "both",
+        "lesson_visibility": "pending"
+      },
+      "sleeptime": {
+        "every_turns": 16,
+        "after_compaction": true,
+        "recent_turns": 12
+      },
+      "tiers": {
+        "short_capacity": 7,
+        "segment_capacity": 200,
+        "segment_threshold": 0.6,
+        "promotion_heat": 5.0
+      }
+    }
+  },
+  "cases": {
+    "longmemeval-3b6f954b": {
+      "source": "LongMemEval_oracle",
+      "version": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c",
+      "replay_sha256": "2438231ea85de6bf45d4f4e57acde4a6228756039d6fb207d464a2d5a61179c5",
+      "questions": [
+        "3b6f954b"
+      ]
+    },
+    "longmemeval-18dcd5a5": {
+      "source": "LongMemEval_oracle",
+      "version": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c",
+      "replay_sha256": "6b58a439a550f0c29eca9fc74f99bb6c4daba953c1edf8f818fe13184a0c9c42",
+      "questions": [
+        "18dcd5a5"
+      ]
+    },
+    "longmemeval-32260d93": {
+      "source": "LongMemEval_oracle",
+      "version": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c",
+      "replay_sha256": "ac96ae1c833708860f95ab6d7fcb9db0dc08266c4a7d6a1f2369e306a32028aa",
+      "questions": [
+        "32260d93"
+      ]
+    },
+    "longmemeval-5c40ec5b": {
+      "source": "LongMemEval_oracle",
+      "version": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c",
+      "replay_sha256": "2f08caa097fb07f70cb6d86ae6c5f0b86a8d37c1ab7243bb909605be99cdb693",
+      "questions": [
+        "5c40ec5b"
+      ]
+    },
+    "longmemeval-5e1b23de": {
+      "source": "LongMemEval_oracle",
+      "version": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c",
+      "replay_sha256": "b2f20b5f276d794f66b6ad9c45a6f947b7894bcbb8a9ca8fa4d51e8b1f74afa4",
+      "questions": [
+        "5e1b23de"
+      ]
+    },
+    "longmemeval-2311e44b": {
+      "source": "LongMemEval_oracle",
+      "version": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c",
+      "replay_sha256": "484b6ffc644d537d3a04231008052c6aa5ea3663fa6627e2a06c155c91770cf6",
+      "questions": [
+        "2311e44b"
+      ]
+    },
+    "locomo-conv-26": {
+      "source": "snap-research/locomo@3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376",
+      "version": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+      "replay_sha256": "e1a4d08e78c450fa7a29fa74fa711b66f69ae99bc1e13f5472e8b43ea53703e6",
+      "questions": [
+        "locomo-26-0",
+        "locomo-26-2"
+      ]
+    },
+    "long-dialogue": {
+      "source": "T16 64-turn dialogue",
+      "version": "01a177729cdd30f1c75122c7a4b6310cebac38860a553fa7661757d6662ea454",
+      "replay_sha256": "8437876a58b43777de88836bb3d77906a2ac1c04113fcd8d1595b9820afe66c4",
+      "questions": [
+        "t16-long-1",
+        "t16-long-4"
+      ]
+    },
+    "repeat-import": {
+      "source": "T09 local import fixture",
+      "version": "",
+      "replay_sha256": "676c9b0366d259b68d2e6c94df481dae14118b40cb5a0765e430cec8b34141ac",
+      "questions": []
+    }
+  }
+}

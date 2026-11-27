@@ -182,7 +182,9 @@ def _assign(
     excess = max(0, len(available) - tiers.segment_capacity)
     evicted = {
         row["id"]
-        for row in sorted(available, key=lambda row: (_heat(row, now), row["id"]))[:excess]
+        for row in sorted(
+            available, key=lambda row: (_heat(row, now), row["last_access"], row["id"])
+        )[:excess]
     }
     _evict(conn, ctx, evicted)
     if segment["id"] not in evicted:
@@ -349,6 +351,7 @@ def summarize(service: MemoryService, job: Job) -> None:
             "summary": result.summary,
             "summarized_generation": latest["generation"],
             "source_event_ids": sorted(source_ids),
+            "metadata": {"strategy": "memoryos", "prompt_version": memoryos.VERSION},
         }
         if promoting:
             updates.update(
@@ -394,7 +397,14 @@ def _propose_profiles(conn, ctx, available, updates, raw_sources, source_ids) ->
         if row is not None and blocks.available_sources(
             conn, Scope.model_validate(dict(row)), source_ids
         ):
-            blocks.propose(conn, ctx, row, item.value, source_ids)
+            blocks.propose(
+                conn,
+                ctx,
+                row,
+                item.value,
+                source_ids,
+                {"strategy": "memoryos", "prompt_version": memoryos.VERSION},
+            )
 
 
 @dataclass(frozen=True, slots=True)

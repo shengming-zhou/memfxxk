@@ -57,6 +57,14 @@ def _record(record_id: UUID, generation: int) -> Select:
     )
 
 
+def _eligible(service: MemoryService, row: RowMapping) -> bool:
+    return (
+        service.settings.strategies.amem_enrich_mem0_facts
+        or row["type"] != "fact"
+        or row["metadata"].get("strategy") not in ("mem0_classic", "mem0_additive")
+    )
+
+
 def queue_from_embeddings(service: MemoryService, embedded_jobs: list[Job]) -> None:
     with transaction(service.engine) as conn:
         for job in embedded_jobs:
@@ -79,7 +87,7 @@ def queue_from_embeddings(service: MemoryService, embedded_jobs: list[Job]) -> N
                 .mappings()
                 .one_or_none()
             )
-            if row is not None and "amem" not in row["metadata"]:
+            if row is not None and "amem" not in row["metadata"] and _eligible(service, row):
                 enqueue(
                     conn,
                     "build_amem_note",
@@ -264,6 +272,11 @@ def _save(
     )
     scope = Scope.model_validate(dict(row))
     attributes = value.attributes.model_dump(exclude={"revision"}, mode="json")
+    provenance = {"strategy": "amem"}
+    if operation in ("enrich", "evolve"):
+        provenance["prompt_version"] = (
+            note_enrich.VERSION if operation == "enrich" else note_evolve.VERSION
+        )
     view = NoteProjection(
         **attributes, revision=max(latest or 0, row["metadata"].get("amem_seq", 0)) + 1
     )
@@ -278,6 +291,7 @@ def _save(
             source_event_ids=sorted(value.sources),
             operation=operation,
             llm_call_id=value.call_id,
+            metadata=provenance,
         )
     )
     conn.execute(
@@ -288,6 +302,7 @@ def _save(
                 **row["metadata"],
                 "amem": view.model_dump(mode="json"),
                 "amem_seq": view.revision,
+                "amem_provenance": provenance,
             }
         )
     )
@@ -336,7 +351,7 @@ def build(service: MemoryService, job: Job, embedder: CachedEmbedder) -> None:
     )
     with service.engine.connect() as conn:
         row = conn.execute(statement).mappings().one_or_none()
-        if row is None or _projection(row):
+        if row is None or _projection(row) or not _eligible(service, row):
             return
         raw = _sources(conn, ctx, row)
         if not _available(conn, ctx, raw):
@@ -555,8 +570,10 @@ def forget_source(conn: Connection, org_id: str, event_id: UUID) -> None:
         metadata = dict(row["metadata"])
         if latest is None:
             metadata.pop("amem", None)
+            metadata.pop("amem_provenance", None)
         else:
             metadata["amem"] = {**latest["attributes"], "revision": latest["revision"]}
+            metadata["amem_provenance"] = latest["metadata"]
         conn.execute(
             records.update()
             .where(records.c.org_id == org_id, records.c.id == record_id)

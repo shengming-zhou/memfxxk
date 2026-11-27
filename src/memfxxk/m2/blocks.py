@@ -38,7 +38,9 @@ def _block(conn: Connection, ctx: Scope, block_id: UUID, *, lock: bool = False) 
 
 def view(conn: Connection, ctx: Scope, row: RowMapping) -> MemoryBlock:
     version = conn.execute(
-        select(block_revisions.c.value, block_revisions.c.source_event_ids)
+        select(
+            block_revisions.c.value, block_revisions.c.source_event_ids, block_revisions.c.metadata
+        )
         .join(memory_blocks, memory_blocks.c.id == block_revisions.c.block_id)
         .where(
             visible_filter(memory_blocks, ctx),
@@ -59,6 +61,7 @@ def view(conn: Connection, ctx: Scope, row: RowMapping) -> MemoryBlock:
         value=value,
         revision=row["head_revision"],
         source_event_ids=version.source_event_ids if version else [],
+        metadata=version.metadata if version else {},
     )
 
 
@@ -123,6 +126,7 @@ def write_revision(
     row: RowMapping,
     value: str,
     source_ids: set[UUID],
+    metadata: dict[str, object] | None = None,
 ) -> int:
     revision = row["revision_seq"] + 1
     conn.execute(
@@ -132,6 +136,7 @@ def write_revision(
             value=value,
             source_event_ids=sorted(source_ids),
             actor=ctx.actor.model_dump(),
+            metadata=metadata or {"strategy": "letta"},
         )
     )
     conn.execute(
@@ -242,6 +247,7 @@ def propose(
     row: RowMapping,
     value: str,
     sources: set[UUID],
+    metadata: dict[str, object] | None = None,
 ) -> BlockProposal:
     identifier = derived_id(
         "block-proposal",
@@ -259,6 +265,7 @@ def propose(
             base_revision=row["head_revision"],
             value=value,
             source_event_ids=sorted(sources),
+            metadata=metadata or {"strategy": "letta"},
         )
         .on_conflict_do_nothing()
     )
@@ -358,7 +365,9 @@ def review(service: BoundService, proposal_id: UUID, accept: bool) -> BlockPropo
             sources = set(pending["source_event_ids"])
             if not available_sources(conn, Scope.model_validate(dict(row)), sources):
                 raise NotFound
-            revision = write_revision(conn, ctx, row, pending["value"], sources)
+            revision = write_revision(
+                conn, ctx, row, pending["value"], sources, pending["metadata"]
+            )
         saved = (
             conn.execute(
                 block_proposals.update()

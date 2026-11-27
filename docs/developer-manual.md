@@ -414,6 +414,14 @@ BGE-small-en-v1.5、`deepseek-flash` 和 `gpt-5.4-mini` 实测中，基线 / Rea
 
 两种提炼依次花费 49,860 和 34,272 写入 token。按相同的三项任务、37 个原始轮计算，每千轮约 134.8 万和 92.6 万 token。三组答题和评分合计 20,538 token，总计 104,670。检索及答题 p95 为 1.54 / 1.53 / 1.43 秒。本次五题没有看到重复任务收益，默认关闭。
 
+## T16 P9 策略组合 {#t16-strategy-matrix}
+
+`config.Settings` 先应用 `presets.PRESETS` 的默认值，再应用明确配置。需要哪些任务模型由合并后的策略决定。同一写入阶段选一种 Mem0 写法，`full` 选 additive。它将 `amem_enrich_mem0_facts` 设为 false，让 Mem0 事实保留原有检索路径，A-Mem 继续加工笔记和经验。经验提炼支持两种同时开启。图、时间与增强向量参加已有检索融合，块、近期轮次、观点和经验仍从 `build_context` 的统一候选入口进入，并使用现有预算。
+
+迁移 `0014` 为块修订、块提议、主题段、图边和增强笔记修订增加 `metadata`。事实、摘要、观点和经验使用已有的 `records.metadata`。模型派生时记录 `strategy` 和适用的提示词版本。以前的修订可能只有原有调用记录。bundle 的 `strategy` 提供主来源，`strategies` 保存融合来源，`prompt_versions` 保存可识别的版本。出现截断或舍弃时读 `candidate_tokens`、`tokens`、`decision` 和 `decision_reason`。
+
+`uv run python eval/run_t16_matrix.py --output eval/results/t16/p9-matrix` 按固定题单跑组合横评。默认是保留标准来源与少量干扰的短回放。使用 `--histories complete` 可保留固定题单对应的完整历史，`--profiles baseline mem0 graphiti letta full` 可以缩小策略集合，`--suite` 可以更换题单。结果目录逐组写入完成的案例，原参数运行可继续已有结果。记录版本和每段输入的 SHA-256 在 `manifest.json`。 [统一横评及结论](/memory-strategy-results/)
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

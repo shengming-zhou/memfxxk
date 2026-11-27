@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from memfxxk.domain.lessons import LessonStrategy
 from memfxxk.llm.settings import LLMSettings, Task, TaskModel
+from memfxxk.presets import PRESETS, StrategyPreset
 
 
 class EmbeddingSettings(BaseModel):
@@ -100,8 +101,10 @@ class StrategiesSettings(BaseModel):
     facts: FactStrategy | None = None
     mem0_additive_ranking: bool = False
     graph: Literal["off", "links", "graphiti"] = "links"
+    auto_graph_hops: int = Field(default=0, ge=0, le=2)
     graph_reranker: Literal["rrf", "mmr", "node_distance", "episode_mentions"] = "rrf"
     notes: Literal["off", "amem"] = "off"
+    amem_enrich_mem0_facts: bool = True
     blocks: Literal["off", "letta"] = "off"
     tiers: Literal["off", "memoryos"] = "off"
     recall: Literal["off", "hindsight"] = "off"
@@ -138,6 +141,7 @@ class Settings(BaseSettings):
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     eval: EvalSettings = Field(default_factory=EvalSettings)
     m2: M2Settings = Field(default_factory=M2Settings)
+    preset: StrategyPreset | None = None
     strategies: StrategiesSettings = Field(default_factory=StrategiesSettings)
     sleeptime: SleeptimeSettings = Field(default_factory=SleeptimeSettings)
     tiers: TierSettings = Field(default_factory=TierSettings)
@@ -146,6 +150,20 @@ class Settings(BaseSettings):
     mcp_enable_manage: bool = False
     bundle_retention_days: int = Field(default=30, gt=0)
     allow_host_hard_delete: bool = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def preset_defaults(cls, data: object) -> object:
+        if not isinstance(data, dict) or not isinstance(name := data.get("preset"), str):
+            return data
+        result = dict(data)
+        for key, defaults in PRESETS.get(name, {}).items():
+            explicit = result.get(key, {})
+            if isinstance(explicit, BaseModel):
+                explicit = explicit.model_dump(exclude_unset=True)
+            if isinstance(explicit, dict):
+                result[key] = {**defaults, **explicit}
+        return result
 
     def task_model(self, task: Task) -> TaskModel:
         legacy = self.m2.model if task in ("compact", "extract") else None

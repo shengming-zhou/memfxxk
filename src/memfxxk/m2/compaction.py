@@ -443,6 +443,8 @@ def commit(service: BoundService, draft_id: UUID) -> CommittedCompaction:
             },
             metadata={
                 "compaction_method": row["method"],
+                "strategy": "compaction",
+                "prompt_versions": [VERSION] if row["method"] == "llm" else [],
                 "checkpoint": row["checkpoint"],
                 "retained_user_event_ids": [str(item) for item in row["retained_user_event_ids"]],
             },

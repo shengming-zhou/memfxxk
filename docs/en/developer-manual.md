@@ -408,6 +408,14 @@ With BGE-small-en-v1.5, `deepseek-flash`, and `gpt-5.4-mini`, hybrid, ReasoningB
 
 ReasoningBank and AWM used 49,860 and 34,272 write tokens. Across the same three tasks and 37 original turns, that scales to about 1.35 million and 0.93 million per 1,000 turns. Answering and grading used 20,538 tokens across the arms, for 104,670 in total. Retrieval and answer p95 was 1.54 / 1.53 / 1.43 seconds. The five-case smoke test showed no repeat-task improvement, so automatic distillation remains off.
 
+## T16 P9 Strategy composition {#t16-strategy-matrix}
+
+`config.Settings` applies defaults from `presets.PRESETS`, then applies explicit settings. The resolved strategies determine which task models are required. One Mem0 write strategy runs at a time, and `full` uses additive. It sets `amem_enrich_mem0_facts` to false so Mem0 facts keep their original retrieval path and A-Mem enriches notes and lessons. Both lesson strategies can run together. Graph, time, and enriched vectors join the existing retrieval fusion. Blocks, recent turns, opinions, and lessons enter the common `build_context` candidate path and share the existing limits.
+
+Migration `0014` adds `metadata` for block revisions, block proposals, tier segments, graph edges, and enriched note revisions. Facts, summaries, opinions, and lessons use `records.metadata`. Derived writes record the strategy and applicable prompt versions. Some older revisions only have the existing call audit. A bundle's `strategy` is the primary attribution, `strategies` keeps contributing sources, and `prompt_versions` records known versions. Inspect `candidate_tokens`, `tokens`, `decision`, and `decision_reason` to explain truncation or exclusion.
+
+Run `uv run python eval/run_t16_matrix.py --output eval/results/t16/p9-matrix` for the frozen comparison. The default focused histories retain annotated evidence and a few distractors. Use `--histories complete` to retain complete histories, `--profiles baseline mem0 graphiti letta full` to select arms, or `--suite` to provide another question selection. Completed cases are saved individually and reused when rerunning with the same configuration. The manifest records dataset versions and SHA-256 fingerprints for each replay. [Unified evaluation and conclusions](/en/memory-strategy-results/)
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

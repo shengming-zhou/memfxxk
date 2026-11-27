@@ -242,6 +242,12 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 宿主在保存最后的工具结果后调用 `POST /v1/sessions/{id}/finish-task` 或 MCP 宿主工具 `session_finish_task`。在 `GET /v1/lesson-proposals` 看待审核经验，采用后相关经验可以装入下一次任务的上下文。设置 `MEMFXXK_STRATEGIES__LESSON_VISIBILITY=searchable` 后，待审核经验可主动搜索，自动装载仍须审核通过。以前手工保存的经验继续可用。小样本里每个任务平均写入约 1.14 万到 1.66 万 token，成本随每项任务的轨迹长度变化。两种自动提炼默认关闭。 [详细用法和本轮成本](/developer-manual/#t16-automatic-lessons)
 
+### 从一套预设开始 {#strategy-presets}
+
+在 API 与 Worker 的环境中设置 `MEMFXXK_PRESET`，再重启服务。可选 `baseline`（混合检索）、`mem0`（加自动事实）、`graphiti`（加时序图）、`letta`（加记忆块和后台整理）、`full`（整合实验策略）。已有的 `MEMFXXK_STRATEGIES__*` 和任务模型配置能覆盖预设。保持未设置预设时会沿用原先配置。
+
+`full` 会增加多种后台模型调用，也会在查询时使用模型重排。它适合用独立作用域试跑，你可以用 `GET /v1/context/bundles/{id}` 检查每条候选由什么策略提供，有多少 token，以及最后如何处理。 [各预设的实测与使用范围](/memory-strategy-results/)
+
 ## 查看证据评测 {#evidence-evaluation}
 
 证据评测检查记忆库能否找回支持答案的历史，并记录查询延时。要复跑，可在独立的评测数据库使用固定的 LongMemEval_S 题集。这一步无需配置聊天模型。 [开发手册的评测步骤](https://shengming-zhou.github.io/memfxxk/developer-manual/#evidence-comparison)

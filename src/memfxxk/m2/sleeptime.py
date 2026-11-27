@@ -244,10 +244,11 @@ def consolidate(service: MemoryService, job: Job) -> None:
             block_scope = Scope.model_validate(dict(row))
             if not blocks.available_sources(conn, block_scope, dependencies):
                 continue
+            metadata = {"strategy": "letta", "prompt_version": sleeptime.VERSION}
             if blocks.may_auto_edit(ctx, row):
-                blocks.write_revision(conn, ctx, row, suggestion.value, dependencies)
+                blocks.write_revision(conn, ctx, row, suggestion.value, dependencies, metadata)
             else:
-                blocks.propose(conn, ctx, row, suggestion.value, dependencies)
+                blocks.propose(conn, ctx, row, suggestion.value, dependencies, metadata)
             revised.add(suggestion.block_id)
         for fact in response.facts:
             if not set(fact.source_event_ids) <= seen_messages:

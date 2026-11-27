@@ -1,0 +1,37 @@
+{
+  "completed_full_cases": [
+    {
+      "case": "longmemeval-18dcd5a5",
+      "write_tokens": 43503,
+      "query_tokens": 2767,
+      "write_calls": 25
+    },
+    {
+      "case": "longmemeval-3b6f954b",
+      "write_tokens": 58476,
+      "query_tokens": 2721,
+      "write_calls": 36
+    },
+    {
+      "case": "longmemeval-5c40ec5b",
+      "write_tokens": 276639,
+      "query_tokens": 2883,
+      "write_calls": 117
+    }
+  ],
+  "interrupted_full_cases": [
+    {
+      "case": "p9:longmemeval-32260d93:full",
+      "unfinished_calls": 1,
+      "note_evolve_calls": 155,
+      "known_tokens": 555365
+    },
+    {
+      "case": "p9:longmemeval-5e1b23de:full",
+      "unfinished_calls": 1,
+      "note_evolve_calls": 65,
+      "known_tokens": 289285
+    }
+  ],
+  "reused_other_cases": 59
+}

@@ -104,6 +104,8 @@ class ContextReference(BaseModel):
     ref_id: str
     record_type: str | None = None
     strategy: str | None = None
+    strategies: list[str] = Field(default_factory=list)
+    prompt_versions: list[str] = Field(default_factory=list)
     version: int | None = None
     revision: int | None = None
     tokens: int = 0

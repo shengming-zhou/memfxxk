@@ -8,8 +8,10 @@ export default defineConfig({
   rewrites: {
     'user-manual.md': 'user-manual/index.md',
     'developer-manual.md': 'developer-manual/index.md',
+    'memory-strategy-results.md': 'memory-strategy-results/index.md',
     'en/user-manual.md': 'en/user-manual/index.md',
     'en/developer-manual.md': 'en/developer-manual/index.md',
+    'en/memory-strategy-results.md': 'en/memory-strategy-results/index.md',
   },
   locales: {
     root: {

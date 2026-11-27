@@ -1,0 +1,10 @@
+{
+  "longmemeval": {
+    "dataset": "oracle",
+    "dataset_sha256": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c",
+    "question_ids": ["3b6f954b", "18dcd5a5", "32260d93", "5c40ec5b", "5e1b23de", "2311e44b"]
+  },
+  "locomo_ids": ["locomo-26-0", "locomo-26-2"],
+  "dialogue_ids": ["t16-long-1", "t16-long-4"],
+  "dialogue_focus_turns": [1, 2, 7, 18, 24, 33, 46, 64]
+}

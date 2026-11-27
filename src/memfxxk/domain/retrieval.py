@@ -91,6 +91,7 @@ class GraphFact(BaseModel):
     valid_at: AwareDatetime | None
     invalid_at: AwareDatetime | None
     source_event_ids: list[UUID]
+    prompt_versions: list[str] = Field(default_factory=list)
     generation: int = Field(default=0, exclude=True)
 
 

@@ -139,3 +139,34 @@ def test_amem_keeps_originals_and_rolls_back_scoped_attributes(service, make_ctx
     owner.forget_event(old_source)
     with pytest.raises(NotFound):
         owner.get_memory(old)
+
+
+def test_combination_can_skip_enrichment_of_already_extracted_facts(service, make_ctx):
+    fake = FakeLLM({})
+    strategy = StrategiesSettings(notes="amem", amem_enrich_mem0_facts=False)
+    settings = service.settings.model_copy(update={"strategies": strategy})
+    service = MemoryService(service.engine, settings, fake)
+    ctx = make_ctx(user="u", project="p")
+    owner = service.for_request(Principal(org_id=ctx.org_id, role="host"), ctx)
+    raw = owner.ingest([IngestEvent(kind="message", role="user", content="Atlas uses Paris.")])[0]
+    identity = uuid4()
+    with transaction(service.engine) as conn:
+        derived_record(
+            conn,
+            ctx,
+            Scope.model_validate(ctx.model_dump()),
+            memory_id=identity,
+            version=1,
+            kind="fact",
+            content="Atlas uses Paris.",
+            sources=[raw.event_id],
+            event_time=datetime.now(UTC),
+            metadata={"strategy": "mem0_additive"},
+        )
+    note, _ = _auto_note(service, owner, "Atlas build note")
+    _fixture(fake, "note_enrich", _attrs("Build note"))
+    drain(service)
+    assert owner.get_memory(note).note_attributes is not None
+    assert owner.get_memory(identity).note_attributes is None
+    assert any(hit.memory_id == identity for hit in owner.search(SearchRequest(query="Paris")).hits)
+    assert [task for task, _, _ in fake.calls] == ["note_enrich"]

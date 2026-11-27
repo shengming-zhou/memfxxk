@@ -46,6 +46,7 @@ class MemoryBlock(BaseModel):
     value: str
     revision: int
     source_event_ids: list[UUID]
+    metadata: dict[str, object] = Field(default_factory=dict)
 
 
 class BlockProposal(BaseModel):
@@ -57,6 +58,7 @@ class BlockProposal(BaseModel):
     status: Literal["pending", "accepted", "rejected"]
     adopted_revision: int | None
     created_at: AwareDatetime
+    metadata: dict[str, object] = Field(default_factory=dict)
 
 
 class BlockEditResult(BaseModel):

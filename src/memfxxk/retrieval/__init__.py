@@ -222,7 +222,12 @@ def _build_hits(
         score = add_rank(candidate.id, settings.vector_weight, rank)
         score.note_rank = rank
         score.note_similarity = candidate.score
-    if hindsight and graph != "off" and query_vector:
+    if (
+        hindsight
+        and graph != "off"
+        and query_vector
+        and (request.graph_hops or "graph_hops" not in request.model_fields_set)
+    ):
         start_graph = perf_counter()
         seeds = [rows[candidate.id] for candidate in fresh(vector)[:4]]
         graph_request = request.model_copy(update={"graph_hops": request.graph_hops or 1})

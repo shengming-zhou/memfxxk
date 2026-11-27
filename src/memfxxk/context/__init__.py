@@ -270,7 +270,11 @@ def _blocks(
                     kind="block",
                     ref_id=str(item.id),
                     record_type="memory_block",
-                    strategy="letta",
+                    strategy=str(item.metadata.get("strategy", "letta")),
+                    strategies=list(
+                        dict.fromkeys((str(item.metadata.get("strategy", "letta")), "letta"))
+                    ),
+                    prompt_versions=_versions(item.metadata),
                     revision=item.revision,
                     reason="memory_block",
                     score=score,
@@ -342,6 +346,12 @@ def _wrap_memory(row: RowMapping, related: list[UUID], content: str) -> str:
     return f"<memory {attrs}>{escape(content, quote=False)}</memory>"
 
 
+def _versions(metadata: dict) -> list[str]:
+    return [str(item) for item in metadata.get("prompt_versions", [])] + (
+        [str(metadata["prompt_version"])] if metadata.get("prompt_version") else []
+    )
+
+
 def _memory(
     row: RowMapping,
     heading: str,
@@ -354,8 +364,20 @@ def _memory(
     graph_fact: GraphFact | None = None,
     excluded_reason: str | None = None,
     strategy: str | None = None,
+    strategies: list[str] | None = None,
 ) -> _Candidate:
     links = related or []
+    metadata = row["metadata"]
+    sources = list(
+        dict.fromkeys(filter(None, (strategy, *(strategies or []), metadata.get("strategy"))))
+    )
+    if not sources and reason.startswith("retrieved("):
+        sources = ["hybrid"]
+    versions = _versions(metadata)
+    if "amem" in sources:
+        versions.extend(_versions(metadata.get("amem_provenance", {})))
+    if graph_fact is not None:
+        versions.extend(graph_fact.prompt_versions)
     content = row["content"] if excerpt is None else excerpt
     if graph and graph_fact is not None:
         content = f"Graph relation: {graph_fact.fact}\n{content}"
@@ -364,7 +386,9 @@ def _memory(
             kind="memory",
             ref_id=str(row["memory_id"]),
             record_type=row["type"],
-            strategy=strategy or row["metadata"].get("strategy"),
+            strategy=sources[0] if sources else None,
+            strategies=sources,
+            prompt_versions=list(dict.fromkeys(versions)),
             version=row["version"],
             reason=reason,
             score=score,
@@ -560,6 +584,12 @@ def _evidence(
     working: tuple[int, int] | None,
 ) -> tuple[list[_Candidate], SearchTimings]:
     filters = request.search_filters.model_dump(exclude_none=True)
+    if "graph_hops" not in request.search_filters.model_fields_set:
+        hops = service.settings.strategies.auto_graph_hops
+        if hops:
+            filters["graph_hops"] = hops
+        else:
+            filters.pop("graph_hops", None)
     filters.setdefault(
         "types",
         [
@@ -629,10 +659,19 @@ def _evidence(
             )
             continue
         excluded = (
-            "already_loaded"
+            "duplicate_candidate"
             if hit.memory_id in projected and not hit.graph_path
             else _evidence_exclusion(row, request, pinned, working)
         )
+        provenance = []
+        if hit.score.time_rank is not None or hit.score.graph_rank is not None:
+            provenance.append("hindsight")
+        if hit.graph_path and service.settings.strategies.graph != "off":
+            provenance.append(service.settings.strategies.graph)
+        if hit.score.note_rank is not None:
+            provenance.append("amem")
+        if hit.score.rerank_position is not None:
+            provenance.append("llm_rerank")
         candidates.append(
             _memory(
                 row,
@@ -646,13 +685,7 @@ def _evidence(
                 graph=bool(hit.graph_path),
                 graph_fact=hit.graph_fact,
                 excluded_reason=excluded,
-                strategy=(
-                    "hindsight"
-                    if hit.score.time_rank is not None or hit.score.graph_rank is not None
-                    else "amem"
-                    if hit.score.note_rank is not None
-                    else None
-                ),
+                strategies=provenance,
             )
         )
     return candidates, response.timings_ms
