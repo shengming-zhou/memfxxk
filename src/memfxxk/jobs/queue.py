@@ -157,3 +157,18 @@ def fail(conn: Connection, job: Job, error: Exception) -> None:
             updated_at=now,
         )
     )
+
+
+def defer(conn: Connection, job: Job, run_after: datetime, code: str) -> None:
+    conn.execute(
+        update(jobs)
+        .where(owned_claim(job))
+        .values(
+            status="queued",
+            run_after=run_after,
+            locked_by=None,
+            locked_at=None,
+            last_error=code,
+            updated_at=func.now(),
+        )
+    )

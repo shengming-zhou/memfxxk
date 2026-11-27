@@ -360,3 +360,33 @@ qdrant_replicas = sa.Table(
     sa.CheckConstraint("dim > 0", name="ck_qdrant_replicas_dim"),
 )
 sa.Index("ix_qdrant_replicas_endpoint", qdrant_replicas.c.endpoint)
+
+llm_calls = sa.Table(
+    "llm_calls",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("task", sa.Text, nullable=False),
+    sa.Column("prompt_version", sa.Text, nullable=False),
+    sa.Column("model", sa.Text, nullable=False),
+    sa.Column("request_id", sa.UUID),
+    sa.Column("job_id", sa.UUID),
+    sa.Column("input_sha256", sa.Text, nullable=False),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False, server_default=sa.text("'{}'")),
+    sa.Column("status", sa.Text, nullable=False),
+    sa.Column("error_code", sa.Text),
+    sa.Column("input_tokens", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("output_tokens", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("reserved_tokens", sa.BigInteger, nullable=False, server_default="0"),
+    sa.Column("retries", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("latency_ms", sa.Float, nullable=False, server_default="0"),
+    sa.Column("debug_input", JSONB),
+    sa.Column("debug_output", JSONB),
+    timestamp("created_at"),
+    sa.CheckConstraint(
+        "status IN ('running', 'succeeded', 'failed', 'budget_exceeded')",
+        name="ck_llm_calls_status",
+    ),
+)
+sa.Index("ix_llm_calls_org_day", llm_calls.c.org_id, llm_calls.c.created_at)
+sa.Index("ix_llm_calls_sources", llm_calls.c.source_event_ids, postgresql_using="gin")

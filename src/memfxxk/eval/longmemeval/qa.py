@@ -13,8 +13,8 @@ from uuid import UUID
 
 from memfxxk.domain.context import BuildContextRequest, SearchFilters
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
-from memfxxk.eval.llm import ChatMessage, ChatModel, ChatResult
 from memfxxk.ingest import NotFound
+from memfxxk.llm import ChatMessage, ChatModel, ChatResult
 from memfxxk.text import make_token_counter
 from memfxxk.tools import ServiceBackend, dispatch, to_openai_tools
 

@@ -10,9 +10,9 @@ import typer
 from memfxxk.config import Settings
 from memfxxk.db import create_engine
 from memfxxk.embedding import CachedEmbedder, make_embedding_provider
+from memfxxk.llm import ChatClient
 from memfxxk.service import MemoryService
 
-from .llm import ChatClient
 from .longmemeval.dataset import DATA_DIRECTORY, DATA_FILES, Dataset, fetch_datasets
 from .longmemeval.evidence import run_evidence
 from .longmemeval.ingestion import ingest_dataset

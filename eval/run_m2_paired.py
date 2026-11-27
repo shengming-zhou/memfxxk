@@ -29,7 +29,6 @@ from memfxxk.domain.context import BuildContextRequest, PrepareCompaction, Searc
 from memfxxk.domain.events import IngestEvent
 from memfxxk.domain.manage import LinkRequest
 from memfxxk.embedding import CachedEmbedder, make_embedding_provider
-from memfxxk.eval.llm import ChatClient
 from memfxxk.eval.longmemeval.dataset import (
     DATA_DIRECTORY,
     DATA_FILES,
@@ -44,6 +43,7 @@ from memfxxk.eval.longmemeval.qa import ANSWER_PROMPT, _answer, read_prompt
 from memfxxk.eval.longmemeval.storage import EVAL_PRINCIPAL, eval_context
 from memfxxk.eval.longmemeval.suite import QuestionSuite, load_suite
 from memfxxk.jobs.worker import drain
+from memfxxk.llm import ChatClient
 from memfxxk.service import BoundService, MemoryService
 from memfxxk.text import TokenCounter, make_token_counter
 

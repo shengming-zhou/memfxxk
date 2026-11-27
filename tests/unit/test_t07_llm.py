@@ -128,7 +128,7 @@ def test_openai_compatible_retries_rate_limits_and_server_errors(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     delays: list[float] = []
-    monkeypatch.setattr("memfxxk.eval.llm.sleep", delays.append)
+    monkeypatch.setattr("memfxxk.llm.chat.sleep", delays.append)
     statuses = iter([429, 503, 200])
 
     def fake(request: httpx.Request) -> httpx.Response:
@@ -157,7 +157,7 @@ def test_openai_compatible_retries_rate_limits_and_server_errors(
 def test_openai_compatible_respects_retry_limit(
     monkeypatch: pytest.MonkeyPatch, status: int, attempts: int
 ) -> None:
-    monkeypatch.setattr("memfxxk.eval.llm.sleep", lambda _: None)
+    monkeypatch.setattr("memfxxk.llm.chat.sleep", lambda _: None)
     sent = 0
 
     def fake(_: httpx.Request) -> httpx.Response:

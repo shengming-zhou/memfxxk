@@ -17,7 +17,7 @@ from sqlalchemy.exc import OperationalError
 from memfxxk.db import compactions, context_bundles, jobs, record_embeddings, records, transaction
 from memfxxk.ids import new_id
 
-from .queue import Job, claim, complete, fail, owned_claim
+from .queue import Job, claim, complete, defer, fail, owned_claim
 
 if TYPE_CHECKING:
     from memfxxk.embedding import CachedEmbedder
@@ -135,13 +135,10 @@ class Worker:
             SYNC_KIND: handle_projection,
         }
         if service.settings.m2.extract_facts:
-            from memfxxk.eval.llm import ChatClient
             from memfxxk.m2.facts import extract
 
             def handle_facts(batch: list[Job]) -> None:
-                with ChatClient(service.settings.m2.model, cache_dir=None) as model:
-                    for job in batch:
-                        extract(service, job, model)
+                extract(service, batch[0])
 
             self.register("extract_facts", handle_facts)
 
@@ -149,6 +146,8 @@ class Worker:
         self.handlers[kind] = handler
 
     def run_once(self, kinds: Collection[str] | None = None, limit: int = 32) -> int:
+        from memfxxk.llm.runner import BudgetExceeded
+
         eligible = self.handlers.keys() if kinds is None else self.handlers.keys() & set(kinds)
         with transaction(self.engine) as conn:
             claimed = claim(
@@ -157,11 +156,15 @@ class Worker:
 
         batches: dict[tuple[str, UUID | None], list[Job]] = defaultdict(list)
         for job in claimed:
-            key = (job.kind, job.id if job.kind == self.qdrant_kind else None)
+            key = (job.kind, job.id if job.kind in (self.qdrant_kind, "extract_facts") else None)
             batches[key].append(job)
         for (kind, _), batch in batches.items():
             try:
                 self.handlers[kind](batch)
+            except BudgetExceeded as error:
+                for job in batch:
+                    with transaction(self.engine) as conn:
+                        defer(conn, job, error.retry_at, error.code)
             except Exception as error:
                 for job in batch:
                     with transaction(self.engine) as conn:

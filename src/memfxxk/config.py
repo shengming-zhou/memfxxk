@@ -4,6 +4,8 @@ from typing import Literal
 from pydantic import AnyHttpUrl, BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from memfxxk.llm.settings import LLMSettings, Task, TaskModel
+
 
 class EmbeddingSettings(BaseModel):
     provider: Literal["fake", "openai_compatible"] = "fake"
@@ -82,12 +84,6 @@ class M2Settings(BaseModel):
     extract_facts: bool = False
     draft_retention_hours: int = Field(default=24, gt=0)
 
-    @model_validator(mode="after")
-    def model_required_for_extraction(self) -> "M2Settings":
-        if self.extract_facts and not self.model.model.strip():
-            raise ValueError("Fact extraction requires MEMFXXK_M2__MODEL__MODEL")
-        return self
-
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -104,7 +100,18 @@ class Settings(BaseSettings):
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     eval: EvalSettings = Field(default_factory=EvalSettings)
     m2: M2Settings = Field(default_factory=M2Settings)
+    llm: LLMSettings = Field(default_factory=LLMSettings)
     mcp_enable_host: bool = False
     mcp_enable_manage: bool = False
     bundle_retention_days: int = Field(default=30, gt=0)
     allow_host_hard_delete: bool = True
+
+    def task_model(self, task: Task) -> TaskModel:
+        legacy = self.m2.model if task in ("compact", "extract") else None
+        return self.llm.resolve(task, legacy)
+
+    @model_validator(mode="after")
+    def extraction_requires_model(self) -> "Settings":
+        if self.m2.extract_facts and not self.task_model("extract").model.strip():
+            raise ValueError("Fact extraction requires a configured extract model")
+        return self

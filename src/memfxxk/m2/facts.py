@@ -12,11 +12,12 @@ from memfxxk.db import events, fact_proposals, jobs, records, transaction
 from memfxxk.domain import RequestContext, Scope
 from memfxxk.domain.events import IngestEvent, IngestResult
 from memfxxk.domain.facts import FactCandidate, FactProposal
-from memfxxk.eval.llm import ChatModel
 from memfxxk.ids import derived_id
 from memfxxk.ingest import NotFound, _turn_part
 from memfxxk.jobs import enqueue
 from memfxxk.jobs.queue import Job, owned_claim
+from memfxxk.llm import ChatModel
+from memfxxk.llm.runner import TaskRunner
 from memfxxk.m2.prompts import EXTRACT
 from memfxxk.m2.storage import derived_record
 from memfxxk.manage.common import ManagementError, lock_user_operations, write_audit
@@ -61,7 +62,7 @@ def _source_query(scope: Scope, ids: list[UUID]) -> Select:
     )
 
 
-def extract(service: "MemoryService", job: Job, model: ChatModel) -> None:
+def extract(service: "MemoryService", job: Job, model: ChatModel | None = None) -> None:
     started = perf_counter()
     statement = select(records).where(
         records.c.id == UUID(job.payload["record_id"]),
@@ -78,8 +79,8 @@ def extract(service: "MemoryService", job: Job, model: ChatModel) -> None:
         ctx = RequestContext(**scope.model_dump(), actor={"type": "system"})
         source_ids = record["source_event_ids"]
         source = list(conn.execute(_source_query(scope, source_ids)).mappings())
-        summary_hint = conn.scalar(
-            select(records.c.content)
+        summary_hint = conn.execute(
+            select(records.c.content, records.c.source_event_ids)
             .where(
                 records.c.session_id == record["session_id"],
                 records.c.type == "summary",
@@ -89,7 +90,7 @@ def extract(service: "MemoryService", job: Job, model: ChatModel) -> None:
                 visible_filter(records, scope),
             )
             .limit(1)
-        )
+        ).one_or_none()
     if not source or len(source) != len(source_ids):
         return
     last = source[-1]
@@ -98,19 +99,32 @@ def extract(service: "MemoryService", job: Job, model: ChatModel) -> None:
     # Tool results may contain long payloads and instructions. Extract facts from messages.
     data = {row["id"]: row for row in source if row["kind"] == "message"}
     transcript = "\n".join(f"[{event_id}] {_turn_part(row)}" for event_id, row in data.items())
+    debug_sources = list(data)
     if summary_hint:
-        transcript += "\n\nPrior summary for context only (do not cite):\n" + summary_hint
-    response = model.complete(
-        [{"role": "system", "content": EXTRACT}, {"role": "user", "content": transcript}],
-        max_tokens=1500,
-    )
-    content = response.message.get("content")
-    if not isinstance(content, str):
-        raise ValueError("Fact extraction returned no text")
-    try:
-        candidates = _facts.validate_json(content)[:10]
-    except ValueError:
-        raise ValueError("Fact extraction returned invalid JSON") from None
+        transcript += "\n\nPrior summary for context only (do not cite):\n" + summary_hint.content
+        debug_sources.extend(summary_hint.source_event_ids)
+    messages = [{"role": "system", "content": EXTRACT}, {"role": "user", "content": transcript}]
+    if model is None:
+        task = TaskRunner.for_service(service, "extract").complete(
+            "extract",
+            scope,
+            messages,
+            schema=_facts,
+            prompt_version="m2-extract-v1",
+            job_id=job.id,
+            source_event_ids=debug_sources,
+            max_tokens=1500,
+        )
+        response, candidates = task.response, (task.parsed or [])[:10]
+    else:
+        response = model.complete(messages, max_tokens=1500)
+        content = response.message.get("content")
+        if not isinstance(content, str):
+            raise ValueError("Fact extraction returned no text")
+        try:
+            candidates = _facts.validate_json(content)[:10]
+        except ValueError:
+            raise ValueError("Fact extraction returned invalid JSON") from None
     added = 0
     with transaction(service.engine) as conn:
         lock_user_operations(conn, ctx)

@@ -172,6 +172,10 @@ Set `evidence_mode` to `excerpt` when the evidence budget is tight. The bundle u
 
 When background fact extraction is enabled, list pending proposals with `GET /v1/fact-proposals`. Review a proposal at `POST /v1/fact-proposals/{id}/review` using `{"accept": true}` or `{"accept": false}`. For fact searches, `as_of_valid` asks what was effective at a given time and `as_of_recorded` limits what the system could have known by then.
 
+## Configure memory models {#memory-model-configuration}
+
+Compaction and fact extraction can use different models. Set defaults with `MEMFXXK_LLM__DEFAULT__MODEL`, `MEMFXXK_LLM__DEFAULT__BASE_URL`, and `MEMFXXK_LLM__DEFAULT__API_KEY`. Override model names with `MEMFXXK_LLM__TASKS__COMPACT__MODEL` or `MEMFXXK_LLM__TASKS__EXTRACT__MODEL`. Fact extraction also requires `MEMFXXK_M2__EXTRACT_FACTS=true`. Usage depends on history size and task frequency. Operators can summarize `llm_calls` or set a daily token limit by organization or project. [Model task configuration](/en/developer-manual/#t16-llm-routing)
+
 ## Check evidence evaluation {#evidence-evaluation}
 
 Evidence evaluation measures whether a memory backend retrieves the history that supports an answer and tracks query latency. Reproduce it with the frozen LongMemEval_S suite in a dedicated evaluation database. This step requires no chat model. [Evaluation steps in the developer manual](https://shengming-zhou.github.io/memfxxk/en/developer-manual/#evidence-comparison)

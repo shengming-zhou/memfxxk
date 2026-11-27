@@ -28,7 +28,7 @@ from memfxxk.domain.context import (
 )
 from memfxxk.domain.events import Event, IngestEvent, IngestResult
 from memfxxk.domain.sessions import SessionState
-from memfxxk.eval.llm import ChatClient, ChatMessage, ChatModel
+from memfxxk.llm import ChatClient, ChatMessage, ChatModel
 from memfxxk.m2.prompts import HOST
 from memfxxk.text import TokenCounter, make_token_counter
 from memfxxk.tools import TOOL_SPECS

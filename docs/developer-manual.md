@@ -146,6 +146,14 @@ Qdrant 恢复后可用 `memfxxk index retry-qdrant` 重试已追踪的镜像。�
 
 仓库的 GitHub CI 在真实 PostgreSQL 上运行测试与 Ruff，双语站点由手册发布工作流处理。 [uv 与 GitHub Actions](https://docs.astral.sh/uv/guides/integration/github/)
 
+## T16 P0 模型调用层 {#t16-llm-routing}
+
+迁移 `0006` 新增 `llm_calls`。服务内的压缩与事实提取通过 `memfxxk.llm.runner.TaskRunner` 调用模型。任务覆盖项优先于 `MEMFXXK_LLM__DEFAULT__*`，缺少设置时可继承旧的 `MEMFXXK_M2__MODEL__*` 配置。独立评测仍使用 `MEMFXXK_EVAL__GEN__*`、`MEMFXXK_EVAL__JUDGE__*`。任务配置可设置 `MODEL`、`BASE_URL`、`API_KEY`、`TEMPERATURE`、`MAX_OUTPUT_TOKENS`、`TIMEOUT`、`MAX_RETRIES` 和 `RESPONSE_FORMAT`。
+
+`RESPONSE_FORMAT` 支持 `prompt`、`json_object`、`json_schema`。结构化结果会在客户端校验，第一次校验失败后用错误信息请求一次修正。两次均失败时没有派生数据写入。`llm_calls` 按调用记录任务、提示词版本、模型名、作用域、作业或请求 ID、输入哈希、状态和用量。调试存储默认关闭。显式打开并有可见原文来源时才保存请求与回复，删除原文会清掉这些正文副本。
+
+`MEMFXXK_LLM__DAILY_LIMITS` 是带作用域和 `tokens` 的 JSON 数组。UTC 日内，匹配的组织级和更细粒度限额都会检查累计使用量及并发预留。超额同步返回 `429 llm_budget_exceeded`，后台作业延后到下一 UTC 日且不扣失败次数。预留用输入估算和输出上限，最终用量以已返回的提供商统计结算。验证命令为 `uv run pytest tests/unit/test_llm_routing.py tests/integration/test_llm_tasks.py`.
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

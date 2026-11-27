@@ -6,7 +6,6 @@ from time import perf_counter
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-import httpx
 from sqlalchemy import Connection, Select, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import RowMapping
@@ -24,9 +23,9 @@ from memfxxk.domain.context import CommittedCompaction, CompactionDraft, Prepare
 from memfxxk.domain.errors import ServiceError
 from memfxxk.domain.sessions import SessionState
 from memfxxk.embedding import _truncate
-from memfxxk.eval.llm import ChatClient
 from memfxxk.ids import derived_id
 from memfxxk.ingest import NotFound, _turn_part
+from memfxxk.llm.runner import TaskRunner
 from memfxxk.manage.common import lock_user_operations
 from memfxxk.scope import visible_filter
 from memfxxk.sessions import read_session
@@ -172,14 +171,16 @@ def _render(
     rows: list[RowMapping],
     previous: str,
     protected: set[UUID],
+    source_ids: list[UUID],
+    request_id: UUID,
 ) -> str:
     counter = make_token_counter(service.settings.token_counter)
-    model = service.settings.m2.model
+    runner = TaskRunner.for_service(service, "compact")
     lines = [
         f"[{'important ' if row['id'] in protected else ''}{row['id']}] {_turn_part(row)}"
         for row in rows
     ]
-    if model.model:
+    if runner.config.model or runner.fake is not None:
         messages = [
             {"role": "system", "content": COMPACT},
             {
@@ -187,11 +188,15 @@ def _render(
                 "content": f"Previous summary:\n{previous}\nNew evidence:\n" + "\n".join(lines),
             },
         ]
-        try:
-            with ChatClient(model, cache_dir=None) as client:
-                result = client.complete(messages, max_tokens=request.target_tokens)
-        except httpx.HTTPError as exc:
-            raise ServiceError(502, "summary_model_failed", "Summary model unavailable") from exc
+        result = runner.complete(
+            "compact",
+            service.ctx,
+            messages,
+            prompt_version="m2-compact-v1",
+            request_id=request_id,
+            source_event_ids=source_ids,
+            max_tokens=request.target_tokens,
+        ).response
         logger.info(
             "summary model input_tokens=%d output_tokens=%d ms=%.1f",
             result.input_tokens,
@@ -275,7 +280,7 @@ def prepare(service: BoundService, request: PrepareCompaction) -> CompactionDraf
                     .order_by(events.c.session_seq)
                 ).mappings()
                 rows = [*retained, *rows]
-    summary = _render(service, request, rows, previous, protected)
+    summary = _render(service, request, rows, previous, protected, all_ids, draft_id)
     tokens = make_token_counter(service.settings.token_counter).count(summary)
     if not summary or not 0 < tokens <= request.target_tokens:
         raise ServiceError(422, "compaction_budget_exhausted", "Summary does not fit the budget")

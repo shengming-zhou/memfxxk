@@ -21,6 +21,7 @@ from memfxxk.db import (
 from memfxxk.domain import RequestContext
 from memfxxk.domain.manage import ForgetMode, ForgetResult
 from memfxxk.ingest import NotFound
+from memfxxk.llm.runner import redact_source_calls
 from memfxxk.scope import visible_filter
 
 from .common import ManagementError, current_record, embed_record, lock_user_operations, write_audit
@@ -88,7 +89,7 @@ def _purge_memories(conn: Connection, ctx: RequestContext, memory_ids: set[UUID]
     ).rowcount
     payload = events.c.payload
     target_ids = [str(memory_id) for memory_id in memory_ids]
-    redacted = conn.execute(
+    redacted = conn.scalars(
         events.update()
         .where(
             events.c.org_id == ctx.org_id,
@@ -109,13 +110,15 @@ def _purge_memories(conn: Connection, ctx: RequestContext, memory_ids: set[UUID]
             ),
             redacted=True,
         )
-    ).rowcount
+        .returning(events.c.id)
+    ).all()
+    redact_source_calls(conn, ctx, redacted)
     return ForgetResult(
         records=len(record_ids),
         embeddings=embeddings or 0,
         marks=marks,
         relations=relations,
-        events_redacted=redacted,
+        events_redacted=len(redacted),
     )
 
 
@@ -181,6 +184,7 @@ def forget_event(service: BoundService, event_id: UUID) -> ForgetResult:
                     derived.c.org_id == ctx.org_id, derived.c.source_event_ids.contains([event_id])
                 )
             )
+        redact_source_calls(conn, ctx, [event_id])
         conn.execute(events.delete().where(target))
         write_audit(conn, ctx, "forget_event", event_id, {}, result.model_dump())
     return result

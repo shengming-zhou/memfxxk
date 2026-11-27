@@ -180,6 +180,10 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 开启后台事实提取后，可以用 `GET /v1/fact-proposals` 查看提议，通过 `POST /v1/fact-proposals/{id}/review` 传 `{"accept": true}` 或 `{"accept": false}`。查询事实时，`as_of_valid` 指要问的生效日期，`as_of_recorded` 指当时系统掌握信息的截止时间。
 
+## 配置记忆模型 {#memory-model-configuration}
+
+可以给压缩和事实提取分别配模型。`MEMFXXK_LLM__DEFAULT__MODEL`、`MEMFXXK_LLM__DEFAULT__BASE_URL` 和 `MEMFXXK_LLM__DEFAULT__API_KEY` 设默认值。`MEMFXXK_LLM__TASKS__COMPACT__MODEL` 和 `MEMFXXK_LLM__TASKS__EXTRACT__MODEL` 可分别覆盖。事实提取还需要打开 `MEMFXXK_M2__EXTRACT_FACTS=true`。模型调用成本取决于历史大小与触发频率。使用量可从 `llm_calls` 汇总，也可给组织或项目设每日 token 限额。 [模型层开发说明](/developer-manual/#t16-llm-routing)
+
 ## 查看证据评测 {#evidence-evaluation}
 
 证据评测检查记忆库能否找回支持答案的历史，并记录查询延时。要复跑，可在独立的评测数据库使用固定的 LongMemEval_S 题集。这一步无需配置聊天模型。 [开发手册的评测步骤](https://shengming-zhou.github.io/memfxxk/developer-manual/#evidence-comparison)

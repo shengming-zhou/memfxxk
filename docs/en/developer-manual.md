@@ -140,6 +140,14 @@ Configuring a model upstream enables `POST /v1/chat/completions` through the exi
 
 GitHub CI runs tests and Ruff against real PostgreSQL. A separate workflow publishes the bilingual manuals. [uv and GitHub Actions](https://docs.astral.sh/uv/guides/integration/github/)
 
+## T16 P0 task model calls {#t16-llm-routing}
+
+Migration `0006` adds `llm_calls`. Compaction and fact extraction use `memfxxk.llm.runner.TaskRunner`. Task-specific settings override `MEMFXXK_LLM__DEFAULT__*`, with legacy `MEMFXXK_M2__MODEL__*` as a compatibility fallback. Independent evaluations retain `MEMFXXK_EVAL__GEN__*` and `MEMFXXK_EVAL__JUDGE__*`. Model settings cover `MODEL`, `BASE_URL`, `API_KEY`, `TEMPERATURE`, `MAX_OUTPUT_TOKENS`, `TIMEOUT`, `MAX_RETRIES`, and `RESPONSE_FORMAT`.
+
+Select `prompt`, `json_object`, or `json_schema` for `RESPONSE_FORMAT`. The client validates structured output and requests one repair after validation fails. When both attempts fail, the task writes no derived data. `llm_calls` tracks task, prompt version, model, scope, associated job or request ID, input hash, status, and usage. Debug payloads default to disabled. With debug enabled, payloads are stored for calls with visible original sources and cleared when a source is erased.
+
+Set `MEMFXXK_LLM__DAILY_LIMITS` to a JSON array of scopes and `tokens`. Each matching organization-level or narrower limit considers UTC-day usage and concurrent reservations. Over-budget synchronous calls return `429 llm_budget_exceeded`. Background jobs wait until the next UTC day without consuming a failure attempt. Reservations use estimated input and a bounded output. Reconciliation uses reported provider usage when available. Verify with `uv run pytest tests/unit/test_llm_routing.py tests/integration/test_llm_tasks.py`.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

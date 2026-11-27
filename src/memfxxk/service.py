@@ -47,15 +47,17 @@ from memfxxk.scope import ScopeError
 
 if TYPE_CHECKING:
     from memfxxk.eval.longmemeval.dataset import Dataset, Question
+    from memfxxk.llm.runner import FakeLLM
 
 
 @dataclass(frozen=True, slots=True)
 class MemoryService:
     engine: Engine
     settings: Settings
+    fake_llm: "FakeLLM | None" = None
 
     def for_request(self, principal: Principal, ctx: RequestContext) -> "BoundService":
-        return BoundService(self.engine, self.settings, principal, ctx)
+        return BoundService(self.engine, self.settings, principal, ctx, self.fake_llm)
 
     def ensure_index(self) -> str:
         config = self.settings.embedding
@@ -98,6 +100,7 @@ class BoundService:
     settings: Settings
     principal: Principal
     ctx: RequestContext
+    fake_llm: "FakeLLM | None" = None
 
     def __post_init__(self) -> None:
         if self.principal.org_id != self.ctx.org_id:

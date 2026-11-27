@@ -7,7 +7,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from memfxxk.eval.llm import ChatModel
+from memfxxk.llm import ChatModel
 
 from .dataset import Question, file_sha256, iter_questions
 from .qa import _write_jsonl, read_prompt
