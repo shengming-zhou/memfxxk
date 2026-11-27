@@ -378,6 +378,36 @@ Run `uv run python eval/run_t16_reflect.py --output eval/results/t16/p7-smoke` f
 
 Hybrid answered 1/6, with 1/3 multi-session and 0/3 temporal. Hindsight answered 3/6, with 2/3 multi-session and 1/3 temporal. At least one gold original was loaded in 5/6 for hybrid and 6/6 for Hindsight. Reflect cited a gold source in all six. Retrieval and answering p50 / p95 was 1.11 / 1.57 seconds and 3.48 / 4.15 seconds respectively. The formal run used 10,503 tokens for hybrid and 24,430 for Hindsight including grading. Default settings remain unchanged after this smoke test.
 
+## T16 P8 Automatic lesson distillation {#t16-automatic-lessons}
+
+### Upstream behavior {#automatic-lessons-upstream}
+
+ReasoningBank judges a task from its goal, trajectory, and output. It distills transferable practices from successes and recurring mistakes from failures. It stores up to three lessons with titles, descriptions, and content and retrieves one by default. Online AWM induces reusable descriptions and steps from successful trajectories, replacing transient values with slots. [ReasoningBank paper and Apache-2.0 code](https://github.com/google-research/reasoning-bank) [AWM paper and Apache-2.0 code](https://github.com/zorazrw/agent-workflow-memory)
+
+### Implementation {#automatic-lessons-implementation}
+
+`POST /v1/sessions/{session_id}/finish-task` accepts `task`, optional `from_seq` (default 1), and `through_seq` (current end). Save originals and tool results first. It returns the finish event ID, range, and job IDs. A repeated request with the same scope, session, range, and task reuses the finish event and job. Both SDKs offer `finish_task`, and the reference harness uses the host MCP tool `session_finish_task`.
+
+`distill_task` calls `trajectory_judge`, then `lesson_distill` or `workflow_induce`. The strategies share one judgment when enabled together. An unclear judgment ends the job. ReasoningBank can distill from failures. For successful tasks, AWM can consult up to three previously approved successful workflows. The writer rechecks the job claim, event range, and sources.
+
+`GET /v1/lesson-proposals` and `list_lesson_proposals` provide the memory ID, version, title, content, method, outcome, state, and source IDs. Submit `base_version` and `accept` to `POST /v1/lesson-proposals/{id}/review` or SDK `review_lesson`. A visible user with write access can review. Accepting or rejecting writes a new version. Stale or conflicting reviews return `409 lesson_revision_conflict`.
+
+### Differences from upstream {#automatic-lessons-differences}
+
+The host declares task boundaries. Results reuse T09's `lesson` records, versions, retrieval, and source links. Drafts use `origin=auto_extract` and `confirmed=false`. The optional `searchable` mode allows explicit draft searches. Context excludes drafts with `lesson_requires_review`. An approved lesson enters the shared evidence candidate path, with strategy, record type, relevance, candidate tokens, and packing decisions. Deleting a source removes dependent lesson versions.
+
+### Worked example {#automatic-lessons-example}
+
+A CSV import initially reports one header field. A second attempt with a semicolon verifies three rows. The judge uses the recorded tool evidence to classify this as success. Distillation proposes inspecting the delimiter and field count before writing and verifying the number of imported rows. The user may inspect and approve it. A later import can retrieve the lesson and use the host's existing tools and checks.
+
+### Evaluation {#automatic-lessons-evaluation}
+
+Run `uv run python eval/run_t16_lessons.py --output eval/results/t16/p8-smoke` for two T09-style repeated imports and three questions from AMA-Bench episode 4. Put the pinned dataset at `eval/data/ama-open-end.jsonl`. The runner verifies SHA-256 and records repeat success, recurrence of the original error, QA, lesson loading, token usage, and latency. [Pinned AMA-Bench source](https://huggingface.co/datasets/AMA-bench/AMA-bench/tree/a5777378066f53229a94557a7b192435cd027909/test)
+
+With BGE-small-en-v1.5, `deepseek-flash`, and `gpt-5.4-mini`, hybrid, ReasoningBank, and AWM each completed 2/2 repeated imports. The original error recurred in 0/2 for all three. AMA scores were 2/3, 1/3, and 2/3. The runner approved the five ReasoningBank and two AWM proposals. The AMA episode produced no AWM proposal, so no workflow loaded for that arm's AMA questions. The benchmark subset assesses QA from saved trajectories. Recurrence is measured on the executable import tasks.
+
+ReasoningBank and AWM used 49,860 and 34,272 write tokens. Across the same three tasks and 37 original turns, that scales to about 1.35 million and 0.93 million per 1,000 turns. Answering and grading used 20,538 tokens across the arms, for 104,670 in total. Retrieval and answer p95 was 1.54 / 1.53 / 1.43 seconds. The five-case smoke test showed no repeat-task improvement, so automatic distillation remains off.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

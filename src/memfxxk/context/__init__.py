@@ -410,6 +410,7 @@ def _pinned(connection: Connection, service: BoundService) -> list[_Candidate]:
                 row,
                 _PINNED_HEADING,
                 f"pinned(scope={json.dumps(scope, ensure_ascii=False, sort_keys=True)})",
+                excluded_reason=_lesson_exclusion(row),
             )
     return list(found.values())
 
@@ -485,12 +486,20 @@ def _working(
     return candidates, sequences
 
 
+def _lesson_exclusion(row: RowMapping) -> str | None:
+    if row["type"] == "lesson" and row["origin"] == "auto_extract" and not row["confirmed"]:
+        return "lesson_requires_review"
+    return None
+
+
 def _evidence_exclusion(
     row: RowMapping,
     request: BuildContextRequest,
     pinned: set[str],
     working: tuple[int, int] | None,
 ) -> str | None:
+    if excluded := _lesson_exclusion(row):
+        return excluded
     pos = row["source_pos"] or {}
     if str(row["memory_id"]) in pinned:
         return "already_loaded"
@@ -505,6 +514,41 @@ def _evidence_exclusion(
             and working[0] <= pos.get("seq_from", 0) <= pos.get("seq_to", 0) <= working[1]
         ):
             return "working_history_overlap"
+    return None
+
+
+def _lesson_candidate(
+    connection: Connection,
+    service: BoundService,
+    request: SearchRequest,
+    pinned: set[str],
+) -> _Candidate | None:
+    allowed = (
+        visible_filter(records, service.ctx),
+        records.c.type == "lesson",
+        records.c.is_current,
+        records.c.status == "active",
+        records.c.confirmed,
+        records.c.origin == "auto_extract",
+        records.c.memory_id.not_in([UUID(key) for key in pinned]),
+    )
+    if connection.scalar(select(records.c.id).where(*allowed).limit(1)) is None:
+        return None
+    hits = service.search(request.model_copy(update={"types": ["lesson"], "graph_hops": 0})).hits
+    for hit in hits:
+        row = (
+            connection.execute(
+                select(records).where(
+                    *allowed,
+                    records.c.memory_id == hit.memory_id,
+                    records.c.version == hit.version,
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        if row is not None:
+            return _memory(row, _EVIDENCE_HEADING, "approved_lesson", score=hit.score.final)
     return None
 
 
@@ -538,6 +582,9 @@ def _evidence(
     by_id = {row["memory_id"]: row for row in rows}
     candidates = []
     projected: set[UUID] = set()
+    if request.search_filters.types is None and service.settings.strategies.lessons != "off":
+        if lesson := _lesson_candidate(connection, service, search_request, pinned):
+            candidates.append(lesson)
     if service.settings.strategies.tiers == "memoryos" and "turn" in search_request.types:
         from memfxxk.m2.tiers import recall
 

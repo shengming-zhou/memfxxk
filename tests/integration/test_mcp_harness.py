@@ -14,6 +14,7 @@ from mcp import StdioServerParameters
 from examples.host_loop import Window
 from examples.mcp_harness import open_harness
 from memfxxk.config import StrategiesSettings
+from memfxxk.domain.lessons import FinishTask
 from memfxxk.eval.llm import ChatMessage, ChatResult
 from memfxxk.service import MemoryService
 from memfxxk.text import SimpleCounter
@@ -200,6 +201,11 @@ def _assert_harness(
             assert second.compaction is None
             assert "Cobalt harness release rule" in second.context.rendered
             assert "Thursday handoff" in second.context.rendered
+            marked = await harness.finish_task(
+                "cli-harness", FinishTask(task="Review the release rule.")
+            )
+            assert marked.through_seq == second.events[-1].session_seq and not marked.jobs
+            assert "session_finish_task" not in model.requests[0][1]
 
         async with open_harness(
             parameters, model=resumed_model, window=window, counter=SimpleCounter()

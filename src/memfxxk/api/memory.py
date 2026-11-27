@@ -13,6 +13,7 @@ from memfxxk.domain.blocks import (
     ReviewBlock,
 )
 from memfxxk.domain.facts import FactProposal, FactReview
+from memfxxk.domain.lessons import LessonProposal, ReviewLesson
 from memfxxk.domain.manage import (
     ForgetRequest,
     ForgetResult,
@@ -118,6 +119,21 @@ def remember(request: RememberRequest, service: RequestService) -> MemoryVersion
 @router.post("/lessons")
 def save_lesson(request: SaveLessonRequest, service: RequestService) -> MemoryVersion:
     return service.save_lesson(request)
+
+
+@router.get("/lesson-proposals")
+def list_lesson_proposals(
+    service: RequestService,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> list[LessonProposal]:
+    return service.list_lesson_proposals(limit)
+
+
+@router.post("/lesson-proposals/{memory_id}/review")
+def review_lesson(
+    memory_id: UUID, request: ReviewLesson, service: RequestService
+) -> LessonProposal:
+    return service.review_lesson(memory_id, request)
 
 
 @router.patch("/memories/{memory_id}")

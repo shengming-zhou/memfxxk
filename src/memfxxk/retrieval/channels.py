@@ -23,6 +23,14 @@ class Candidate:
     score: float
 
 
+def searchable_lesson() -> ColumnElement[bool]:
+    return or_(
+        records.c.type != "lesson",
+        records.c.confirmed,
+        records.c.metadata["lesson_state"].as_string() == "searchable",
+    )
+
+
 def search_filters(ctx: Scope, request: SearchRequest) -> list[ColumnElement[bool]]:
     recorded_at = request.as_of_recorded or func.now()
     valid_at = request.as_of_valid or func.now()
@@ -46,6 +54,7 @@ def search_filters(ctx: Scope, request: SearchRequest) -> list[ColumnElement[boo
     )
     filters = [
         visible_filter(records, ctx),
+        searchable_lesson(),
         or_(
             and_(records.c.type != "fact", records.c.is_current),
             and_(

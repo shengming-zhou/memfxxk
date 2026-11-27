@@ -14,6 +14,7 @@ from memfxxk.domain.context import (
     PrepareCompaction,
 )
 from memfxxk.domain.documents import Document, DocumentInfo, DocumentRevision, PutDocumentRequest
+from memfxxk.domain.lessons import FinishedTask, FinishTask
 from memfxxk.domain.reflect import ReflectRequest, ReflectResult
 from memfxxk.domain.sessions import PutSessionState, SessionState
 from memfxxk.domain.workspace import (
@@ -84,6 +85,11 @@ def put_state(session_id: str, request: PutSessionState, service: RequestService
 @router.post("/context/build")
 def build_context(request: BuildContextRequest, service: RequestService) -> ContextBundle:
     return service.build_context(request)
+
+
+@router.post("/sessions/{session_id}/finish-task")
+def finish_task(session_id: str, request: FinishTask, service: RequestService) -> FinishedTask:
+    return service.finish_task(session_id, request)
 
 
 @router.post("/reflect")

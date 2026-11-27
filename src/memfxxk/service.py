@@ -28,6 +28,7 @@ from memfxxk.domain.context import (
 from memfxxk.domain.documents import Document, DocumentInfo, DocumentRevision, PutDocumentRequest
 from memfxxk.domain.events import Event, IngestEvent, IngestResult
 from memfxxk.domain.facts import FactProposal
+from memfxxk.domain.lessons import FinishedTask, FinishTask, LessonProposal, ReviewLesson
 from memfxxk.domain.manage import (
     ForgetMode,
     ForgetResult,
@@ -331,6 +332,22 @@ class BoundService:
 
     def get_session(self, session_id: str) -> SessionState:
         return sessions.get_session(self, session_id)
+
+    def finish_task(self, session_id: str, request: FinishTask) -> FinishedTask:
+        from memfxxk.m2.lesson_jobs import finish
+
+        self.require_write()
+        return finish(self, session_id, request)
+
+    def list_lesson_proposals(self, limit: int = 50) -> list[LessonProposal]:
+        from memfxxk.m2.lesson_jobs import proposals
+
+        return proposals(self, limit)
+
+    def review_lesson(self, memory_id: UUID, request: ReviewLesson) -> LessonProposal:
+        from memfxxk.m2.lesson_jobs import review
+
+        return review(self, memory_id, request)
 
     def put_session_state(self, session_id: str, request: PutSessionState) -> SessionState:
         self.require_write()

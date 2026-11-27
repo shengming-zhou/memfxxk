@@ -228,6 +228,12 @@ Enable `MEMFXXK_STRATEGIES__REFLECT=hindsight` and configure the `reflect` and `
 
 The six-question check averaged about 4,072 tokens per question with reflection and reranking and 1,751 for hybrid, including grading. The time channel itself runs locally. Reflection and model reranking are off by default. [API, model usage, and evaluation](/en/developer-manual/#t16-hindsight)
 
+### Turn completed tasks into lessons you can review {#automatic-lesson-usage}
+
+Set `MEMFXXK_STRATEGIES__LESSONS=reasoningbank` to distill from successes and failures. Use `awm` for workflows from successful runs. The `both` setting shares one trajectory judgment before running the applicable distillation tasks. Configure the memory models and run a worker.
+
+After saving the final tool result, call `POST /v1/sessions/{id}/finish-task` or the host MCP tool `session_finish_task`. Review drafts through `GET /v1/lesson-proposals`. Approved lessons can load into subsequent tasks. With `MEMFXXK_STRATEGIES__LESSON_VISIBILITY=searchable`, drafts are available to explicit search while automatic loading requires approval. Existing manually saved lessons remain available. In the smoke test, distillation averaged about 11,400 to 16,600 write tokens per task. Cost varies with trajectory length. Both automatic strategies are off by default. [Usage and measured costs](/en/developer-manual/#t16-automatic-lessons)
+
 ## Check evidence evaluation {#evidence-evaluation}
 
 Evidence evaluation measures whether a memory backend retrieves the history that supports an answer and tracks query latency. Reproduce it with the frozen LongMemEval_S suite in a dedicated evaluation database. This step requires no chat model. [Evaluation steps in the developer manual](https://shengming-zhou.github.io/memfxxk/en/developer-manual/#evidence-comparison)

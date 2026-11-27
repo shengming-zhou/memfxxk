@@ -43,6 +43,7 @@ from memfxxk.domain.context import (
 from memfxxk.domain.documents import Document, DocumentInfo, DocumentRevision, PutDocumentRequest
 from memfxxk.domain.events import Event, IngestEvent, IngestResult
 from memfxxk.domain.facts import FactProposal, FactReview
+from memfxxk.domain.lessons import FinishedTask, FinishTask, LessonProposal, ReviewLesson
 from memfxxk.domain.manage import (
     ForgetMode,
     ForgetRequest,
@@ -292,6 +293,21 @@ class MemfxxkClient(ClientContext):
 
     def get_session(self, session_id: str) -> SessionState:
         return self._request("GET", f"sessions/{segment(session_id)}/state", SessionState)
+
+    def finish_task(self, session_id: str, request: FinishTask) -> FinishedTask:
+        return self._request(
+            "POST", f"sessions/{segment(session_id)}/finish-task", FinishedTask, body=request
+        )
+
+    def list_lesson_proposals(self, limit: int = 50) -> list[LessonProposal]:
+        return self._request(
+            "GET", "lesson-proposals", list[LessonProposal], params={"limit": limit}
+        )
+
+    def review_lesson(self, memory_id: UUID | str, request: ReviewLesson) -> LessonProposal:
+        return self._request(
+            "POST", f"lesson-proposals/{segment(memory_id)}/review", LessonProposal, body=request
+        )
 
     def put_session_state(self, session_id: str, request: PutSessionState) -> SessionState:
         return self._request(
@@ -567,6 +583,21 @@ class AsyncMemfxxkClient(ClientContext):
 
     async def get_session(self, session_id: str) -> SessionState:
         return await self._request("GET", f"sessions/{segment(session_id)}/state", SessionState)
+
+    async def finish_task(self, session_id: str, request: FinishTask) -> FinishedTask:
+        return await self._request(
+            "POST", f"sessions/{segment(session_id)}/finish-task", FinishedTask, body=request
+        )
+
+    async def list_lesson_proposals(self, limit: int = 50) -> list[LessonProposal]:
+        return await self._request(
+            "GET", "lesson-proposals", list[LessonProposal], params={"limit": limit}
+        )
+
+    async def review_lesson(self, memory_id: UUID | str, request: ReviewLesson) -> LessonProposal:
+        return await self._request(
+            "POST", f"lesson-proposals/{segment(memory_id)}/review", LessonProposal, body=request
+        )
 
     async def put_session_state(self, session_id: str, request: PutSessionState) -> SessionState:
         return await self._request(

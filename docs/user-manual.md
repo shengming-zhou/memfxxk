@@ -236,6 +236,12 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 六题验收中，反思加重排平均每题约用 4,072 token，混合组约 1,751，均包含答题和评分。不开启反思重排时，时间通道只做本地计算。反思和模型重排默认关闭。 [API、模型用量和实测结果](/developer-manual/#t16-hindsight)
 
+### 把任务做法提炼成待审核经验 {#automatic-lesson-usage}
+
+启用 `MEMFXXK_STRATEGIES__LESSONS=reasoningbank` 可从成功和失败轨迹总结做法。用 `awm` 可从成功轨迹归纳可复用的流程。设置 `both` 会先共用一次结果判断，再运行适用的提炼方法。需要配置记忆模型并运行 Worker。
+
+宿主在保存最后的工具结果后调用 `POST /v1/sessions/{id}/finish-task` 或 MCP 宿主工具 `session_finish_task`。在 `GET /v1/lesson-proposals` 看待审核经验，采用后相关经验可以装入下一次任务的上下文。设置 `MEMFXXK_STRATEGIES__LESSON_VISIBILITY=searchable` 后，待审核经验可主动搜索，自动装载仍须审核通过。以前手工保存的经验继续可用。小样本里每个任务平均写入约 1.14 万到 1.66 万 token，成本随每项任务的轨迹长度变化。两种自动提炼默认关闭。 [详细用法和本轮成本](/developer-manual/#t16-automatic-lessons)
+
 ## 查看证据评测 {#evidence-evaluation}
 
 证据评测检查记忆库能否找回支持答案的历史，并记录查询延时。要复跑，可在独立的评测数据库使用固定的 LongMemEval_S 题集。这一步无需配置聊天模型。 [开发手册的评测步骤](https://shengming-zhou.github.io/memfxxk/developer-manual/#evidence-comparison)

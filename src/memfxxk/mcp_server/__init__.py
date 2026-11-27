@@ -13,6 +13,7 @@ from memfxxk.client import ClientError
 from memfxxk.domain.blocks import EditBlock
 from memfxxk.domain.context import BuildContextRequest, CommitCompaction, PrepareCompaction
 from memfxxk.domain.events import IngestEvent
+from memfxxk.domain.lessons import FinishTask
 from memfxxk.domain.manage import LinkRequest, Mark, PatchRequest, SaveLessonRequest
 from memfxxk.domain.reflect import ReflectRequest
 from memfxxk.m2.prompts import HOST
@@ -39,6 +40,10 @@ class _PreferenceArguments(BaseModel):
 
 class _SessionArguments(BaseModel):
     session_id: str
+
+
+class _FinishTaskArguments(_SessionArguments):
+    task: FinishTask
 
 
 class _EventArguments(BaseModel):
@@ -111,6 +116,11 @@ def make_server(
                 "Read the session boundary.",
                 _SessionArguments,
                 lambda req: client.get_session(req.session_id).model_dump(mode="json"),
+            ),
+            "session_finish_task": (
+                "Mark a saved task trajectory complete and schedule enabled lesson extraction.",
+                _FinishTaskArguments,
+                lambda req: client.finish_task(req.session_id, req.task).model_dump(mode="json"),
             ),
             "session_events": (
                 "Read an exact session event range.",

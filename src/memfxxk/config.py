@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import AnyHttpUrl, BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from memfxxk.domain.lessons import LessonStrategy
 from memfxxk.llm.settings import LLMSettings, Task, TaskModel
 
 
@@ -105,6 +106,8 @@ class StrategiesSettings(BaseModel):
     tiers: Literal["off", "memoryos"] = "off"
     recall: Literal["off", "hindsight"] = "off"
     reflect: Literal["off", "hindsight"] = "off"
+    lessons: LessonStrategy = "off"
+    lesson_visibility: Literal["pending", "searchable"] = "pending"
 
 
 class SleeptimeSettings(BaseModel):
@@ -194,4 +197,14 @@ class Settings(BaseSettings):
             or not self.task_model("opinion_update").model.strip()
         ):
             raise ValueError("Hindsight reflect requires reflect and opinion_update models")
+        lessons = self.strategies.lessons
+        if lessons != "off" and not self.task_model("trajectory_judge").model.strip():
+            raise ValueError("Automatic lessons require a trajectory_judge model")
+        if (
+            lessons in ("reasoningbank", "both")
+            and not self.task_model("lesson_distill").model.strip()
+        ):
+            raise ValueError("ReasoningBank requires a lesson_distill model")
+        if lessons in ("awm", "both") and not self.task_model("workflow_induce").model.strip():
+            raise ValueError("AWM requires a workflow_induce model")
         return self

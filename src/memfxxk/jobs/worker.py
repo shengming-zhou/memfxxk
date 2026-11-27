@@ -191,6 +191,13 @@ class Worker:
                 refresh(service, batch[0])
 
             self.register("opinion_update", update_opinions)
+        if service.settings.strategies.lessons != "off":
+            from memfxxk.m2.lesson_jobs import distill
+
+            def distill_task(batch: list[Job]) -> None:
+                distill(service, batch[0])
+
+            self.register("distill_task", distill_task)
 
     def register(self, kind: str, handler: Callable[[list[Job]], None]) -> None:
         self.handlers[kind] = handler
@@ -219,6 +226,7 @@ class Worker:
                     "tier_project",
                     "tier_summarize",
                     "opinion_update",
+                    "distill_task",
                 )
                 else None,
             )

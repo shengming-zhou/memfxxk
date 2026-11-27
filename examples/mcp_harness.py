@@ -27,6 +27,7 @@ from memfxxk.domain.context import (
     PrepareCompaction,
 )
 from memfxxk.domain.events import Event, IngestEvent, IngestResult
+from memfxxk.domain.lessons import FinishedTask, FinishTask
 from memfxxk.domain.sessions import SessionState
 from memfxxk.llm import ChatClient, ChatMessage, ChatModel
 from memfxxk.m2.prompts import HOST
@@ -146,6 +147,14 @@ class MCPHarness:
         if data is None:
             raise HarnessToolError(name, "Missing structured result")
         return data
+
+    async def finish_task(self, session_id: str, request: FinishTask) -> FinishedTask:
+        return FinishedTask.model_validate(
+            await self._host_call(
+                "session_finish_task",
+                {"session_id": session_id, "task": request.model_dump(mode="json")},
+            )
+        )
 
     async def _session_state(self, session_id: str) -> SessionState | None:
         try:

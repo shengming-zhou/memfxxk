@@ -34,6 +34,8 @@ def _decode_cursor(value: str) -> tuple[datetime, UUID]:
 
 
 def list_memories(service: BoundService, filters: ListRequest) -> MemoryPage:
+    from memfxxk.retrieval.channels import searchable_lesson
+
     ctx = service.ctx
     related = records.alias("related")
     from_endpoint = memory_relations.c.from_memory_id
@@ -53,7 +55,10 @@ def list_memories(service: BoundService, filters: ListRequest) -> MemoryPage:
         .scalar_subquery()
     )
     query = select(records, relation_count.label("relation_count")).where(
-        visible_filter(records, ctx), records.c.is_current, records.c.status == filters.status
+        visible_filter(records, ctx),
+        records.c.is_current,
+        records.c.status == filters.status,
+        searchable_lesson(),
     )
     if filters.types:
         query = query.where(records.c.type.in_(filters.types))

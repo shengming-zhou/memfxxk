@@ -384,6 +384,36 @@ Hindsight 从输入提取自包含的叙述事实，区分世界事实、Agent �
 
 混合检索答对 1/6，其中多会话 1/3、时间 0/3。Hindsight 答对 3/6，其中多会话 2/3、时间 1/3。至少找到一条标准原文从 5/6 提升到 6/6。反思组 6/6 引用至少一条标准原文。检索与答题总耗时 p50 / p95 分别为 1.11 / 1.57 秒与 3.48 / 4.15 秒。两组正式运行分别用 10,503 和 24,430 token，含评分。小样本仅用于功能验收，默认仍关闭。
 
+## T16 P8 自动提炼经验 {#t16-automatic-lessons}
+
+### 原版怎么做 {#automatic-lessons-upstream}
+
+ReasoningBank 的评判模型看任务、轨迹、输出，判断成败。成功提炼可迁移的做法，失败提炼容易复发的误区。每次最多三条，保存标题、描述和内容，后续默认检索一条。AWM 在线模式从成功轨迹归纳「描述与步骤」，把特定路径和对象换成可替换的槽位。 [ReasoningBank 论文及 Apache-2.0 实现](https://github.com/google-research/reasoning-bank) [AWM 论文及 Apache-2.0 实现](https://github.com/zorazrw/agent-workflow-memory)
+
+### 这里怎么做 {#automatic-lessons-implementation}
+
+`POST /v1/sessions/{session_id}/finish-task` 接收 `task`、可选 `from_seq`（默认 1）和 `through_seq`（当前末尾）。调用方要先保存原文与工具结果。返回结束事件 ID、边界和作业 ID。同一作用域、会话、边界和任务的重复请求共用同一个结束事件和作业。同步与异步 SDK 都提供 `finish_task`，参考 Harness 通过 MCP `session_finish_task` 调用。
+
+`distill_task` 用 `trajectory_judge` 评判，再调用 `lesson_distill` 或 `workflow_induce`。两种策略同时启用时只评判一次。判断不确定时结束作业，失败时 ReasoningBank 仍可提炼经验。AWM 在成功路径还会参考最多三条原有已确认的成功工作流。写回检查作业租约、事件范围和来源有效性。
+
+`GET /v1/lesson-proposals` 或 SDK `list_lesson_proposals` 返回含 `memory_id`、版本、标题、正文、方法、成败、状态、来源的提议列表。用 `POST /v1/lesson-proposals/{id}/review` 或 SDK `review_lesson`，传 `base_version` 与 `accept`。服务器要求可见的用户身份和写权限。通过或拒绝会建立新版本。过期或已作其他决定返回 `409 lesson_revision_conflict`。
+
+### 和原版的差异 {#automatic-lessons-differences}
+
+由宿主明确任务边界。产物使用 T09 的 `lesson` 类型和原文链接，代码复用记录版本和现有检索。待采纳记录的 `origin=auto_extract`，`confirmed=false`。启用 `searchable` 可主动搜索草稿。审批前自动装载会舍弃草稿，理由为 `lesson_requires_review`。采纳后，合适的自动经验和其他证据共用现有装载入口与预算。引用保存策略、类型、相关度、候选 token 和装载决定。删除源事件同步删除依赖的经验版本。
+
+### 一个具体例子 {#automatic-lessons-example}
+
+导入工具先返回「标题只识别出一列」，第二次改用分号后验证三行。评判看到实际工具结果，返回成功。提炼提示给出「导入前核对分隔符和字段数，写入后核对行数」。宿主通知任务结束后，用户可检查原文并采用。下一次导入查询装入这一条经验，Harness 仍负责调用工具和检查结果。
+
+### 评测结果 {#automatic-lessons-evaluation}
+
+`uv run python eval/run_t16_lessons.py --output eval/results/t16/p8-smoke` 重跑两个 T09 同类重复导入任务，以及固定 AMA-Bench 第 4 段轨迹的三道 QA。把固定版本题集放到 `eval/data/ama-open-end.jsonl`。脚本核对 SHA-256，记录后续任务成功、原错误复发、答题表现、经验装载、token 和延时。 [AMA-Bench 固定数据版本](https://huggingface.co/datasets/AMA-bench/AMA-bench/tree/a5777378066f53229a94557a7b192435cd027909/test)
+
+BGE-small-en-v1.5、`deepseek-flash` 和 `gpt-5.4-mini` 实测中，基线 / ReasoningBank / AWM 的重复导入都是 2/2，原错误复发都是 0/2。AMA-Bench QA 分别答对 2/3、1/3、2/3。评测脚本采用了生成的五条 ReasoningBank 和两条 AWM 提议。AWM 组的三道 AMA 题均未装载经验，该轨迹未生成 AWM 提议。AMA 此处只测从已有轨迹答题。复发率只在可运行的导入工具上计算。
+
+两种提炼依次花费 49,860 和 34,272 写入 token。按相同的三项任务、37 个原始轮计算，每千轮约 134.8 万和 92.6 万 token。三组答题和评分合计 20,538 token，总计 104,670。检索及答题 p95 为 1.54 / 1.53 / 1.43 秒。本次五题没有看到重复任务收益，默认关闭。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。
