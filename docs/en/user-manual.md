@@ -180,7 +180,13 @@ Set a rule with `PUT /v1/priorities` or MCP `memory_priority_set` in the intende
 {"target":{"kind":"section","path":"world/ports.md","heading":"Harbors / Lanterns"},"priority":75}
 ```
 
-Send the target object to `POST /v1/priorities/resolve` or `memory_priority_get`. The response shows the winning `source` and `source_scope`. To clear the setting in your current scope, use `POST /v1/priorities/clear` or `memory_priority_clear` and inspect the newly inherited value. Shared budget allocation across directories, documents, and sections arrives with the adaptive allocator. [Implementation and migration](/en/developer-manual/#t17-priority-inheritance)
+Send the target object to `POST /v1/priorities/resolve` or `memory_priority_get`. The response shows the winning `source` and `source_scope`. To clear the setting in your current scope, use `POST /v1/priorities/clear` or `memory_priority_clear` and inspect the newly inherited value. [Implementation and migration](/en/developer-manual/#t17-priority-inheritance)
+
+### Give writing context one budget {#adaptive-context-usage}
+
+Send `{"allocator":"adaptive","max_tokens":1200,"query":"Write a storm scene in the north harbor"}` to `POST /v1/context/build` or MCP `context_build`. These 1,200 tokens are for memfxxk. The host budgets its system prompt, tools, retained messages, and reply space. Setting, conversation, and retrieved evidence share the allocation. Each priority layer has a chance to include a short entry first, then relevant entries get more detail. Higher-priority entries appear earlier in the assembled text.
+
+Send the response's `rendered` to the model. Use `GET /v1/context/bundles/{id}` to inspect what was loaded. See `resolution` and `decision_reason` in `sections[].items` and check `sections[].dropped`. For documents, `ref_id`, `revision`, and `section_index` identify the exact version and section. Open the source through search or the document index to check a rule. The default allocator is `fixed`. [Allocation, thresholds, and traces](/en/developer-manual/#t17-adaptive-context)
 
 Pass `graph_hops: 1` or `2` to search, or put it in `search_filters` when building context. Search starts with keyword and vector matches and follows links or shared entities on reviewed facts. Inspect `graph_path` to see the chain of evidence.
 

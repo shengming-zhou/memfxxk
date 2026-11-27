@@ -56,6 +56,7 @@ class _Candidate:
     marker: str = "[truncated]"
     graph: bool = False
     excluded_reason: str | None = None
+    row: RowMapping | None = None
 
 
 def _join(entries: list[tuple[_Candidate, str]], *, reverse_events: bool = False) -> str:
@@ -313,22 +314,24 @@ def _documents(
     ]
     if include_index:
         candidates.extend(
-            _Candidate(
-                ContextReference(
-                    kind="index",
-                    ref_id=str(item.document_id),
-                    revision=item.revision,
-                    reason="on_demand_index",
-                ),
-                "## Memory index",
-                f"- doc:{item.path} — {' '.join(item.purpose.split())}",
-                escape,
-                "",
-            )
-            for item in resolved
-            if item.load_policy == "on_demand"
+            _document_index(item) for item in resolved if item.load_policy == "on_demand"
         )
     return candidates
+
+
+def _document_index(item: DocumentInfo) -> _Candidate:
+    return _Candidate(
+        ContextReference(
+            kind="index",
+            ref_id=str(item.document_id),
+            revision=item.revision,
+            reason="on_demand_index",
+        ),
+        "## Memory index",
+        f"- doc:{item.path} — {' '.join(item.purpose.split())}",
+        escape,
+        "",
+    )
 
 
 def _wrap_memory(row: RowMapping, related: list[UUID], content: str) -> str:
@@ -405,6 +408,7 @@ def _memory(
         f"[truncated: use memory_get {row['memory_id']}]",
         graph,
         excluded_reason,
+        row,
     )
 
 
@@ -696,12 +700,17 @@ def build_context(service: BoundService, request: BuildContextRequest) -> Contex
     budget.update(request.budget or {})
     counter = make_token_counter(service.settings.token_counter)
     selected = set(request.sections)
+    allocator = request.allocator or service.settings.context.allocator
     sections: list[ContextSection] = []
+    candidates_by_section: dict[SectionName, list[_Candidate]] = {}
     pinned: set[str] = set()
     working_range: tuple[int, int] | None = None
     retrieval_timings = None
 
     def pack(name: SectionName, candidates: list[_Candidate]) -> ContextSection:
+        if allocator == "adaptive":
+            candidates_by_section[name] = candidates
+            return ContextSection(name=name, budget=0, used_tokens=0, items=[], dropped=[])
         prefix = "\n\n".join(section.rendered for section in sections if section.rendered)
         if name == "evidence":
             section = _pack_evidence(
@@ -726,7 +735,11 @@ def build_context(service: BoundService, request: BuildContextRequest) -> Contex
 
     with transaction(service.engine) as connection:
         if "documents" in selected:
-            docs = _documents(connection, service, request.include_on_demand_index)
+            docs = (
+                _documents(connection, service, request.include_on_demand_index)
+                if allocator == "fixed"
+                else []
+            )
             if service.settings.strategies.blocks == "letta":
                 docs.extend(_blocks(connection, service, request.query))
             pack("documents", docs)
@@ -739,7 +752,13 @@ def build_context(service: BoundService, request: BuildContextRequest) -> Contex
                     connection,
                     service,
                     request.session_id,
-                    budget["working"],
+                    budget["working"]
+                    if allocator == "fixed"
+                    else (
+                        request.max_tokens
+                        if request.max_tokens is not None
+                        else sum(budget[name] for name in selected)
+                    ),
                     request.host_history_from_seq,
                 )
                 if request.session_id is not None
@@ -755,11 +774,24 @@ def build_context(service: BoundService, request: BuildContextRequest) -> Contex
                 connection, service, request, pinned, working_range
             )
             pack("evidence", evidence)
-        rendered = "\n\n".join(section.rendered for section in sections if section.rendered)
+        allocation = None
+        if allocator == "adaptive":
+            from memfxxk.context.adaptive_sources import assemble
+
+            capacity = (
+                request.max_tokens
+                if request.max_tokens is not None
+                else sum(budget[name] for name in candidates_by_section)
+            )
+            sections, rendered, allocation = assemble(
+                connection, service, request, candidates_by_section, counter, capacity
+            )
+        else:
+            rendered = "\n\n".join(section.rendered for section in sections if section.rendered)
+            capacity = sum(section.budget for section in sections)
+            if request.max_tokens is not None:
+                capacity = min(capacity, request.max_tokens)
         used = counter.count(rendered)
-        capacity = sum(section.budget for section in sections)
-        if request.max_tokens is not None:
-            capacity = min(capacity, request.max_tokens)
         ratio = used / capacity if capacity else 0.0
         bundle = ContextBundle(
             bundle_id=new_id(),
@@ -769,6 +801,8 @@ def build_context(service: BoundService, request: BuildContextRequest) -> Contex
             retrieval_timings_ms=retrieval_timings,
             pressure="warning" if ratio > service.settings.context.pressure_threshold else "normal",
             pressure_ratio=ratio,
+            allocator=allocator,
+            allocation=allocation,
         )
         connection.execute(
             context_bundles.insert().values(
@@ -781,6 +815,8 @@ def build_context(service: BoundService, request: BuildContextRequest) -> Contex
                     "max_tokens": request.max_tokens,
                     "pressure": bundle.pressure,
                     "pressure_ratio": bundle.pressure_ratio,
+                    "allocator": allocator,
+                    "allocation": allocation.model_dump(mode="json") if allocation else None,
                     **(
                         {"graph_evidence_tokens": request.graph_evidence_tokens}
                         if request.graph_evidence_tokens
@@ -819,4 +855,6 @@ def get_bundle(service: BoundService, bundle_id: UUID) -> BundleMetadata:
         created_at=row["created_at"],
         pressure=row["budget"].get("pressure", "normal"),
         pressure_ratio=row["budget"].get("pressure_ratio", 0.0),
+        allocator=row["budget"].get("allocator", "fixed"),
+        allocation=row["budget"].get("allocation"),
     )

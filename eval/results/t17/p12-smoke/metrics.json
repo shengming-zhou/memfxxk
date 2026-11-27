@@ -1,0 +1,100 @@
+{
+  "live": false,
+  "cases": [
+    {
+      "case": 1,
+      "budget": 120,
+      "tokens": 94,
+      "elapsed_ms": 361.33,
+      "included": [
+        "Gates",
+        "Ferry",
+        "Lanterns"
+      ],
+      "coefficients": {},
+      "calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "errors": []
+    },
+    {
+      "case": 2,
+      "budget": 120,
+      "tokens": 94,
+      "elapsed_ms": 35.99,
+      "included": [
+        "Gates",
+        "Ferry",
+        "Lanterns"
+      ],
+      "coefficients": {},
+      "calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "errors": []
+    },
+    {
+      "case": 3,
+      "budget": 120,
+      "tokens": 94,
+      "elapsed_ms": 39.25,
+      "included": [
+        "Gates",
+        "Ferry",
+        "Lanterns"
+      ],
+      "coefficients": {},
+      "calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "errors": []
+    },
+    {
+      "case": 4,
+      "budget": 160,
+      "tokens": 129,
+      "elapsed_ms": 43.75,
+      "included": [
+        "Gates",
+        "Ferry",
+        "Lanterns"
+      ],
+      "coefficients": {},
+      "calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "errors": []
+    },
+    {
+      "case": 5,
+      "budget": 80,
+      "tokens": 76,
+      "elapsed_ms": 43.51,
+      "included": [
+        "Gates",
+        "Ferry",
+        "Lanterns"
+      ],
+      "coefficients": {},
+      "calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "errors": []
+    },
+    {
+      "case": 6,
+      "budget": 44,
+      "tokens": 27,
+      "elapsed_ms": 36.61,
+      "included": [
+        "Lanterns"
+      ],
+      "coefficients": {},
+      "calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "errors": []
+    }
+  ],
+  "model": null
+}

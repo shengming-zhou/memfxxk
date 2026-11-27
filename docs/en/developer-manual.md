@@ -456,6 +456,26 @@ Migration `0016` adds `content_resolutions` for shorter versions and source even
 
 Explicitly set `MEMFXXK_LLM__TASKS__RESOLUTION_SUMMARIZE__MODEL` to enable calls. The task uses the shared endpoint, credential, timeout, and JSON configuration. Run `uv run pytest -q tests/integration/test_content_resolutions.py` for invalidation, concurrent changes, deletion, fallback, and scope isolation. For a live check of six source types, run `uv run python eval/run_t17_resolutions.py --output eval/results/t17/p11-smoke`. All six DeepSeek Flash requests in the saved run used the fallback. All extracts were grounded. The gateway reported no token usage. Separate fake-model tests exercise successful generation.
 
+## T17 P12 Adaptive context {#t17-adaptive-context}
+
+### Candidates and budget {#allocator-candidates}
+
+`BuildContextRequest.allocator` overrides `MEMFXXK_CONTEXT__ALLOCATOR`. With `adaptive`, `max_tokens` is the shared limit. If omitted, the enabled source budgets are summed. The `fixed` allocator still interprets separate budgets and the graph reservation. The SDK accepts a `BuildContextRequest`, and MCP consumes the same schema. Hosts inject the complete `rendered` field. Use `sections` for source inspection and `render_order` for order across sections.
+
+Both paths use the existing memory block, pinned record, session, retrieval, and graph sources. The adaptive path splits documents by heading. It considers `always` sections plus term-matched or retrieved `on_demand` sections. Duplicate chunks are marked `covered_by_document_section`. Versions match the current generation, with excerpts as fallback. `host_history_from_seq` continues to exclude host-owned messages. Relevance takes the greater of term coverage and normalized retrieval score.
+
+### Water filling, upgrades, and repairs {#allocator-packing}
+
+`context/adaptive.py` runs independently of the database. The base weight is `decay ** rank` with a default decay of 0.72. Each layer starts with a floor of one line. Demand includes all lines plus expansion for the four most relevant candidates. Floors are reduced from the lowest layer when they exceed the budget. Unused budget flows to uncapped layers proportionally. Lines load first, then upgrades are chosen by marginal gain per token. A higher priority cannot downgrade an item whose relevance is more than `relevance_gap` greater, with a default of 0.20. When an upgrade misses by at most 12% of the target version, the allocator tries a downgrade, the 3% flex allowance, then a paragraph boundary. Settings use `MEMFXXK_CONTEXT__ADAPTIVE__`.
+
+The highest layer uses stable source ordering. Its membership and resolutions can still change the prefix. The final joined text is tokenized again to enforce the hard cap. T16 pressure uses the existing threshold and the shared limit as its denominator. Bundle metadata records layer demand, allocation, usage, floor reductions, reference decisions, repairs, and plan metadata.
+
+### Optional model and verification {#allocator-verification}
+
+Set `plan_with_llm=true` on a request and configure the explicit `context_plan` task. It receives a short description, example types, and weights for up to 100 layers. Finite coefficients for known layers are clamped to 0.7–1.3 by default. Budget and model failures use the base weights. Stored metadata records those weights, applied coefficients, and the call ID. Bundles retain references and omit source and request text.
+
+Run `uv run pytest -q tests/unit/test_adaptive_allocation.py tests/integration/test_adaptive_context.py` for repairs, budgets, pressure, cross-layer relevance, scope, and plan fallback. Run `uv run python eval/run_t17_allocator_smoke.py --output eval/results/t17/p12-smoke` for six requests. Add `--live` when the gateway is available.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

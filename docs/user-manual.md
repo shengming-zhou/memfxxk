@@ -188,7 +188,13 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 {"target":{"kind":"section","path":"world/ports.md","heading":"港口 / 灯号"},"priority":75}
 ```
 
-用 `POST /v1/priorities/resolve` 或 `memory_priority_get` 查询，传上面 `target` 的内容。返回的 `source` 和 `source_scope` 会告诉你是哪条规则生效。用 `POST /v1/priorities/clear` 或 `memory_priority_clear` 清除本次作用域的设置，系统会返回重新继承的值。跨目录、文档和章节的预算竞争在自适应分配阶段接通。[优先级实现与迁移](/developer-manual/#t17-priority-inheritance)
+用 `POST /v1/priorities/resolve` 或 `memory_priority_get` 查询，传上面 `target` 的内容。返回的 `source` 和 `source_scope` 会告诉你是哪条规则生效。用 `POST /v1/priorities/clear` 或 `memory_priority_clear` 清除本次作用域的设置，系统会返回重新继承的值。[优先级实现与迁移](/developer-manual/#t17-priority-inheritance)
+
+### 给写作上下文一份总预算 {#adaptive-context-usage}
+
+在 HTTP `POST /v1/context/build` 或 MCP `context_build` 传 `{"allocator":"adaptive","max_tokens":1200,"query":"写北港暴风雨时的场景"}`。这 1,200 token 是给 memfxxk 的，宿主仍负责系统提示、工具、它保留的消息和回复空间。设定、对话和检索结果共用这份额度。各优先级层有机会先带一条短版，相关内容再展开。优先级高的候选在最终文本里排在前面。
+
+宿主把响应的 `rendered` 放进模型请求，然后可以用 `GET /v1/context/bundles/{id}` 查这次的取舍。看 `sections[].items` 中的 `resolution` 和 `decision_reason`，以及 `sections[].dropped`。文档的 `ref_id`、`revision`、`section_index` 指向具体版本和章节。需要核实一条设定时，根据搜索和文档索引打开原文。默认分配方式为 `fixed`。[分配、阈值与追踪](/developer-manual/#t17-adaptive-context)
 
 图检索需要在搜索里传 `graph_hops: 1` 或 `2`，上下文装载则放在 `search_filters`。它先查关键词和向量，再查候选记忆的关联或已审核事实的共享实体。结果包含 `graph_path`，可逐条核对这条路径。
 

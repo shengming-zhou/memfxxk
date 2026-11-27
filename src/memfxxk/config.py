@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import AnyHttpUrl, BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from memfxxk.domain.context import AdaptiveSettings, Allocator
 from memfxxk.domain.lessons import LessonStrategy
 from memfxxk.llm.settings import LLMSettings, Task, TaskModel
 from memfxxk.presets import PRESETS, StrategyPreset
@@ -65,6 +66,8 @@ class ContextBudget(BaseModel):
 class ContextSettings(BaseModel):
     budget: ContextBudget = Field(default_factory=ContextBudget)
     pressure_threshold: float = Field(default=0.7, gt=0, le=1)
+    allocator: Allocator = "fixed"
+    adaptive: AdaptiveSettings = Field(default_factory=AdaptiveSettings)
 
 
 class WorkerSettings(BaseModel):

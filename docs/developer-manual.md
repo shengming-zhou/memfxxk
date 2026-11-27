@@ -462,6 +462,26 @@ T17 的优先级由用户写入。所有候选按生效整数从高到低分层�
 
 显式设置 `MEMFXXK_LLM__TASKS__RESOLUTION_SUMMARIZE__MODEL` 才会调用 `resolution_summarize`。模型端点、密钥、超时和 JSON 模式沿用模型层设置。用 `uv run pytest -q tests/integration/test_content_resolutions.py` 验证版本失效、后台竞争、删除、降级和读权限。可选运行 `uv run python eval/run_t17_resolutions.py --output eval/results/t17/p11-smoke` 检查六类来源。保存的 DeepSeek Flash 试跑六次请求都落入摘录回退，六条均能追溯原文，网关未返回 token 用量。模型成功生成由独立的 fake LLM 回归验证。
 
+## T17 P12 自适应上下文 {#t17-adaptive-context}
+
+### 候选和预算 {#allocator-candidates}
+
+`BuildContextRequest.allocator` 覆盖服务端的 `MEMFXXK_CONTEXT__ALLOCATOR`。启用 `adaptive` 后，`max_tokens` 是唯一上限，省略则加总启用来源的旧预算作为上限。旧分区预算和图专用预留继续由 `fixed` 解释。SDK 传一份 `BuildContextRequest`，MCP 按同一个 schema 接收参数。宿主注入整体 `rendered`。分组的 `sections` 供查看来源，跨组顺序见 `render_order`。
+
+固定和自适应复用已有记忆块、固定记录、会话、检索及图来源。自适应按标题切分文档，将 `always` 章节和词项匹配或被检索到的 `on_demand` 章节加入池中。重复文档切块在追踪中标记为 `covered_by_document_section`。使用当前代际的摘要，回退时从原文摘录。宿主已经保留的对话仍按 `host_history_from_seq` 剔除。得分取词项覆盖与归一化检索分的较大值。
+
+### 注水、升级和修补 {#allocator-packing}
+
+`context/adaptive.py` 可脱离数据库运行。候选按生效整数分层，基准权重为 `decay ** rank`。默认衰减 0.72，保底 1 条短版，需求包括该层全部短版和相关度最高 4 条的展开量。总保底超出预算时，从最低层开始减条数。余量按权重在未饱和层重新分配。先加载短版，再按边际价值除以所需 token 升级。跨层修补时，高优先级候选不能降级相关度高出 `relevance_gap` 的条目，默认差值为 0.20。差额在目标版本 token 的 12% 以内时，依次尝试降一级、用 3% 机动额度和按段落边界截断。设置位于 `MEMFXXK_CONTEXT__ADAPTIVE__` 下。
+
+最高层按稳定来源顺序排列，版本和成员变化仍会改变前缀。最终对完整字符串重新计数并执行硬上限。沿用 T16 的压力阈值，分母为本次总上限。Bundle 留存层预算及实用量、保底缩减、引用和取舍理由、修补步骤和模型元数据。
+
+### 可选模型与验证 {#allocator-verification}
+
+请求传 `plan_with_llm=true`，并配置独立的 `context_plan` 任务。模型接收请求短描述、最多 100 层的类型示例和权重。仅保留已知层的有限系数，默认截到 0.7–1.3。预算耗尽或模型失败时使用基准权重。Bundle 持久化基准权重、有效系数及调用 ID。查询和原文不保存在 bundle 中。
+
+`uv run pytest -q tests/unit/test_adaptive_allocation.py tests/integration/test_adaptive_context.py` 验证各修补路径、预算、压力、跨层保护、作用域隔离和模型失败回退。`uv run python eval/run_t17_allocator_smoke.py --output eval/results/t17/p12-smoke` 试跑六条请求。网关可用时加 `--live` 核验模型微调。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

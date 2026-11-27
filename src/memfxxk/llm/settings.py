@@ -26,6 +26,7 @@ Task = Literal[
     "rerank",
     "persona_update",
     "resolution_summarize",
+    "context_plan",
 ]
 
 

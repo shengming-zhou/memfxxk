@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
+from memfxxk.domain.resolutions import ResolutionLevel
 from memfxxk.domain.retrieval import MemoryType, SearchChannel, SearchTimings
 from memfxxk.prompts.compact import Checkpoint
 
@@ -10,6 +11,45 @@ SectionName = Literal["documents", "pinned", "working", "evidence"]
 CompactionMethod = Literal["legacy", "llm", "extractive_fallback"]
 Pressure = Literal["normal", "warning"]
 SectionKind = Literal["document", "index", "memory", "event", "summary", "block"]
+Allocator = Literal["fixed", "adaptive"]
+
+
+class AdaptiveSettings(BaseModel):
+    decay: float = Field(default=0.72, gt=0, le=1)
+    floor_items: int = Field(default=1, ge=0, le=20)
+    expand_items: int = Field(default=4, ge=0, le=100)
+    relevance_gap: float = Field(default=0.2, gt=0, le=1)
+    near_fit_ratio: float = Field(default=0.12, ge=0, le=1)
+    flex_ratio: float = Field(default=0.03, ge=0, le=0.25)
+    plan_min: float = Field(default=0.7, gt=0, le=1)
+    plan_max: float = Field(default=1.3, ge=1, le=3)
+
+
+class LayerAllocation(BaseModel):
+    priority: int
+    weight: float
+    demand: int
+    allocated: int
+    used: int
+    floor_tokens: int
+    floor_reduced: int
+
+
+class AllocationRepair(BaseModel):
+    priority: int
+    ref_id: str
+    step: Literal["downgrade", "flex", "paragraph", "exact_budget"]
+    donor_ref_id: str | None = None
+
+
+class AllocationTrace(BaseModel):
+    budget: int
+    flex_tokens: int
+    layers: list[LayerAllocation]
+    repairs: list[AllocationRepair]
+    plan_input_weights: dict[int, float] = Field(default_factory=dict)
+    plan_coefficients: dict[int, float] = Field(default_factory=dict)
+    plan_call_id: UUID | None = None
 
 
 class SearchFilters(BaseModel):
@@ -44,6 +84,8 @@ class BuildContextRequest(BaseModel):
     query: str | None = None
     budget: dict[SectionName, Annotated[int, Field(ge=0)]] | None = None
     max_tokens: int | None = Field(default=None, ge=0)
+    allocator: Allocator | None = None
+    plan_with_llm: bool = False
     graph_evidence_tokens: int = Field(
         default=0,
         ge=0,
@@ -118,6 +160,10 @@ class ContextReference(BaseModel):
     related: list[UUID] = Field(default_factory=list)
     compaction_method: CompactionMethod | None = None
     graph_edge_id: UUID | None = None
+    effective_priority: int | None = None
+    section_index: int | None = None
+    resolution: ResolutionLevel | None = None
+    render_order: int | None = None
 
 
 class ContextSection(BaseModel):
@@ -137,6 +183,8 @@ class ContextBundle(BaseModel):
     retrieval_timings_ms: SearchTimings | None = None
     pressure: Pressure = "normal"
     pressure_ratio: float = 0.0
+    allocator: Allocator = "fixed"
+    allocation: AllocationTrace | None = None
 
 
 class BundleMetadata(BaseModel):
@@ -146,3 +194,5 @@ class BundleMetadata(BaseModel):
     created_at: AwareDatetime
     pressure: Pressure = "normal"
     pressure_ratio: float = 0.0
+    allocator: Allocator = "fixed"
+    allocation: AllocationTrace | None = None
