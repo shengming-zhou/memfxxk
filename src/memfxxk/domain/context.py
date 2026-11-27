@@ -102,6 +102,7 @@ class ContextReference(BaseModel):
     kind: SectionKind
     ref_id: str
     record_type: str | None = None
+    strategy: str | None = None
     version: int | None = None
     revision: int | None = None
     tokens: int = 0

@@ -222,6 +222,12 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 64 轮实测里，两组都答对两道偏好题和两道改期题。后台四次整理额外用了 13,610 个 token，默认关闭自动装载和整理。 [API、复跑命令与指标](/developer-manual/#t16-memory-blocks)
 
+### 让长期对话按主题积累 {#memoryos-usage}
+
+默认的混合检索对全部原文做关键词和语义搜索。可选的 `MEMFXXK_STRATEGIES__TIERS=memoryos` 会让最新的 7 轮先进入候选列表，更早的轮次按主题分组，再查相关分组。两个来源共用已有的上下文上限。需要为 `persona_update` 配置模型并运行 Worker。
+
+如果希望系统建议长期修改，可先创建 `user_profile`、`user_knowledge` 或 `agent_traits` 块并启用块装载。主题积累到热度阈值时，Worker 可能创建修改提议。可以在 `GET /v1/block-proposals` 检查和采纳，用户原有设置仍由用户确认。在一次批量回放中，写入按每千轮折算约 8 万 token。分批写入的调用频率可能更高。两组测试中分层装载都少答对一题，功能默认关闭。 [实现、配置和实测成本](/developer-manual/#t16-memoryos)
+
 ## 查看证据评测 {#evidence-evaluation}
 
 证据评测检查记忆库能否找回支持答案的历史，并记录查询延时。要复跑，可在独立的评测数据库使用固定的 LongMemEval_S 题集。这一步无需配置聊天模型。 [开发手册的评测步骤](https://shengming-zhou.github.io/memfxxk/developer-manual/#evidence-comparison)

@@ -173,6 +173,17 @@ class Worker:
                 consolidate(service, batch[0])
 
             self.register("sleeptime_consolidate", handle_sleeptime)
+        if service.settings.strategies.tiers == "memoryos":
+            from memfxxk.m2.tiers import project, summarize
+
+            def project_tier(batch: list[Job]) -> None:
+                project(service, batch[0], embedder)
+
+            def summarize_tier(batch: list[Job]) -> None:
+                summarize(service, batch[0])
+
+            self.register("tier_project", project_tier)
+            self.register("tier_summarize", summarize_tier)
 
     def register(self, kind: str, handler: Callable[[list[Job]], None]) -> None:
         self.handlers[kind] = handler
@@ -198,6 +209,8 @@ class Worker:
                     "build_entity_graph",
                     "build_amem_note",
                     "sleeptime_consolidate",
+                    "tier_project",
+                    "tier_summarize",
                 )
                 else None,
             )

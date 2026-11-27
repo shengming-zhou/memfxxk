@@ -270,6 +270,7 @@ def _blocks(
                     kind="block",
                     ref_id=str(item.id),
                     record_type="memory_block",
+                    strategy="letta",
                     revision=item.revision,
                     reason="memory_block",
                     score=score,
@@ -352,6 +353,7 @@ def _memory(
     graph: bool = False,
     graph_fact: GraphFact | None = None,
     excluded_reason: str | None = None,
+    strategy: str | None = None,
 ) -> _Candidate:
     links = related or []
     content = row["content"] if excerpt is None else excerpt
@@ -362,6 +364,7 @@ def _memory(
             kind="memory",
             ref_id=str(row["memory_id"]),
             record_type=row["type"],
+            strategy=strategy or row["metadata"].get("strategy"),
             version=row["version"],
             reason=reason,
             score=score,
@@ -482,6 +485,29 @@ def _working(
     return candidates, sequences
 
 
+def _evidence_exclusion(
+    row: RowMapping,
+    request: BuildContextRequest,
+    pinned: set[str],
+    working: tuple[int, int] | None,
+) -> str | None:
+    pos = row["source_pos"] or {}
+    if str(row["memory_id"]) in pinned:
+        return "already_loaded"
+    if row["type"] == "turn" and row["session_id"] == request.session_id:
+        if (
+            request.host_history_from_seq is not None
+            and pos.get("seq_to", 0) >= request.host_history_from_seq
+        ):
+            return "host_history_overlap"
+        if (
+            working is not None
+            and working[0] <= pos.get("seq_from", 0) <= pos.get("seq_to", 0) <= working[1]
+        ):
+            return "working_history_overlap"
+    return None
+
+
 def _evidence(
     connection: Connection,
     service: BoundService,
@@ -491,7 +517,8 @@ def _evidence(
 ) -> tuple[list[_Candidate], SearchTimings]:
     filters = request.search_filters.model_dump(exclude_none=True)
     filters.setdefault("types", _DEFAULT_EVIDENCE_TYPES)
-    response = service.search(SearchRequest(query=request.query or "", k=request.k, **filters))
+    search_request = SearchRequest(query=request.query or "", k=request.k, **filters)
+    response = service.search(search_request)
     rows = connection.execute(
         select(records).where(
             tuple_(records.c.memory_id, records.c.version).in_(
@@ -503,6 +530,23 @@ def _evidence(
     ).mappings()
     by_id = {row["memory_id"]: row for row in rows}
     candidates = []
+    projected: set[UUID] = set()
+    if service.settings.strategies.tiers == "memoryos" and "turn" in search_request.types:
+        from memfxxk.m2.tiers import recall
+
+        for hit in recall(connection, service, search_request):
+            row = hit.row
+            projected.add(row["memory_id"])
+            candidates.append(
+                _memory(
+                    row,
+                    _EVIDENCE_HEADING,
+                    hit.reason,
+                    score=hit.score,
+                    strategy="memoryos",
+                    excluded_reason=_evidence_exclusion(row, request, pinned, working),
+                )
+            )
     for rank, hit in enumerate(response.hits, 1):
         row = by_id.get(hit.memory_id)
         reason = (
@@ -530,21 +574,11 @@ def _evidence(
                 )
             )
             continue
-        excluded = None
-        pos = row["source_pos"] or {}
-        if str(hit.memory_id) in pinned:
-            excluded = "already_loaded"
-        elif row["type"] == "turn" and row["session_id"] == request.session_id:
-            if (
-                request.host_history_from_seq is not None
-                and pos.get("seq_to", 0) >= request.host_history_from_seq
-            ):
-                excluded = "host_history_overlap"
-            elif (
-                working is not None
-                and working[0] <= pos.get("seq_from", 0) <= pos.get("seq_to", 0) <= working[1]
-            ):
-                excluded = "working_history_overlap"
+        excluded = (
+            "already_loaded"
+            if hit.memory_id in projected and not hit.graph_path
+            else _evidence_exclusion(row, request, pinned, working)
+        )
         candidates.append(
             _memory(
                 row,
@@ -558,6 +592,7 @@ def _evidence(
                 graph=bool(hit.graph_path),
                 graph_fact=hit.graph_fact,
                 excluded_reason=excluded,
+                strategy="amem" if hit.score.note_rank is not None else None,
             )
         )
     return candidates, response.timings_ms

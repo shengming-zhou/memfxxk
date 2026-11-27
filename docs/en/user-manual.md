@@ -214,6 +214,12 @@ Use a block for a small set of regularly used preferences, commitments, or hando
 
 In a 64-turn replay, both groups answered two preference and two rescheduling questions correctly. Four background consolidation calls added 13,610 tokens. Automatic loading and consolidation are off by default. [API, reproduction, and metrics](/en/developer-manual/#t16-memory-blocks)
 
+### Group a growing conversation by topic {#memoryos-usage}
+
+Hybrid search runs keyword and semantic search over the original turns. With `MEMFXXK_STRATEGIES__TIERS=memoryos`, the last seven turns become candidates first. Older turns are grouped by topic and retrieved from matching segments. Both sources share the existing context limit. Configure a model for `persona_update` and run a worker.
+
+To receive suggested long-term edits, create blocks labeled `user_profile`, `user_knowledge`, or `agent_traits` and enable block loading. A segment must reach its heat threshold before the worker can propose changes. Review them through `GET /v1/block-proposals` and approve those you want to keep. One batch replay scaled to about 80,000 write tokens per 1,000 turns. Incremental writes may call the model more often. Tiers answered one fewer question in each comparison and remain off by default. [Implementation, configuration, and measured cost](/en/developer-manual/#t16-memoryos)
+
 ## Check evidence evaluation {#evidence-evaluation}
 
 Evidence evaluation measures whether a memory backend retrieves the history that supports an answer and tracks query latency. Reproduce it with the frozen LongMemEval_S suite in a dedicated evaluation database. This step requires no chat model. [Evaluation steps in the developer manual](https://shengming-zhou.github.io/memfxxk/en/developer-manual/#evidence-comparison)

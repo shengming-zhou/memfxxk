@@ -98,12 +98,20 @@ class StrategiesSettings(BaseModel):
     graph_reranker: Literal["rrf", "mmr", "node_distance", "episode_mentions"] = "rrf"
     notes: Literal["off", "amem"] = "off"
     blocks: Literal["off", "letta"] = "off"
+    tiers: Literal["off", "memoryos"] = "off"
 
 
 class SleeptimeSettings(BaseModel):
     every_turns: int = Field(default=0, ge=0)
     after_compaction: bool = False
     recent_turns: int = Field(default=12, ge=1, le=100)
+
+
+class TierSettings(BaseModel):
+    short_capacity: int = Field(default=7, gt=0, le=100)
+    segment_capacity: int = Field(default=200, gt=0, le=2000)
+    segment_threshold: float = Field(default=0.6, ge=0, le=2)
+    promotion_heat: float = Field(default=5.0, ge=0)
 
 
 class Settings(BaseSettings):
@@ -123,6 +131,7 @@ class Settings(BaseSettings):
     m2: M2Settings = Field(default_factory=M2Settings)
     strategies: StrategiesSettings = Field(default_factory=StrategiesSettings)
     sleeptime: SleeptimeSettings = Field(default_factory=SleeptimeSettings)
+    tiers: TierSettings = Field(default_factory=TierSettings)
     llm: LLMSettings = Field(default_factory=LLMSettings)
     mcp_enable_host: bool = False
     mcp_enable_manage: bool = False
@@ -167,4 +176,9 @@ class Settings(BaseSettings):
             and not self.task_model("sleeptime").model.strip()
         ):
             raise ValueError("Background block consolidation requires a configured sleeptime model")
+        if (
+            self.strategies.tiers == "memoryos"
+            and not self.task_model("persona_update").model.strip()
+        ):
+            raise ValueError("MemoryOS requires a configured persona_update model")
         return self

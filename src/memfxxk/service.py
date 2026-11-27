@@ -181,6 +181,8 @@ class BoundService:
                 kinds.append("build_entity_graph")
             if self.settings.strategies.blocks == "letta" and self.settings.sleeptime.every_turns:
                 kinds.append("sleeptime_consolidate")
+            if self.settings.strategies.tiers == "memoryos":
+                kinds.append("tier_project")
             if kinds:
                 from memfxxk.m2.facts import enqueue_closed_turns
 

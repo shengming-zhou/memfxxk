@@ -28,6 +28,45 @@ def index_scope(table: sa.Table) -> None:
     )
 
 
+tier_segments = sa.Table(
+    "tier_segments",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("bank_id", UUID, nullable=False),
+    sa.Column("embedding", VECTOR, nullable=False),
+    sa.Column("model", sa.Text, nullable=False),
+    sa.Column("keywords", ARRAY(sa.Text), nullable=False),
+    sa.Column("summary", sa.Text, nullable=False, server_default=""),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False, server_default="{}"),
+    sa.Column("generation", sa.Integer, nullable=False, server_default="1"),
+    sa.Column("summarized_generation", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("visits", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("unpromoted_pages", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("promotion_epoch", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("last_access", sa.DateTime(timezone=True), nullable=False),
+)
+sa.Index("ix_tier_segments_bank", tier_segments.c.org_id, tier_segments.c.bank_id)
+sa.Index("ix_tier_segments_sources", tier_segments.c.source_event_ids, postgresql_using="gin")
+
+tier_pages = sa.Table(
+    "tier_pages",
+    metadata,
+    sa.Column(
+        "record_id",
+        UUID,
+        sa.ForeignKey("records.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    sa.Column("bank_id", UUID, nullable=False),
+    sa.Column("generation", sa.Integer, nullable=False),
+    sa.Column("state", sa.Text, nullable=False),
+    sa.Column("segment_id", UUID, sa.ForeignKey("tier_segments.id", ondelete="SET NULL")),
+)
+sa.Index("ix_tier_pages_bank_state", tier_pages.c.bank_id, tier_pages.c.state)
+sa.Index("ix_tier_pages_segment", tier_pages.c.segment_id)
+
+
 api_keys = sa.Table(
     "api_keys",
     metadata,

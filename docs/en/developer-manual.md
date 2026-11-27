@@ -322,6 +322,34 @@ Run `uv run python eval/run_t16_blocks.py --output eval/results/t16/p5-long-dial
 
 Four consolidation calls succeeded and spent 12,289 input and 1,321 output tokens, or about 192,016 input and 20,641 output tokens per 1,000 turns at this rate. Total write time was 2.94 seconds for hybrid and 12.80 seconds for blocks. Assembly p50 / p95 was 135 / 171 ms and 69 / 108 ms. Answer p50 / p95 was 850 / 1,421 ms and 614 / 814 ms. Four answers used 3,609 and 4,759 tokens respectively. Including grading and consolidation, both arms spent 22,647 tokens in total. First-call timing and run order affect these small-sample latencies. Automatic consolidation remains off by default.
 
+## T16 P6 MemoryOS tiers {#t16-memoryos}
+
+### Upstream behavior {#memoryos-upstream}
+
+The paper uses seven pages in its recent queue and at most 200 topic segments. A page holds a turn and a chain summary. Moving pages into a segment uses cosine similarity plus keyword Jaccard, with a 0.6 threshold. Heat combines visits, page counts, and `exp(−Δt/10⁷)`. Capacity pressure evicts the coldest segment. Heat above five triggers proposed updates for durable user knowledge, preferences, and agent traits. Retrieval takes the recent pages and ranks pages from the top five matching segments, using ten segment pages for LoCoMo. [MemoryOS paper sections 3 and 4.1](https://arxiv.org/html/2506.06326v1) [Apache-2.0 implementation](https://github.com/BAI-LAB/MemoryOS)
+
+### Implementation {#memoryos-implementation}
+
+Migration `0012` creates `tier_pages` and `tier_segments`. Pages reference the original turn row and generation. A segment keeps its seed embedding, keyword set, summary, source IDs, unpromoted page count, visits, and last access. The full scope determines the write bank, and reads use core visibility rules. A closed turn schedules `tier_project`. Eligible overflow pages move into a segment and schedule `tier_summarize`. A retrieval that crosses the promotion threshold can schedule the same job.
+
+Set `MEMFXXK_STRATEGIES__TIERS=memoryos` and configure the `persona_update` model. The `MEMFXXK_TIERS__SHORT_CAPACITY`, `SEGMENT_CAPACITY`, `SEGMENT_THRESHOLD`, and `PROMOTION_HEAT` settings control thresholds. The worker reads up to 64 of the newest original pages, then asks for a `summary` and optional versioned block proposals. It checks the job claim, segment and page generations, and source visibility before writing. Promotions use P5 review. Forgetting a source removes dependent segments or proposals. Surviving original turns remain reachable through hybrid search.
+
+### Differences from upstream {#memoryos-differences}
+
+We use the paper's 0.6 / 5 defaults. The source repository's ChromaDB example uses 0.7 / 13. A page holds a turn reference, and the segment keeps a model summary. Pending generations can coalesce into one summary for the latest state. Promotion resets counters and keeps original turns searchable. Long-term profiles use P5 blocks provisioned by the host, with approval. Recorded-time queries use the original temporal search path.
+
+Recent and segment hits pass through the shared `_Candidate` evidence pipeline. Bundles keep `strategy=memoryos`, the original turn ID, type, relevance, candidate tokens, and loading decisions. The strategy shares the existing evidence budget.
+
+### Worked example {#memoryos-example}
+
+Several turns mention brewing tea and choosing a water temperature. After turn eight, the first turn moves out of the recent queue. Similar older turns join the tea segment. Once heat exceeds five, `persona_update` reads the source turns and summarizes the tea topic. It may propose that an existing `user_profile` record the user's preference for a light brew. The user can review the sources before accepting. Original turns remain available during review.
+
+### Evaluation {#memoryos-evaluation}
+
+Run `uv run python eval/run_t16_tiers.py --output eval/results/t16/p6-tiers` for the same 1,500-token limit across the frozen 64-turn dialogue and LoCoMo `conv-26`. Put the pinned `locomo10.json` file in `eval/data/`. The script verifies SHA-256 and records answers, evidence, candidate references, model calls, token usage, and timings. [Pinned LoCoMo source](https://github.com/snap-research/locomo/blob/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/data/locomo10.json)
+
+The live run used BGE-small-en-v1.5, `deepseek-flash` for writes, and `gpt-5.4-mini` for answering and grading. The long dialogue fell from 4/4 to 3/4, with tiers missing one original preference message. On the 214-turn LoCoMo conversation, results fell from 2/8 to 1/8 and gold source hits from 4/15 to 3/15. Hybrid and tier assembly p95 was 194 / 251 ms for the long dialogue and 229 / 303 ms for LoCoMo. Each tier replay coalesced its writes into one model call, for 21,426 input and 946 output tokens combined, or about 80,475 tokens per 1,000 turns. Answering and grading used 35,984 tokens for a total of 58,356. Live incremental cost depends on how often segment updates run. Tier loading remains off by default.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

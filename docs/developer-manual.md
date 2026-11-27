@@ -328,6 +328,34 @@ Agent 先读到交接块第 1 版。调用 MCP `memory_block_edit`，传 `{"bloc
 
 四次整理无失败，输入 12,289、输出 1,321 token。每千轮约 192,016 输入和 20,641 输出 token。基线和记忆块组的 64 轮写入总耗时为 2.94 / 12.80 秒，组装 p50 / p95 分别是 135 / 171 毫秒和 69 / 108 毫秒，答题分别是 850 / 1,421 毫秒和 614 / 814 毫秒。四题的答题 token 总量为 3,609 / 4,759。加上判分与整理，两组共用 22,647 token。四题延时受首次调用和运行顺序影响。该小样本用于确认功能，自动整理维持关闭。
 
+## T16 P6 MemoryOS 分层记忆 {#t16-memoryos}
+
+### 原版怎么做 {#memoryos-upstream}
+
+论文的短期队列长 7 页，中期最多 200 个主题段。一页包含原轮及链式摘要。移出短期的页根据余弦相似度与关键词 Jaccard 相似度之和入段，阈值 0.6。段热度是访问次数、页数和 `exp(−Δt/10⁷)` 之和。容量满时驱逐最低热度的段。大于 5 时可归纳长期用户知识、偏好与 Agent 特质。召回先取全部短期页，再选 5 个相关段，对段内页按语义排序。论文的 LoCoMo 配置取 10 页。 [MemoryOS 论文 §3 与 §4.1](https://arxiv.org/html/2506.06326v1) [Apache-2.0 实现](https://github.com/BAI-LAB/MemoryOS)
+
+### 这里怎么做 {#memoryos-implementation}
+
+迁移 `0012` 创建 `tier_pages` 和 `tier_segments`。页关联原生 `turn` 的行 ID 和代次。段包含分组用的种子向量、词集合、摘要、来源 ID、待晋升页数、访问计数和上次访问时间。完整作用域确定每个写入分组，读取遵守已有可见性。闭合轮次投递 `tier_project`，超短期容量的页进入匹配段。段变更投递 `tier_summarize`。检索使段热度越过阈值时也安排该作业。
+
+启用 `MEMFXXK_STRATEGIES__TIERS=memoryos` 并配置 `persona_update` 模型。可用 `MEMFXXK_TIERS__SHORT_CAPACITY`、`SEGMENT_CAPACITY`、`SEGMENT_THRESHOLD` 和 `PROMOTION_HEAT` 配置阈值。Worker 将最新段中最多 64 页原文传给模型，输出 `summary` 和可选的版本化记忆块修改提议。作业租约、段代次和页代次必须仍有效，引用原文须仍可见。晋升通过 P5 的提议表，块的明确用户值须审核。忘记来源会清除依赖的段或提议，未删除的原轮还可经混合检索。
+
+### 和原版的差异 {#memoryos-differences}
+
+采用论文的 0.6 / 5 阈值，仓库的 ChromaDB 示例采用 0.7 / 13。页只保存原轮引用，每段存一份模型摘要，避免为每页复制一份链式摘要。多个尚未处理的段版本只为最新状态调用模型。晋升重置计数，保留原轮供召回。长期画像沿用 P5 的块与审批，宿主显式创建对应块。历史 `as_of_recorded` 查询使用原有时态检索。
+
+短期和中期命中走共享 `_Candidate`，共用原有证据装载流程。bundle 记录 `strategy=memoryos`、原轮 ID、类型、相关度、候选 token 与每条装载决定。驱逐、召回以及审批无新增 token 分区。
+
+### 一个具体例子 {#memoryos-example}
+
+几个对话轮里多次出现泡茶和水温。第八轮结束后第一轮被移出短期队列，较早的后续泡茶页按相似度归入同一个段。热度超过 5 后，`persona_update` 读取这些轮次，生成茶饮主题摘要，并可能提议把「喜欢清淡泡茶」写入已有 `user_profile`。用户可先查看来源再采用。提议待审时，相关原轮仍能被召回。
+
+### 评测结果 {#memoryos-evaluation}
+
+`uv run python eval/run_t16_tiers.py --output eval/results/t16/p6-tiers` 使用同一 1,500 token 记忆预算，重跑 64 轮固定对话与 LoCoMo `conv-26`。把固定版本的 `locomo10.json` 放到 `eval/data/`，脚本会校验 SHA-256。结果含逐题答案、证据命中、候选引用、写入调用、用量和延时。 [LoCoMo 固定数据版本](https://github.com/snap-research/locomo/blob/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/data/locomo10.json)
+
+使用 BGE-small-en-v1.5、`deepseek-flash` 加工和 `gpt-5.4-mini` 答题及评分。固定长对话从 4/4 降到 3/4，分层组少装入一道偏好题的原文。LoCoMo 214 轮八题从 2/8 降到 1/8，标准原文引用命中从 4/15 降到 3/15。长对话的混合与分层装载 p95 为 194 / 251 ms，LoCoMo 为 229 / 303 ms。两组分层写入各合并成一次模型调用，输入 21,426、输出 946 token，折算约每千轮 80,475 token。答题和评分共用 35,984 token，总计 58,356。批量写入合并了旧版本。真实连续写入成本取决于段更新的频率。分层装载维持关闭。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。
