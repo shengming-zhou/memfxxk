@@ -177,6 +177,9 @@ def forget_event(service: BoundService, event_id: UUID) -> ForgetResult:
                 )
             )
         )
+        from memfxxk.m2.temporal_graph.deletion import forget_source
+
+        forget_source(conn, ctx.org_id, event_id)
         result = _purge_memories(conn, ctx, memory_ids)
         for derived in (fact_proposals, compactions):
             conn.execute(

@@ -1,0 +1,12 @@
+{
+  "dataset": "oracle",
+  "dataset_sha256": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c",
+  "question_ids": [
+    "2311e44b",
+    "a1cc6108",
+    "8979f9ec",
+    "e4e14d04",
+    "gpt4_483dd43c",
+    "gpt4_65aabe59"
+  ]
+}

@@ -76,12 +76,23 @@ class MemoryReference(BaseModel):
     source_pos: dict[str, object] | None = None
 
 
+class GraphFact(BaseModel):
+    edge_id: UUID
+    relation_type: str
+    fact: str
+    valid_at: AwareDatetime | None
+    invalid_at: AwareDatetime | None
+    source_event_ids: list[UUID]
+    generation: int = Field(default=0, exclude=True)
+
+
 class SearchHit(MemoryReference):
     snippet: str
     content_truncated: bool
     marks: list[MemoryMark]
     related: list[RelatedMemory] = Field(default_factory=list)
     graph_path: list[UUID] = Field(default_factory=list)
+    graph_fact: GraphFact | None = None
     priority: int | None = None
     tags: list[str] = Field(default_factory=list)
     score: ScoreDetails

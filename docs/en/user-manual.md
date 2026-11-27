@@ -178,6 +178,12 @@ Set `evidence_mode` to `excerpt` when the evidence budget is tight. The bundle u
 
 When background fact extraction is enabled, list pending proposals with `GET /v1/fact-proposals`. Review a proposal at `POST /v1/fact-proposals/{id}/review` using `{"accept": true}` or `{"accept": false}`. For fact searches, `as_of_valid` asks what was effective at a given time and `as_of_recorded` limits what the system could have known by then.
 
+### Use temporal graph memory {#temporal-graph-usage}
+
+Set `MEMFXXK_STRATEGIES__GRAPH=graphiti` to derive entities and relationships from newly closed turns. The five tasks can share a default model or use separate settings for `entity_extract`, `entity_resolve`, `edge_extract`, `edge_resolve`, and `node_summary`. Search with `graph_hops=1` or `2`. Use `as_of_valid` for relationships effective on a given date and `as_of_recorded` to limit what the service could have known. A `graph_fact` can include the relationship text, dates, and original event IDs. Select `MEMFXXK_STRATEGIES__GRAPH=links` for the existing link search. [Temporal graph implementation](/en/developer-manual/#t16-temporal-graph)
+
+The six-question replay showed no answer accuracy gain. Scaled from those conversations, graph writes used about 14.52 million input and 1.49 million output tokens per 1,000 turns. The existing link graph is the default. [Temporal graph evaluation](/en/developer-manual/#temporal-graph-evaluation)
+
 ## Configure memory models {#memory-model-configuration}
 
 Compaction and fact extraction can use different models. Set defaults with `MEMFXXK_LLM__DEFAULT__MODEL`, `MEMFXXK_LLM__DEFAULT__BASE_URL`, and `MEMFXXK_LLM__DEFAULT__API_KEY`. Override model names with `MEMFXXK_LLM__TASKS__COMPACT__MODEL` or `MEMFXXK_LLM__TASKS__EXTRACT__MODEL`. Operators can summarize `llm_calls` or set a daily token limit by organization or project. [Model task configuration](/en/developer-manual/#t16-llm-routing)

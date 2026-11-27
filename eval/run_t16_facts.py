@@ -13,6 +13,7 @@ from run_m2_paired import (
     MEMORY_BUDGET,
     TOP_K,
     _append,
+    _edges,
     _isolated_service,
     _latency,
     _load_questions,
@@ -25,6 +26,7 @@ from memfxxk.config import Settings, StrategiesSettings
 from memfxxk.db import jobs, llm_calls
 from memfxxk.domain.context import BuildContextRequest, SearchFilters
 from memfxxk.domain.events import IngestEvent
+from memfxxk.domain.manage import LinkRequest
 from memfxxk.eval.longmemeval.dataset import DATA_DIRECTORY, DATA_FILES, Question, iter_turns
 from memfxxk.eval.longmemeval.judging import _grade
 from memfxxk.eval.longmemeval.qa import ANSWER_PROMPT, _answer, read_prompt
@@ -32,6 +34,7 @@ from memfxxk.eval.longmemeval.storage import EVAL_PRINCIPAL, eval_context
 from memfxxk.eval.longmemeval.suite import load_suite
 from memfxxk.jobs.worker import drain
 from memfxxk.llm import ChatClient
+from memfxxk.prompts import edge_extract, edge_resolve, entity_extract, entity_resolve, node_summary
 from memfxxk.prompts.extract import ADDITIVE_VERSION, CLASSIC_VERSION
 from memfxxk.prompts.reconcile import VERSION as RECONCILE_VERSION
 from memfxxk.scope import visible_filter
@@ -39,9 +42,13 @@ from memfxxk.service import MemoryService
 
 SUITE = Path("eval/suites/longmemeval-oracle-t16-p2.json")
 ARMS = ("G3", "mem0_classic", "mem0_additive")
+GRAPH_ARMS = ("G3", "links", "graphiti")
+GRAPH_SUITE = Path("eval/suites/longmemeval-oracle-t16-p3.json")
+GRAPH_BUDGET = 300
+GRAPH_TASKS = ("entity_extract", "entity_resolve", "edge_extract", "edge_resolve", "node_summary")
 
 
-def evaluate(settings: Settings, question: Question) -> dict:
+def evaluate(settings: Settings, question: Question, arms: tuple[str, ...] = ARMS) -> dict:
     turns = sorted(
         (turn for turn in iter_turns(question) if turn.event_time <= question.asked_at),
         key=lambda turn: turn.event_time,
@@ -49,14 +56,16 @@ def evaluate(settings: Settings, question: Question) -> dict:
     staged = [(turn, message) for turn in turns for message in turn.messages]
     results = []
     with _isolated_service(settings) as database:
-        for arm in ARMS:
-            derived = arm != "G3"
+        for arm in arms:
+            derived = arm in ("mem0_classic", "mem0_additive")
+            graph = arm in ("links", "graphiti")
             arm_settings = database.settings.model_copy(
                 update={
                     "llm": settings.llm,
                     "strategies": StrategiesSettings(
                         facts=arm if derived else "off",
                         mem0_additive_ranking=arm == "mem0_additive",
+                        graph=arm if graph else "off",
                     ),
                 }
             )
@@ -82,7 +91,24 @@ def evaluate(settings: Settings, question: Question) -> dict:
                 for (_, message), item in zip(staged, stored, strict=True)
                 if message.has_answer
             }
-            drain(service, kinds={"embed_record", "extract_facts"}, max_rounds=1000)
+            drain(
+                service,
+                kinds={"embed_record", "extract_facts", "build_entity_graph"},
+                max_rounds=1000,
+            )
+            if arm == "links":
+                turns_by_memory = {
+                    item.memory_ids_touched[0]: turn
+                    for (turn, _), item in zip(staged, stored, strict=True)
+                }
+                for source, target, entity in _edges(turns_by_memory):
+                    bound.link(
+                        LinkRequest(
+                            from_memory_id=source,
+                            to_memory_id=target,
+                            purpose=f"shared entity: {entity}",
+                        )
+                    )
             build_ms = (perf_counter() - start_build) * 1000
             with service.engine.connect() as conn:
                 usage = conn.execute(
@@ -92,7 +118,7 @@ def evaluate(settings: Settings, question: Question) -> dict:
                 ).all()
                 job_statuses = conn.scalars(
                     select(jobs.c.status).where(
-                        jobs.c.kind == "extract_facts",
+                        jobs.c.kind.in_(("extract_facts", "build_entity_graph")),
                         jobs.c.payload["scope"]["project_id"].as_string() == scope.project_id,
                     )
                 ).all()
@@ -113,10 +139,12 @@ def evaluate(settings: Settings, question: Question) -> dict:
                     k=TOP_K,
                     max_tokens=MEMORY_BUDGET,
                     budget={"evidence": MEMORY_BUDGET},
+                    graph_evidence_tokens=GRAPH_BUDGET if graph else 0,
                     search_filters=SearchFilters(
                         time_to=question.asked_at,
                         as_of_valid=question.asked_at,
                         types=["turn", "fact"] if derived else ["turn"],
+                        graph_hops=2 if graph else 0,
                     ),
                 )
             )
@@ -142,6 +170,7 @@ def evaluate(settings: Settings, question: Question) -> dict:
             fact_sources = {
                 source for item in loaded if item.type == "fact" for source in item.source_event_ids
             }
+            graph_refs = bundle.sections[0].items
             results.append(
                 {
                     "arm": arm,
@@ -150,6 +179,17 @@ def evaluate(settings: Settings, question: Question) -> dict:
                     "gold_from_loaded": len(sources & gold),
                     "gold_from_facts": len(fact_sources & gold),
                     "facts_loaded": sum(item.type == "fact" for item in loaded),
+                    "graph_paths_loaded": sum(
+                        item.reason.startswith("graph(") for item in graph_refs
+                    ),
+                    "graph_edges_loaded": sum(
+                        item.graph_edge_id is not None for item in graph_refs
+                    ),
+                    "graph_gold": any(
+                        item.reason.startswith("graph(")
+                        and bool(set(memory.source_event_ids) & gold)
+                        for item, memory in zip(graph_refs, loaded, strict=True)
+                    ),
                     "written_turns": len(turns),
                     "write_calls": len(usage),
                     "write_jobs": len(job_statuses),
@@ -173,9 +213,9 @@ def evaluate(settings: Settings, question: Question) -> dict:
     }
 
 
-def report(rows: list[dict]) -> dict:
+def report(rows: list[dict], arms: tuple[str, ...] = ARMS) -> dict:
     result = {"questions": len(rows), "arms": {}}
-    for arm in ARMS:
+    for arm in arms:
         records = [(row, item) for row in rows for item in row["arms"] if item["arm"] == arm]
         items = [item for _, item in records]
         summary = {
@@ -192,6 +232,12 @@ def report(rows: list[dict]) -> dict:
             "loaded_gold_question_count": sum(item["gold_from_loaded"] > 0 for item in items),
             "loaded_fact_gold_question_count": sum(item["gold_from_facts"] > 0 for item in items),
         }
+        if arm in GRAPH_ARMS[1:]:
+            summary.update(
+                graph_path_questions=sum(item["graph_paths_loaded"] > 0 for item in items),
+                graph_edge_questions=sum(item["graph_edges_loaded"] > 0 for item in items),
+                graph_gold_questions=sum(item["graph_gold"] for item in items),
+            )
         for key in (
             "write_calls",
             "write_jobs",
@@ -220,22 +266,22 @@ def report(rows: list[dict]) -> dict:
     return result
 
 
-def main() -> None:
+def main(*, graph: bool = False) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--suite", type=Path, default=SUITE)
+    parser.add_argument("--suite", type=Path, default=GRAPH_SUITE if graph else SUITE)
     args = parser.parse_args()
     settings = Settings()
-    required = (
-        settings.task_model("extract"),
-        settings.task_model("reconcile"),
-        settings.eval.gen,
-        settings.eval.judge,
-    )
+    arms = GRAPH_ARMS if graph else ARMS
+    tasks = GRAPH_TASKS if graph else ("extract", "reconcile")
+    model_tasks = {task: settings.task_model(task) for task in tasks}
+    required = (*model_tasks.values(), settings.eval.gen, settings.eval.judge)
     if settings.embedding.provider != "openai_compatible" or not all(
         item.model for item in required
     ):
-        parser.error("Configure a semantic embedding endpoint and the four model tasks")
+        parser.error(
+            "Configure a semantic embedding endpoint, write task models, answerer and judge"
+        )
     path = DATA_DIRECTORY / DATA_FILES["oracle"]
     suite = load_suite(args.suite, "oracle", path)
     questions = _load_questions(path, suite)
@@ -243,19 +289,34 @@ def main() -> None:
     manifest_path = args.output / "manifest.json"
     rows_path = args.output / "diagnostics.jsonl"
     manifest = {
-        "protocol": "t16-p2-oracle-v1",
+        "protocol": "t16-p3-oracle-v1" if graph else "t16-p2-oracle-v1",
         **suite.model_dump(mode="json"),
-        "arms": list(ARMS),
+        "arms": list(arms),
         "embedding": settings.embedding.model,
-        "fact_extract_model": required[0].model,
-        "fact_reconcile_model": required[1].model,
-        "answer_model": required[2].model,
-        "judge_model": required[3].model,
+        "answer_model": settings.eval.gen.model,
+        "judge_model": settings.eval.judge.model,
         "prompt_versions": [CLASSIC_VERSION, ADDITIVE_VERSION, RECONCILE_VERSION],
         "memory_budget": MEMORY_BUDGET,
         "answer_budget": ANSWER_BUDGET,
         "top_k": TOP_K,
     }
+    if graph:
+        manifest.update(
+            task_models={task: item.model for task, item in model_tasks.items()},
+            graph_evidence_tokens=GRAPH_BUDGET,
+            prompt_versions=[
+                entity_extract.VERSION,
+                entity_resolve.VERSION,
+                edge_extract.VERSION,
+                edge_resolve.VERSION,
+                node_summary.VERSION,
+            ],
+        )
+    else:
+        manifest.update(
+            fact_extract_model=model_tasks["extract"].model,
+            fact_reconcile_model=model_tasks["reconcile"].model,
+        )
     if manifest_path.exists() and json.loads(manifest_path.read_text(encoding="utf-8")) != manifest:
         parser.error("Output already contains another experiment")
     _write(manifest_path, manifest)
@@ -264,12 +325,12 @@ def main() -> None:
     remaining = [question for question in questions if question.question_id not in done]
     try:
         with ThreadPoolExecutor(max_workers=settings.eval.concurrency) as executor:
-            for row in executor.map(lambda question: evaluate(settings, question), remaining):
+            for row in executor.map(lambda question: evaluate(settings, question, arms), remaining):
                 _append(rows_path, row)
                 rows.append(row)
                 print(f"Completed {len(rows)}/{len(questions)} {row['question_id']}", flush=True)
     finally:
-        _write(args.output / "metrics.json", report(rows))
+        _write(args.output / "metrics.json", report(rows, arms))
 
 
 if __name__ == "__main__":

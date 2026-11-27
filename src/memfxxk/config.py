@@ -94,6 +94,8 @@ FactStrategy = Literal["off", "key_proposal", "mem0_classic", "mem0_additive"]
 class StrategiesSettings(BaseModel):
     facts: FactStrategy | None = None
     mem0_additive_ranking: bool = False
+    graph: Literal["off", "links", "graphiti"] = "links"
+    graph_reranker: Literal["rrf", "mmr", "node_distance", "episode_mentions"] = "rrf"
 
 
 class Settings(BaseSettings):
@@ -129,9 +131,20 @@ class Settings(BaseSettings):
         return "key_proposal" if self.m2.extract_facts else "off"
 
     @model_validator(mode="after")
-    def extraction_requires_model(self) -> "Settings":
+    def strategies_require_models(self) -> "Settings":
         if self.fact_strategy != "off" and not self.task_model("extract").model.strip():
             raise ValueError("Fact extraction requires a configured extract model")
         if self.fact_strategy == "mem0_classic" and not self.task_model("reconcile").model.strip():
             raise ValueError("Mem0 classic requires a configured reconcile model")
+        if self.strategies.graph == "graphiti":
+            graph_tasks: tuple[Task, ...] = (
+                "entity_extract",
+                "entity_resolve",
+                "edge_extract",
+                "edge_resolve",
+                "node_summary",
+            )
+            missing = [task for task in graph_tasks if not self.task_model(task).model.strip()]
+            if missing:
+                raise ValueError(f"Graphiti requires configured models for {', '.join(missing)}")
         return self

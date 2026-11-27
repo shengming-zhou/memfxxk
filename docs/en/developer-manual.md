@@ -234,6 +234,32 @@ The user first says Atlas uses the Paris hub and later switches to Lyon. The ext
 
 Uses the [same frozen suite](#mem0-classic-evaluation) with additive fact weighting enabled. The final run answered 3/6, with 2/3 knowledge updates and 1/3 temporal reasoning. It gained two answers and lost one against G3, and loaded facts with gold sources on all six questions. There were 56 write calls, including five initial validation failures followed by repair. All 51 write jobs finished. Write usage was 174,095 input and 25,331 output tokens. Ingest, write, and index p50 / p95 was 25.92 / 45.41 seconds. Retrieval and assembly p50 / p95 was 70 / 141 milliseconds. Scores varied between the two runs. Both strategies remain opt-in. The final run used 419,464 tokens in total. The manifest and per-question diagnostics are in `eval/results/t16/p2-oracle-validated`.
 
+## T16 P3 temporal knowledge graph {#t16-temporal-graph}
+
+### Upstream behavior {#temporal-graph-upstream}
+
+Graphiti extracts entities, retrieves candidates using text and name vectors, then asks a model to resolve identity. It extracts relationships with temporal bounds and checks existing edges for duplicates and contradictions. Same-pair edges supply duplicates, and other relevant edges supply invalidation candidates. A later contradiction closes the earlier interval and records when the service learned that fact. The paper uses four recent episodes. The checked code sets the default lookup and retrieval limits to ten, similarity to 0.6, and MMR λ to 0.5. [Zep paper](https://arxiv.org/html/2501.13956) [Search configuration](https://github.com/getzep/graphiti/blob/2a4f079ccedf32c36693e503d0a1cdfa2821d223/graphiti_core/search/search_utils.py) [Edge updates](https://github.com/getzep/graphiti/blob/2a4f079ccedf32c36693e503d0a1cdfa2821d223/graphiti_core/utils/maintenance/edge_operations.py)
+
+### Implementation {#temporal-graph-implementation}
+
+`MEMFXXK_STRATEGIES__GRAPH=graphiti` schedules `build_entity_graph` for closed turns. The worker reads raw events and four earlier turns, extracts entities, resolves them in a batch if candidates exist, extracts edges, resolves each edge that has candidates, and summarizes entities in a batch. All five tasks have configurable models, versioned prompts, and structured validation. The code is in `m2/temporal_graph/`. Migration `0009` adds `entities`, `entity_edges`, and `entity_mentions`. A transaction validates the turn and graph generations and the job lease before writing. Erasure removes supporting evidence and undoes any invalidation based on that erased evidence.
+
+### Differences from upstream {#temporal-graph-differences}
+
+PostgreSQL stores the graph. Retrieval combines terms, cosine similarity, and adjacency for entities or edges, with BM25 scoring on the full-text shortlist. Select `rrf`, `mmr`, `node_distance`, or `episode_mentions` through `MEMFXXK_STRATEGIES__GRAPH_RERANKER`. Duplicate detection compares edges with the same endpoints and relation type. State changes can also compare different objects with the same subject and relation type. `graph_hops` sets expansion depth. `graph_evidence_tokens` budgets assembly. Search hits can show `graph_fact`, and the persisted bundle keeps only `graph_edge_id`, original turn references, and counts. Existing expansion remains available as `graph=links`.
+
+### Example {#temporal-graph-example}
+
+On January 1, Rae says they live in Beijing. The worker extracts the person, city, and `LIVES_IN` relationship with a raw citation. On January 3, Rae Tang says they moved to Shanghai. Resolution maps both names to the same entity. The new edge starts on January 3. The old edge's `invalid_at` becomes January 3, and `expired_at` records when the service learned about the change. January 2 and January 4 queries return Beijing and Shanghai respectively. Erasing the move restores the earlier interval.
+
+### Evaluation results {#temporal-graph-evaluation}
+
+Run `uv run python eval/run_t16_graph.py --output eval/results/t16/p3-oracle`. All arms share the same LongMemEval Oracle histories, top 8, and a 1,500-token memory budget. Both graph arms reserve 300 tokens within that total and expand at most two hops. The frozen suite contains three multi-session and three temporal-reasoning questions with at least two sessions each. The links arm builds shared-name links from the original conversation.
+
+Each arm replayed 60 turns using BGE-small-en-v1.5 embeddings, `deepseek-flash` graph writes, and `gpt-5.4-mini` answering and judging. Hybrid, links, and temporal graph scored 1/6, 1/6, and 0/6. The two correct answers were multi-session. All arms scored 0/3 on temporal reasoning and loaded at least one gold source on five questions. Link and temporal expansions loaded evidence on two and five questions respectively, with zero questions gaining a gold source from those expansions. The temporal arm included edge references in loaded results on all six questions.
+
+All 60 temporal graph jobs finished. There were 239 model calls, including five initial validation failures followed by repair. Writes used 870,987 input and 89,513 output tokens. Per-question write build p50 / p95 was 68.77 / 175.23 seconds. Retrieval and assembly p50 / p95 was 208 / 253, 80 / 100, and 124 / 183 milliseconds respectively, with cold-start costs concentrated in the first arm. Write usage extrapolates to about 14.52 million input and 1.49 million output tokens per 1,000 turns from this replay. Including answers and judging, the run used 991,779 tokens. Link expansion remains the default graph strategy.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

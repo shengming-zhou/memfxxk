@@ -109,6 +109,7 @@ class ContextReference(BaseModel):
     score: float | None = None
     related: list[UUID] = Field(default_factory=list)
     compaction_method: CompactionMethod | None = None
+    graph_edge_id: UUID | None = None
 
 
 class ContextSection(BaseModel):

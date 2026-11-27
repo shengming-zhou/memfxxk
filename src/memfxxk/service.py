@@ -166,10 +166,15 @@ class BoundService:
                 write_project=self.write_project,
                 namespace=self.idempotency_namespace,
             )
+            kinds = []
             if self.settings.fact_strategy != "off":
+                kinds.append("extract_facts")
+            if self.settings.strategies.graph == "graphiti":
+                kinds.append("build_entity_graph")
+            if kinds:
                 from memfxxk.m2.facts import enqueue_closed_turns
 
-                enqueue_closed_turns(connection, self.ctx, batch, results)
+                enqueue_closed_turns(connection, self.ctx, batch, results, kinds)
             return results
 
     def list_fact_proposals(self, limit: int = 50) -> list[FactProposal]:

@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from uuid import UUID
 
 import pytest
@@ -125,7 +125,7 @@ def test_job_retries_after_provider_failure_and_goes_dead(
             )
             if attempt < initial["max_attempts"]:
                 assert result["status"] == "queued"
-                connection.execute(jobs.update().values(run_after=datetime.now(UTC)))
+                connection.execute(jobs.update().values(run_after=func.now()))
             else:
                 assert result["status"] == "dead"
     assert worker.run_once() == 0

@@ -32,7 +32,11 @@ _facts = TypeAdapter(list[FactCandidate])
 
 
 def enqueue_closed_turns(
-    conn: Connection, ctx: RequestContext, batch: list[IngestEvent], results: list[IngestResult]
+    conn: Connection,
+    ctx: RequestContext,
+    batch: list[IngestEvent],
+    results: list[IngestResult],
+    kinds: list[str],
 ) -> None:
     order = {
         memory_id: index
@@ -51,16 +55,14 @@ def enqueue_closed_turns(
         ).where(records.c.memory_id.in_(order), records.c.is_current, visible_filter(records, ctx))
     )
     for row in sorted(closed, key=lambda row: order[row.memory_id]):
-        enqueue(
-            conn,
-            "extract_facts",
-            {
-                "record_id": str(row.id),
-                "generation": row.generation,
-                "scope": Scope.model_validate(dict(row._mapping)).model_dump(),
-            },
-            dedupe_key=f"facts:{row.id}:{row.generation}",
-        )
+        payload = {
+            "record_id": str(row.id),
+            "generation": row.generation,
+            "scope": Scope.model_validate(dict(row._mapping)).model_dump(),
+        }
+        for kind in kinds:
+            prefix = "facts" if kind == "extract_facts" else kind
+            enqueue(conn, kind, payload, dedupe_key=f"{prefix}:{row.id}:{row.generation}")
 
 
 def _source_query(scope: Scope, ids: list[UUID]) -> Select:

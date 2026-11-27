@@ -240,6 +240,32 @@ UPDATE 在 `records` 增加版本。DELETE 写入有效期为零的失效版本�
 
 沿用 [classic 的固定题集](#mem0-classic-evaluation)，开启事实加权。最终答对 3/6，知识更新 2/3、时间推理 1/3。相对 G3 多对 2 道、少对 1 道，6 题都装入了带标准来源的事实。56 次写入调用含 5 次格式修正前的失败，总计 174,095 输入和 25,331 输出 token，51 个写入作业最终完成。每题导入、写入和索引的 p50 / p95 为 25.92 / 45.41 秒。检索和装载的 p50 / p95 为 70 / 141 毫秒。两次试跑分数有波动，两套策略继续作为可选配置。最终实跑总用量为 419,464 token。逐题结果和清单位于 `eval/results/t16/p2-oracle-validated`。
 
+## T16 P3 时序知识图 {#t16-temporal-graph}
+
+### 原版怎么做 {#temporal-graph-upstream}
+
+Graphiti 提取实体，用全文与名称向量找候选，再让模型判断同一性。关系抽取带生效和失效时间。已有同端点的关系用于查重，其他相关关系可用于判断失效。更晚生效的矛盾关系截断旧边，系统另记发现矛盾的时间。论文用近 4 个 episode。核对的上游代码里，`RELEVANT_SCHEMA_LIMIT` 和默认检索数均为 10，向量门槛是 0.6，MMR λ 是 0.5。 [Zep 论文](https://arxiv.org/html/2501.13956) [召回配置](https://github.com/getzep/graphiti/blob/2a4f079ccedf32c36693e503d0a1cdfa2821d223/graphiti_core/search/search_utils.py) [关系更新](https://github.com/getzep/graphiti/blob/2a4f079ccedf32c36693e503d0a1cdfa2821d223/graphiti_core/utils/maintenance/edge_operations.py)
+
+### 这里怎么做 {#temporal-graph-implementation}
+
+`MEMFXXK_STRATEGIES__GRAPH=graphiti` 为关闭的 turn 排入 `build_entity_graph`。作业读取原始事件和前四个 turn，按顺序做实体抽取、必要时批量消歧、关系抽取、逐条比较有旧边的新关系、批量实体摘要。五个任务可分别配模型。源码位于 `m2/temporal_graph/`，提示词均带版本与结构校验。迁移 `0009` 增加 `entities`、`entity_edges`、`entity_mentions`。一次事务检查轮次代次、租约与图记录代次后提交写入。删除原文移除对应支持，若这条原文让旧边失效，也会撤销该失效依据。
+
+### 和原版的差异 {#temporal-graph-differences}
+
+图存 PostgreSQL。词项、余弦、邻接三条路分别找实体或关系，BM25 作用于全文候选集。用 `MEMFXXK_STRATEGIES__GRAPH_RERANKER` 选 `rrf`、`mmr`、`node_distance` 或 `episode_mentions`。查重按同端点、同关系类型找，状态变化会额外比较同主体、同关系类型的旧边。通过 `graph_hops` 控制展开，`graph_evidence_tokens` 按 T13 分配图证据空间。搜索结果可带 `graph_fact`，持久化记忆包只存 `graph_edge_id`、原始 turn 引用和计数。已有显式关联仍可用 `graph=links`。
+
+### 一个具体例子 {#temporal-graph-example}
+
+1 月 1 日 Rae 说住在北京，模型抽出人、城市和 `LIVES_IN` 关系，带原文引用。1 月 3 日 Rae Tang 说搬到上海。消歧把两种姓名映射到同一实体。新边开始于 1 月 3 日，旧边的 `invalid_at` 也写入 1 月 3 日，`expired_at` 记录服务学到更正的时间。查询 1 月 2 日与 1 月 4 日分别得到北京和上海。删除搬家那条原文后，旧边恢复原先的有效区间。
+
+### 评测结果 {#temporal-graph-evaluation}
+
+重跑命令为 `uv run python eval/run_t16_graph.py --output eval/results/t16/p3-oracle`。三组共用同一份 LongMemEval Oracle 历史、top 8 和每题 1,500 token。两个图组在总额度里各留 300 token，最多两跳。固定 3 道多会话和 3 道时序题，每题至少两个会话。链接组从原文生成共享名称链接，建图过程无需题目和标准答案。
+
+实跑每组回放 60 轮，BGE-small-en-v1.5 做向量，`deepseek-flash` 建图，`gpt-5.4-mini` 答题和评分。混合检索、链接图、时序图分别答对 1/6、1/6、0/6。两个命中均在多会话类，三组时序题均为 0/3。三组均有 5/6 装入至少一条标准来源。链接和时序图分别有 2、5 题装入图展开结果，其中标准来源计数均为 0。时序图在 6 题装入的条目上附带了边引用。
+
+时序图写入成功完成 60 个作业，239 次模型调用包含 5 次格式修正前的失败。共用 870,987 输入、89,513 输出 token。每题写入构建 p50 / p95 为 68.77 / 175.23 秒。三个策略的检索与装载 p50 / p95 分别为 208 / 253、80 / 100、124 / 183 毫秒，同次比较的冷启动主要落在第一组。图构建这份回放的每千轮折算约 1,452 万输入、149 万输出 token。加上答题和评分后总用量为 991,779 token。保留 `links` 为默认图策略。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

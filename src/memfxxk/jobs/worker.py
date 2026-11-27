@@ -146,6 +146,13 @@ class Worker:
                     process(service, batch[0], embedder)
 
             self.register("extract_facts", handle_facts)
+        if service.settings.strategies.graph == "graphiti":
+            from memfxxk.m2.temporal_graph.ingest import project_episode
+
+            def handle_graph(batch: list[Job]) -> None:
+                project_episode(service, batch[0], embedder)
+
+            self.register("build_entity_graph", handle_graph)
 
     def register(self, kind: str, handler: Callable[[list[Job]], None]) -> None:
         self.handlers[kind] = handler
@@ -161,7 +168,12 @@ class Worker:
 
         batches: dict[tuple[str, UUID | None], list[Job]] = defaultdict(list)
         for job in claimed:
-            key = (job.kind, job.id if job.kind in (self.qdrant_kind, "extract_facts") else None)
+            key = (
+                job.kind,
+                job.id
+                if job.kind in (self.qdrant_kind, "extract_facts", "build_entity_graph")
+                else None,
+            )
             batches[key].append(job)
         for (kind, _), batch in batches.items():
             try:

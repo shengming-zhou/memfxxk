@@ -24,7 +24,7 @@ from memfxxk.domain.context import (
     SectionName,
 )
 from memfxxk.domain.documents import DocumentInfo
-from memfxxk.domain.retrieval import MemoryType, SearchRequest, SearchTimings
+from memfxxk.domain.retrieval import GraphFact, MemoryType, SearchRequest, SearchTimings
 from memfxxk.ids import new_id
 from memfxxk.ingest import NotFound, _turn_part
 from memfxxk.scope import visible_filter
@@ -270,8 +270,12 @@ def _memory(
     related: list[UUID] | None = None,
     excerpt: str | None = None,
     graph: bool = False,
+    graph_fact: GraphFact | None = None,
 ) -> _Candidate:
     links = related or []
+    content = row["content"] if excerpt is None else excerpt
+    if graph and graph_fact is not None:
+        content = f"Graph relation: {graph_fact.fact}\n{content}"
     return _Candidate(
         ContextReference(
             kind="memory",
@@ -284,9 +288,10 @@ def _memory(
             compaction_method=row["metadata"].get("compaction_method", "legacy")
             if row["type"] == "summary"
             else None,
+            graph_edge_id=graph_fact.edge_id if graph_fact else None,
         ),
         heading,
-        row["content"] if excerpt is None else excerpt,
+        content,
         partial(_wrap_memory, row, links),
         f"[truncated: use memory_get {row['memory_id']}]",
         graph,
@@ -452,6 +457,7 @@ def _evidence(
                 related=[item.memory_id for item in hit.related],
                 excerpt=hit.snippet if request.evidence_mode == "excerpt" else None,
                 graph=bool(hit.graph_path),
+                graph_fact=hit.graph_fact,
             )
         )
     return candidates, response.timings_ms

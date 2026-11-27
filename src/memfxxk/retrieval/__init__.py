@@ -130,6 +130,7 @@ def search(
             lexical_candidates,
             vector_candidates,
             important_candidates,
+            vector,
         )
 
     timings.total = max(0, _milliseconds(started) - timings.embed)
@@ -146,9 +147,11 @@ def _build_hits(
     lexical: list[Candidate],
     vector: list[Candidate],
     important: list[Candidate],
+    query_vector: list[float],
 ) -> list[SearchHit]:
     ids = {candidate.id for group in (lexical, vector, important) for candidate in group}
-    if not ids:
+    graph = service.settings.strategies.graph
+    if not ids and not (graph == "graphiti" and request.graph_hops):
         return []
 
     stage = perf_counter()
@@ -205,20 +208,39 @@ def _build_hits(
     selected = reranker.rerank(request, hits)[: request.k]
     timings.fuse = _milliseconds(stage)
     stage = perf_counter()
-    if request.graph_hops and request.k > 1 and selected:
+    if (
+        request.graph_hops
+        and request.k > 1
+        and graph != "off"
+        and (selected or graph == "graphiti")
+    ):
         keep = selected[: max(1, request.k // 2)]
-        neighbors = graph_neighbors(
-            connection,
-            service.ctx,
-            request,
-            [rows[by_memory_id[hit.memory_id]] for hit in keep],
-            filters,
-        )
-        graph_ids = [row["memory_id"] for row, _ in neighbors]
+        seeds = [rows[by_memory_id[hit.memory_id]] for hit in keep]
+        if graph == "graphiti":
+            from memfxxk.m2.temporal_graph.search import graph_matches
+
+            graph_results = graph_matches(
+                connection, service, request, seeds, filters, tokens, query_vector
+            )
+            matched_facts = {item.row["memory_id"]: item.fact for item in graph_results}
+            for hit in keep:
+                hit.graph_fact = matched_facts.get(hit.memory_id)
+            kept_ids = {hit.memory_id for hit in keep}
+            neighbors = [
+                (item.row, item.path, item.fact)
+                for item in graph_results
+                if item.row["memory_id"] not in kept_ids
+            ]
+        else:
+            neighbors = [
+                (row, path, None)
+                for row, path in graph_neighbors(connection, service.ctx, request, seeds, filters)
+            ]
+        graph_ids = [row["memory_id"] for row, _, _ in neighbors]
         graph_marks = marks_for(connection, service.ctx, graph_ids)
         graph_preferences = preferences_for(connection, service.ctx, graph_ids)
         expanded = []
-        for row, path in neighbors:
+        for row, path, fact in neighbors:
             memory_id = row["memory_id"]
             rows[row["id"]] = row
             by_memory_id[memory_id] = row["id"]
@@ -231,6 +253,7 @@ def _build_hits(
                     content_truncated=excerpt != row["content"],
                     marks=graph_marks.get(memory_id, []),
                     graph_path=path,
+                    graph_fact=fact,
                     priority=priority,
                     tags=tags,
                     score=ScoreDetails(rrf=0, boost=1, final=0),
@@ -266,6 +289,20 @@ def _build_hits(
         ),
     )
     fresh_ids = {key for key, generation in remaining if rows[key]["generation"] == generation}
+    facts = {hit.graph_fact.edge_id: hit.graph_fact for hit in selected if hit.graph_fact}
+    if facts:
+        from memfxxk.db import entity_edges
+
+        live = dict(
+            connection.execute(
+                select(entity_edges.c.id, entity_edges.c.generation).where(
+                    visible_filter(entity_edges, service.ctx), entity_edges.c.id.in_(facts)
+                )
+            ).all()
+        )
+        for hit in selected:
+            if hit.graph_fact and live.get(hit.graph_fact.edge_id) != hit.graph_fact.generation:
+                hit.graph_fact = None
     return [
         hit
         for hit in selected

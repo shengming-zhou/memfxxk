@@ -186,6 +186,12 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 开启后台事实提取后，可以用 `GET /v1/fact-proposals` 查看提议，通过 `POST /v1/fact-proposals/{id}/review` 传 `{"accept": true}` 或 `{"accept": false}`。查询事实时，`as_of_valid` 指要问的生效日期，`as_of_recorded` 指当时系统掌握信息的截止时间。
 
+### 使用带时间的图记忆 {#temporal-graph-usage}
+
+设置 `MEMFXXK_STRATEGIES__GRAPH=graphiti` 后，新的对话轮次会在后台生成实体和关系。可共用默认模型，也可分别给 `entity_extract`、`entity_resolve`、`edge_extract`、`edge_resolve` 和 `node_summary` 配模型。查询传 `graph_hops=1` 或 `2`，并用 `as_of_valid` 查指定日期有效的关系。需要限定系统当时知道什么时，一并传 `as_of_recorded`。搜索返回的 `graph_fact` 包含关系文字、时间和原文 ID。用 `MEMFXXK_STRATEGIES__GRAPH=links` 可走原有图检索。 [时序图开发说明](/developer-manual/#t16-temporal-graph)
+
+六题回放里，时序图没提高答题准确率。按这批历史的消息长度折算，每千轮建图约用 1,452 万输入和 149 万输出 token。默认仍用原有链接图检查关联。 [时序图实测](/developer-manual/#temporal-graph-evaluation)
+
 ## 配置记忆模型 {#memory-model-configuration}
 
 可以给压缩和事实提取分别配模型。`MEMFXXK_LLM__DEFAULT__MODEL`、`MEMFXXK_LLM__DEFAULT__BASE_URL` 和 `MEMFXXK_LLM__DEFAULT__API_KEY` 设默认值。`MEMFXXK_LLM__TASKS__COMPACT__MODEL` 和 `MEMFXXK_LLM__TASKS__EXTRACT__MODEL` 可分别覆盖。使用量可从 `llm_calls` 汇总，也可给组织或项目设每日 token 限额。 [模型层开发说明](/developer-manual/#t16-llm-routing)

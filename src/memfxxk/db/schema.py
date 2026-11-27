@@ -402,3 +402,76 @@ llm_calls = sa.Table(
 )
 sa.Index("ix_llm_calls_org_day", llm_calls.c.org_id, llm_calls.c.created_at)
 sa.Index("ix_llm_calls_sources", llm_calls.c.source_event_ids, postgresql_using="gin")
+
+entities = sa.Table(
+    "entities",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("name", sa.Text, nullable=False),
+    sa.Column("normalized_name", sa.Text, nullable=False),
+    sa.Column("entity_type", sa.Text, nullable=False),
+    sa.Column("summary", sa.Text, nullable=False, server_default=""),
+    sa.Column("name_vector", VECTOR()),
+    sa.Column("embedding_model", sa.Text),
+    sa.Column("lexemes", TSVECTOR, nullable=False),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
+    sa.Column(
+        "summary_source_event_ids", ARRAY(UUID), nullable=False, server_default=sa.text("'{}'")
+    ),
+    sa.Column("generation", sa.Integer, nullable=False, server_default="0"),
+    timestamp("created_at"),
+)
+index_scope(entities)
+sa.Index("ix_entities_lexemes", entities.c.lexemes, postgresql_using="gin")
+sa.Index("ix_entities_sources", entities.c.source_event_ids, postgresql_using="gin")
+
+entity_edges = sa.Table(
+    "entity_edges",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("source_id", UUID, sa.ForeignKey("entities.id", ondelete="CASCADE"), nullable=False),
+    sa.Column("target_id", UUID, sa.ForeignKey("entities.id", ondelete="CASCADE"), nullable=False),
+    sa.Column("relation_type", sa.Text, nullable=False),
+    sa.Column("fact", sa.Text, nullable=False),
+    sa.Column("fact_vector", VECTOR()),
+    sa.Column("embedding_model", sa.Text),
+    sa.Column("lexemes", TSVECTOR, nullable=False),
+    sa.Column("valid_at", sa.DateTime(timezone=True)),
+    sa.Column("invalid_at", sa.DateTime(timezone=True)),
+    sa.Column("declared_invalid_at", sa.DateTime(timezone=True)),
+    sa.Column("expired_at", sa.DateTime(timezone=True)),
+    sa.Column("asserted_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
+    sa.Column("supports", JSONB, nullable=False),
+    sa.Column(
+        "invalidation_event_ids", ARRAY(UUID), nullable=False, server_default=sa.text("'{}'")
+    ),
+    sa.Column("generation", sa.Integer, nullable=False, server_default="0"),
+    timestamp("created_at"),
+)
+index_scope(entity_edges)
+sa.Index("ix_entity_edges_source", entity_edges.c.source_id, entity_edges.c.relation_type)
+sa.Index("ix_entity_edges_target", entity_edges.c.target_id)
+sa.Index("ix_entity_edges_sources", entity_edges.c.source_event_ids, postgresql_using="gin")
+sa.Index("ix_entity_edges_lexemes", entity_edges.c.lexemes, postgresql_using="gin")
+
+entity_mentions = sa.Table(
+    "entity_mentions",
+    metadata,
+    *scope_columns(),
+    sa.Column(
+        "entity_id", UUID, sa.ForeignKey("entities.id", ondelete="CASCADE"), primary_key=True
+    ),
+    sa.Column(
+        "episode_id", UUID, sa.ForeignKey("records.id", ondelete="CASCADE"), primary_key=True
+    ),
+    sa.Column("name", sa.Text, nullable=False),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
+    sa.Column("asserted_at", sa.DateTime(timezone=True), nullable=False),
+    timestamp("created_at"),
+)
+index_scope(entity_mentions)
+sa.Index("ix_entity_mentions_episode", entity_mentions.c.episode_id)
+sa.Index("ix_entity_mentions_sources", entity_mentions.c.source_event_ids, postgresql_using="gin")
