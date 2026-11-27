@@ -446,6 +446,22 @@ T17 的优先级由用户写入。所有候选按生效整数从高到低分层�
 
 `uv run pytest -q tests/unit/test_priority_layers.py tests/integration/test_content_priorities.py tests/integration/test_cli_mcp.py` 验证超大整数、组合继承、清除、404 隔离、旧数据升级与降级，以及 MCP 到 HTTP 的调用。优先级解析完全确定，本阶段无需模型 API。
 
+## T17 P11 内容详细程度 {#t17-content-resolutions}
+
+### 版本和出处 {#resolution-design}
+
+`full` 在读取时取原文。每个源有 `summary` 和 `line`，默认上限是原文 token 的 17% 且最多 512，`line` 最多 24，短文本按至少 1 token 计算。模型返回的每段文字须为原文的连续子串，代码分别校验两个版本的出处和预算。未配置、越界或失败时，截取可追溯的原文并标记 `extractive_fallback`。
+
+### 接口、存储和失效 {#resolution-implementation}
+
+`POST /v1/context/resolutions` 接 `ResolutionTarget`。同步与异步 SDK 都提供 `get_resolutions`。返回源 ID、`generation` 和 `sections`。每节有从 0 开始的索引、标题链和三个含 `text`、`tokens`、`method` 的对象。
+
+迁移 `0016` 增加 `content_resolutions`，只存短版和源事件 ID。文档、记忆块写入及记录嵌入后入队 `refresh_resolutions`。后台在调用前校验当前版本，在持用户操作锁写回前重新检查来源、代际与作业所有权。读取也匹配当前代际，旧版不会继续装载。源删除通过外键或源事件 ID 清理。旧数据和未处理作业按需摘录。文档切块复用章节来源。
+
+### 配置和核验 {#resolution-verification}
+
+显式设置 `MEMFXXK_LLM__TASKS__RESOLUTION_SUMMARIZE__MODEL` 才会调用 `resolution_summarize`。模型端点、密钥、超时和 JSON 模式沿用模型层设置。用 `uv run pytest -q tests/integration/test_content_resolutions.py` 验证版本失效、后台竞争、删除、降级和读权限。可选运行 `uv run python eval/run_t17_resolutions.py --output eval/results/t17/p11-smoke` 检查六类来源。保存的 DeepSeek Flash 试跑六次请求都落入摘录回退，六条均能追溯原文，网关未返回 token 用量。模型成功生成由独立的 fake LLM 回归验证。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

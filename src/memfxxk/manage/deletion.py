@@ -179,6 +179,7 @@ def forget_event(service: BoundService, event_id: UUID) -> ForgetResult:
                 )
             )
         )
+        from memfxxk.context.resolutions import forget_source as forget_resolutions
         from memfxxk.m2.amem import forget_source as forget_note_source
         from memfxxk.m2.blocks import forget_source as forget_block_source
         from memfxxk.m2.temporal_graph.deletion import forget_source as forget_graph_source
@@ -188,6 +189,7 @@ def forget_event(service: BoundService, event_id: UUID) -> ForgetResult:
         forget_note_source(conn, ctx.org_id, event_id)
         forget_block_source(conn, ctx.org_id, event_id)
         forget_tier_source(conn, ctx.org_id, event_id)
+        forget_resolutions(conn, ctx.org_id, event_id)
         result = _purge_memories(conn, ctx, memory_ids)
         for derived in (fact_proposals, compactions):
             conn.execute(

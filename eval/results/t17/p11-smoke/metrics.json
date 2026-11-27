@@ -1,0 +1,85 @@
+{
+  "model": "deepseek-flash",
+  "prompt": "source-resolution-v1",
+  "elapsed_ms": 13756,
+  "cases": [
+    {
+      "kind": "document",
+      "full_tokens": 76,
+      "summary_tokens": 12,
+      "line_tokens": 3,
+      "summary_method": "extractive_fallback",
+      "line_method": "extractive_fallback",
+      "source_grounded": true,
+      "expected_in_summary": false,
+      "model_input_tokens": 0,
+      "model_output_tokens": 0,
+      "calls": 1
+    },
+    {
+      "kind": "block",
+      "full_tokens": 72,
+      "summary_tokens": 12,
+      "line_tokens": 11,
+      "summary_method": "extractive_fallback",
+      "line_method": "extractive_fallback",
+      "source_grounded": true,
+      "expected_in_summary": true,
+      "model_input_tokens": 0,
+      "model_output_tokens": 0,
+      "calls": 1
+    },
+    {
+      "kind": "note",
+      "full_tokens": 72,
+      "summary_tokens": 12,
+      "line_tokens": 11,
+      "summary_method": "extractive_fallback",
+      "line_method": "extractive_fallback",
+      "source_grounded": true,
+      "expected_in_summary": true,
+      "model_input_tokens": 0,
+      "model_output_tokens": 0,
+      "calls": 1
+    },
+    {
+      "kind": "fact",
+      "full_tokens": 71,
+      "summary_tokens": 12,
+      "line_tokens": 10,
+      "summary_method": "extractive_fallback",
+      "line_method": "extractive_fallback",
+      "source_grounded": true,
+      "expected_in_summary": true,
+      "model_input_tokens": 0,
+      "model_output_tokens": 0,
+      "calls": 1
+    },
+    {
+      "kind": "lesson",
+      "full_tokens": 72,
+      "summary_tokens": 12,
+      "line_tokens": 11,
+      "summary_method": "extractive_fallback",
+      "line_method": "extractive_fallback",
+      "source_grounded": true,
+      "expected_in_summary": true,
+      "model_input_tokens": 0,
+      "model_output_tokens": 0,
+      "calls": 1
+    },
+    {
+      "kind": "turn",
+      "full_tokens": 76,
+      "summary_tokens": 12,
+      "line_tokens": 12,
+      "summary_method": "extractive_fallback",
+      "line_method": "extractive_fallback",
+      "source_grounded": true,
+      "expected_in_summary": false,
+      "model_input_tokens": 0,
+      "model_output_tokens": 0,
+      "calls": 1
+    }
+  ]
+}

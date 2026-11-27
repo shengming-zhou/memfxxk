@@ -224,7 +224,10 @@ def put_document_in_transaction(
         .one()
     )
     source_id = _audit(connection, service, scope, "put_document", updated, request.content)
+    from memfxxk.context.resolutions import queue_resolution
     from memfxxk.m2.doc_chunks import replace_chunks
+
+    queue_resolution(connection, scope, "document", updated["id"], head + 1, [source_id])
 
     replace_chunks(
         connection,

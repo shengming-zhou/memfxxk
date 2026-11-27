@@ -204,6 +204,12 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 六题回放里，时序图没提高答题准确率。按这批历史的消息长度折算，每千轮建图约用 1,452 万输入和 149 万输出 token。默认仍用原有链接图检查关联。 [时序图实测](/developer-manual/#temporal-graph-evaluation)
 
+### 查看原文、摘要或一句话 {#content-resolutions-usage}
+
+用 `POST /v1/context/resolutions` 查看三个版本。世界观文档传 `{"kind":"document","path":"world/ports.md"}`。笔记、事实、经验和对话记录传 `{"kind":"record","id":"<memory_id>"}`，记忆块传 `{"kind":"block","id":"<block_id>"}`。文档按 Markdown 标题分节返回。修改后可以立即读取新版原文及暂用的摘录，后台会补齐新版，删除原文后也无法读到派生摘要。
+
+短版的 `method` 会标出来源。`llm_extract` 是模型挑选的原句，没有配置摘要模型或调用失败时会得到 `extractive_fallback`。原文可用于查证具体措辞。 [详细程度与后台生成](/developer-manual/#t17-content-resolutions)
+
 ## 配置记忆模型 {#memory-model-configuration}
 
 可以给压缩和事实提取分别配模型。`MEMFXXK_LLM__DEFAULT__MODEL`、`MEMFXXK_LLM__DEFAULT__BASE_URL` 和 `MEMFXXK_LLM__DEFAULT__API_KEY` 设默认值。`MEMFXXK_LLM__TASKS__COMPACT__MODEL` 和 `MEMFXXK_LLM__TASKS__EXTRACT__MODEL` 可分别覆盖。使用量可从 `llm_calls` 汇总，也可给组织或项目设每日 token 限额。 [模型层开发说明](/developer-manual/#t16-llm-routing)

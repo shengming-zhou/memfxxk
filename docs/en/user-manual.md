@@ -196,6 +196,12 @@ Set `MEMFXXK_STRATEGIES__GRAPH=graphiti` to derive entities and relationships fr
 
 The six-question replay showed no answer accuracy gain. Scaled from those conversations, graph writes used about 14.52 million input and 1.49 million output tokens per 1,000 turns. The existing link graph is the default. [Temporal graph evaluation](/en/developer-manual/#temporal-graph-evaluation)
 
+### Read the original, a summary, or one line {#content-resolutions-usage}
+
+Use `POST /v1/context/resolutions` to inspect all three versions. Pass `{"kind":"document","path":"world/ports.md"}` for a setting document, `{"kind":"record","id":"<memory_id>"}` for a note, fact, lesson, or turn, or `{"kind":"block","id":"<block_id>"}` for a memory block. Documents return one entry per Markdown section. Edits expose the new original and a temporary excerpt immediately. The worker prepares the new versions. Deleting the source also removes access to its summaries.
+
+Each short version has a `method`. `llm_extract` means the model selected exact source wording. `extractive_fallback` is used when the task has no model or when a call fails. Use the original to verify the wording. [Resolutions and workers](/en/developer-manual/#t17-content-resolutions)
+
 ## Configure memory models {#memory-model-configuration}
 
 Compaction and fact extraction can use different models. Set defaults with `MEMFXXK_LLM__DEFAULT__MODEL`, `MEMFXXK_LLM__DEFAULT__BASE_URL`, and `MEMFXXK_LLM__DEFAULT__API_KEY`. Override model names with `MEMFXXK_LLM__TASKS__COMPACT__MODEL` or `MEMFXXK_LLM__TASKS__EXTRACT__MODEL`. Operators can summarize `llm_calls` or set a daily token limit by organization or project. [Model task configuration](/en/developer-manual/#t16-llm-routing)

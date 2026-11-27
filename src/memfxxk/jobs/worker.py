@@ -104,6 +104,8 @@ class Worker:
         self.worker_id = worker_id or str(new_id())
         self.bundle_retention = timedelta(days=service.settings.bundle_retention_days)
         self.draft_retention = timedelta(hours=service.settings.m2.draft_retention_hours)
+        from memfxxk.context.resolutions import JOB as RESOLUTION_JOB
+        from memfxxk.context.resolutions import queue_embedded, refresh
         from memfxxk.embedding import CachedEmbedder, make_embedding_provider
         from memfxxk.qdrant import SYNC_KIND, QdrantClient, sync_projection
 
@@ -130,12 +132,17 @@ class Worker:
                 from memfxxk.m2.amem import queue_from_embeddings
 
                 queue_from_embeddings(service, batch)
+            queue_embedded(service, batch)
 
         def handle_projection(batch: list[Job]) -> None:
             sync_projection(self.engine, qdrant, batch[0])
 
+        def handle_resolution(batch: list[Job]) -> None:
+            refresh(service, batch[0])
+
         self.handlers: dict[str, Callable[[list[Job]], None]] = {
             "embed_record": handle_embed,
+            RESOLUTION_JOB: handle_resolution,
             SYNC_KIND: handle_projection,
         }
         if service.settings.fact_strategy != "off":
@@ -227,6 +234,7 @@ class Worker:
                     "tier_summarize",
                     "opinion_update",
                     "distill_task",
+                    "refresh_resolutions",
                 )
                 else None,
             )

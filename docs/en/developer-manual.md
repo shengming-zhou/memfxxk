@@ -440,6 +440,22 @@ Set the project default to 3, the `world` directory to 40, `world/ports.md` to 6
 
 Run `uv run pytest -q tests/unit/test_priority_layers.py tests/integration/test_content_priorities.py tests/integration/test_cli_mcp.py` to cover large integers, inheritance, clearing, scope isolation, upgrades and downgrades, and the MCP-to-HTTP path. Priority resolution is deterministic and uses no model API.
 
+## T17 P11 Content resolutions {#t17-content-resolutions}
+
+### Versions and provenance {#resolution-design}
+
+`full` reads from the current original. Each source has `summary` and `line` versions. The summary is capped at 17% of the source token count and 512 tokens. A line is also capped at 24 tokens. Very short inputs have a minimum cap of one token. The service checks each model excerpt against the original and enforces both version limits. Missing model configuration, invalid excerpts, and failed calls fall back to marked extracts.
+
+### API, storage, and invalidation {#resolution-implementation}
+
+`POST /v1/context/resolutions` accepts a `ResolutionTarget`. Both SDKs expose `get_resolutions`. The response contains the source ID, `generation`, and `sections`. Each section has a zero-based index, heading chain, and three objects with `text`, `tokens`, and `method`.
+
+Migration `0016` adds `content_resolutions` for shorter versions and source event IDs. Document and memory-block writes and completed record embeddings enqueue `refresh_resolutions`. Workers check the generation before generation and validate the source, current generation, and claim under the user-operation lock before writing. Reads also require the current generation. Foreign keys and event IDs remove derived rows when the source is deleted. Existing content and pending jobs use excerpts on demand. Document chunks use their source sections.
+
+### Configuration and verification {#resolution-verification}
+
+Explicitly set `MEMFXXK_LLM__TASKS__RESOLUTION_SUMMARIZE__MODEL` to enable calls. The task uses the shared endpoint, credential, timeout, and JSON configuration. Run `uv run pytest -q tests/integration/test_content_resolutions.py` for invalidation, concurrent changes, deletion, fallback, and scope isolation. For a live check of six source types, run `uv run python eval/run_t17_resolutions.py --output eval/results/t17/p11-smoke`. All six DeepSeek Flash requests in the saved run used the fallback. All extracts were grounded. The gateway reported no token usage. Separate fake-model tests exercise successful generation.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

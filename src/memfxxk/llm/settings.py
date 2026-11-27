@@ -25,6 +25,7 @@ Task = Literal[
     "workflow_induce",
     "rerank",
     "persona_update",
+    "resolution_summarize",
 ]
 
 

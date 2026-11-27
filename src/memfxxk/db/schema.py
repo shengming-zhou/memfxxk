@@ -625,3 +625,24 @@ block_proposals = sa.Table(
 )
 index_scope(block_proposals)
 sa.Index("ix_block_proposals_sources", block_proposals.c.source_event_ids, postgresql_using="gin")
+
+content_resolutions = sa.Table(
+    "content_resolutions",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("record_id", UUID, sa.ForeignKey("records.id", ondelete="CASCADE")),
+    sa.Column("document_id", UUID, sa.ForeignKey("documents.id", ondelete="CASCADE")),
+    sa.Column("block_id", UUID, sa.ForeignKey("memory_blocks.id", ondelete="CASCADE")),
+    sa.Column("generation", sa.Integer, nullable=False),
+    sa.Column("variants", JSONB, nullable=False),
+    sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
+    sa.CheckConstraint(
+        "num_nonnulls(record_id, document_id, block_id) = 1", name="ck_content_resolutions_source"
+    ),
+)
+sa.Index(
+    "ix_content_resolutions_sources", content_resolutions.c.source_event_ids, postgresql_using="gin"
+)
+for _resolution_fk in ("record_id", "document_id", "block_id"):
+    sa.Index(f"ix_content_resolutions_{_resolution_fk}", content_resolutions.c[_resolution_fk])

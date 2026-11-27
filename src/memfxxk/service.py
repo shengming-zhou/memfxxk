@@ -44,6 +44,7 @@ from memfxxk.domain.manage import (
 from memfxxk.domain.notes import NoteHistoryEntry, NoteProjection, RollbackNote
 from memfxxk.domain.priorities import ClearPriority, PriorityResult, PriorityTarget, SetPriority
 from memfxxk.domain.reflect import ReflectRequest, ReflectResult
+from memfxxk.domain.resolutions import ContentResolutions, ResolutionTarget
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 from memfxxk.domain.sessions import PutSessionState, SessionState
 from memfxxk.domain.workspace import (
@@ -359,6 +360,11 @@ class BoundService:
 
     def get_priority(self, target: PriorityTarget) -> PriorityResult:
         from memfxxk.context.priorities import get
+
+        return get(self, target)
+
+    def get_resolutions(self, target: ResolutionTarget) -> ContentResolutions:
+        from memfxxk.context.resolutions import get
 
         return get(self, target)
 

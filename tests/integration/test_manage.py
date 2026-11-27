@@ -36,7 +36,7 @@ def test_remember_indexes_transactionally_and_is_idempotent(
     page = manage.list_memories(owner, ListRequest(q="parseHTTPResponse"))
     assert [row.memory_id for row in page.items] == [original.memory_id]
     assert page.items[0].marks == []
-    assert drain(service) == 1
+    assert drain(service, kinds={"embed_record"}) == 1
     with engine.connect() as conn:
         assert conn.scalar(select(func.count()).select_from(record_embeddings)) == 1
         audit = conn.execute(select(events.c.kind, events.c.payload)).one()
@@ -148,7 +148,7 @@ def test_deactivate_reactivate_and_redact_hard_deleted_memory(
     manage.patch_memory(
         owner, memory.memory_id, PatchRequest(base_version=1, content="delete-new value")
     )
-    assert drain(service) == 3
+    assert drain(service, kinds={"embed_record"}) == 3
     manage.forget(owner, memory.memory_id, "deactivate")
     assert not manage.list_memories(owner, ListRequest(marks=["pinned"])).items
     assert manage.list_memories(owner, ListRequest(status="inactive")).items[0].marks == ["pinned"]
@@ -163,7 +163,7 @@ def test_deactivate_reactivate_and_redact_hard_deleted_memory(
     deleted = manage.forget(owner, memory.memory_id, "delete")
     assert (deleted.records, deleted.embeddings, deleted.marks, deleted.relations) == (2, 2, 1, 1)
     assert deleted.events_redacted == 5
-    assert drain(service) == 1
+    assert drain(service, kinds={"embed_record"}) == 1
     with engine.connect() as conn:
         assert conn.execute(select(records.c.memory_id)).all() == [(peer.memory_id,)]
         assert conn.scalar(select(func.count()).select_from(record_embeddings)) == 1

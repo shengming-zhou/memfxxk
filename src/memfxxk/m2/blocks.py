@@ -144,6 +144,9 @@ def write_revision(
         .where(memory_blocks.c.id == row["id"], visible_filter(memory_blocks, ctx))
         .values(head_revision=revision, revision_seq=revision)
     )
+    from memfxxk.context.resolutions import queue_resolution
+
+    queue_resolution(conn, Scope.model_validate(dict(row)), "block", row["id"], revision)
     return revision
 
 

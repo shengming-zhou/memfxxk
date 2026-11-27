@@ -54,12 +54,12 @@ def test_drain_embeds_batch_and_reuses_cached_content(
     embedder = CachedEmbedder(engine, provider)
     write_turns("alpha", "beta")
 
-    assert drain(service, embedder=embedder) == 2
+    assert drain(service, embedder=embedder, kinds={"embed_record"}) == 2
     assert len(provider.batches) == 1
     assert len(provider.batches[0]) == 2
 
     write_turns("alpha")
-    assert drain(service, embedder=embedder) == 1
+    assert drain(service, embedder=embedder, kinds={"embed_record"}) == 1
     assert len(provider.batches) == 1
 
     with engine.connect() as connection:
@@ -100,7 +100,9 @@ def test_stale_job_never_writes_embedding(
     assert bool(provider.batches) == (when == "during_embedding")
     with engine.connect() as connection:
         assert connection.scalar(select(func.count()).select_from(record_embeddings)) == 0
-        assert connection.execute(select(jobs.c.status)).scalar_one() == "done"
+        assert (
+            connection.scalar(select(jobs.c.status).where(jobs.c.kind == "embed_record")) == "done"
+        )
 
 
 def test_job_retries_after_provider_failure_and_goes_dead(
@@ -156,5 +158,7 @@ def test_rebuild_during_embedding_keeps_new_job_queued(
     assert len(provider.batches) == 2
     assert "end of turn" in provider.batches[1][0]
     with engine.connect() as connection:
-        assert connection.execute(select(jobs.c.status)).scalar_one() == "done"
+        assert (
+            connection.scalar(select(jobs.c.status).where(jobs.c.kind == "embed_record")) == "done"
+        )
         assert connection.scalar(select(func.count()).select_from(record_embeddings)) == 1

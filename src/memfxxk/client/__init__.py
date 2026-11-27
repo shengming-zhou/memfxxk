@@ -60,6 +60,7 @@ from memfxxk.domain.manage import (
 from memfxxk.domain.notes import NoteHistoryEntry, NoteProjection, RollbackNote
 from memfxxk.domain.priorities import ClearPriority, PriorityResult, PriorityTarget, SetPriority
 from memfxxk.domain.reflect import ReflectRequest, ReflectResult
+from memfxxk.domain.resolutions import ContentResolutions, ResolutionTarget
 from memfxxk.domain.retrieval import MemoryResponse, SearchRequest, SearchResponse
 from memfxxk.domain.sessions import PutSessionState, SessionState
 from memfxxk.domain.workspace import (
@@ -297,6 +298,9 @@ class MemfxxkClient(ClientContext):
 
     def get_priority(self, target: PriorityTarget) -> PriorityResult:
         return self._request("POST", "priorities/resolve", PriorityResult, body=target)
+
+    def get_resolutions(self, target: ResolutionTarget) -> ContentResolutions:
+        return self._request("POST", "context/resolutions", ContentResolutions, body=target)
 
     def set_priority(self, request: SetPriority) -> PriorityResult:
         return self._request("PUT", "priorities", PriorityResult, body=request)
@@ -596,6 +600,9 @@ class AsyncMemfxxkClient(ClientContext):
 
     async def get_priority(self, target: PriorityTarget) -> PriorityResult:
         return await self._request("POST", "priorities/resolve", PriorityResult, body=target)
+
+    async def get_resolutions(self, target: ResolutionTarget) -> ContentResolutions:
+        return await self._request("POST", "context/resolutions", ContentResolutions, body=target)
 
     async def set_priority(self, request: SetPriority) -> PriorityResult:
         return await self._request("PUT", "priorities", PriorityResult, body=request)

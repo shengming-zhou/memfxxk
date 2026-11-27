@@ -17,6 +17,7 @@ from memfxxk.domain.documents import Document, DocumentInfo, DocumentRevision, P
 from memfxxk.domain.lessons import FinishedTask, FinishTask
 from memfxxk.domain.priorities import ClearPriority, PriorityResult, PriorityTarget, SetPriority
 from memfxxk.domain.reflect import ReflectRequest, ReflectResult
+from memfxxk.domain.resolutions import ContentResolutions, ResolutionTarget
 from memfxxk.domain.sessions import PutSessionState, SessionState
 from memfxxk.domain.workspace import (
     ImportWorkspaceRequest,
@@ -91,6 +92,11 @@ def build_context(request: BuildContextRequest, service: RequestService) -> Cont
 @router.post("/priorities/resolve")
 def get_priority(target: PriorityTarget, service: RequestService) -> PriorityResult:
     return service.get_priority(target)
+
+
+@router.post("/context/resolutions")
+def read_resolutions(target: ResolutionTarget, service: RequestService) -> ContentResolutions:
+    return service.get_resolutions(target)
 
 
 @router.put("/priorities")
