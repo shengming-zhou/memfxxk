@@ -134,11 +134,16 @@ class Worker:
             "embed_record": handle_embed,
             SYNC_KIND: handle_projection,
         }
-        if service.settings.m2.extract_facts:
+        if service.settings.fact_strategy != "off":
             from memfxxk.m2.facts import extract
 
             def handle_facts(batch: list[Job]) -> None:
-                extract(service, batch[0])
+                if service.settings.fact_strategy == "key_proposal":
+                    extract(service, batch[0])
+                else:
+                    from memfxxk.m2.mem0 import process
+
+                    process(service, batch[0], embedder)
 
             self.register("extract_facts", handle_facts)
 

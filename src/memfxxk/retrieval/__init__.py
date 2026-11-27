@@ -165,6 +165,10 @@ def _build_hits(
 
     settings = service.settings.search
     scores = fuse(fresh(lexical), fresh(vector), fresh(important), settings)
+    if service.settings.strategies.mem0_additive_ranking:
+        from memfxxk.m2.mem0_ranking import apply_additive_weights
+
+        apply_additive_weights(scores, rows, tokens)
     memory_ids = [rows[key]["memory_id"] for key in scores]
     marks = marks_for(connection, service.ctx, memory_ids)
     preferences = preferences_for(connection, service.ctx, memory_ids)

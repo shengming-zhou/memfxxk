@@ -166,7 +166,7 @@ class BoundService:
                 write_project=self.write_project,
                 namespace=self.idempotency_namespace,
             )
-            if self.settings.m2.extract_facts:
+            if self.settings.fact_strategy != "off":
                 from memfxxk.m2.facts import enqueue_closed_turns
 
                 enqueue_closed_turns(connection, self.ctx, batch, results)

@@ -188,7 +188,17 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 ## 配置记忆模型 {#memory-model-configuration}
 
-可以给压缩和事实提取分别配模型。`MEMFXXK_LLM__DEFAULT__MODEL`、`MEMFXXK_LLM__DEFAULT__BASE_URL` 和 `MEMFXXK_LLM__DEFAULT__API_KEY` 设默认值。`MEMFXXK_LLM__TASKS__COMPACT__MODEL` 和 `MEMFXXK_LLM__TASKS__EXTRACT__MODEL` 可分别覆盖。事实提取还需要打开 `MEMFXXK_M2__EXTRACT_FACTS=true`。模型调用成本取决于历史大小与触发频率。使用量可从 `llm_calls` 汇总，也可给组织或项目设每日 token 限额。 [模型层开发说明](/developer-manual/#t16-llm-routing)
+可以给压缩和事实提取分别配模型。`MEMFXXK_LLM__DEFAULT__MODEL`、`MEMFXXK_LLM__DEFAULT__BASE_URL` 和 `MEMFXXK_LLM__DEFAULT__API_KEY` 设默认值。`MEMFXXK_LLM__TASKS__COMPACT__MODEL` 和 `MEMFXXK_LLM__TASKS__EXTRACT__MODEL` 可分别覆盖。使用量可从 `llm_calls` 汇总，也可给组织或项目设每日 token 限额。 [模型层开发说明](/developer-manual/#t16-llm-routing)
+
+### 选择事实写入方式 {#fact-strategy-settings}
+
+- `MEMFXXK_STRATEGIES__FACTS=key_proposal` 会从已结束轮次提出事实，等用户确认后才写成事实记忆。原有的 `MEMFXXK_M2__EXTRACT_FACTS=true` 也能开启这条路径。
+- `MEMFXXK_STRATEGIES__FACTS=mem0_classic` 会先提取，再判断旧事实要更新、失效还是保留。用户确认、显式保存或标记过的事实仍走待审。需要同时配置 `extract` 和 `reconcile` 两个任务。
+- `MEMFXXK_STRATEGIES__FACTS=mem0_additive` 每轮用一次抽取，新增事实和旧说法并存，后续可以查两个版本的原话。加上 `MEMFXXK_STRATEGIES__MEM0_ADDITIVE_RANKING=true` 可在召回后给匹配的实体和较新的有效时间加权。
+
+选择 `off` 暂停后台提取。切换策略后，已经存下的事实仍可读取。 [事实写入开发说明](/developer-manual/#t16-fact-strategies)
+
+本次 51 轮回放折算每千轮，classic 写入约用 356 万输入、20 万输出 token，additive 约用 341 万输入、50 万输出 token。实际花费随消息长度和已有事实数量变化。 [实测明细](/developer-manual/#mem0-classic-evaluation)
 
 ## 查看证据评测 {#evidence-evaluation}
 

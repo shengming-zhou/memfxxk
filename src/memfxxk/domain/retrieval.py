@@ -49,6 +49,8 @@ class ScoreDetails(BaseModel):
     rrf: float
     boost: float
     final: float
+    fact_bm25: float | None = None
+    fact_entity_boost: float | None = None
 
 
 class RelatedMemory(BaseModel):

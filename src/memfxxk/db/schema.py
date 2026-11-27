@@ -338,6 +338,13 @@ fact_proposals = sa.Table(
     sa.Column("id", UUID, primary_key=True),
     *scope_columns(),
     sa.Column("source_event_ids", ARRAY(UUID), nullable=False),
+    sa.Column("operation", sa.Text, nullable=False, server_default="propose"),
+    sa.Column("base_version", sa.Integer),
+    sa.CheckConstraint(
+        "(operation = 'propose' AND base_version IS NULL) "
+        "OR (operation IN ('update', 'delete') AND base_version > 0 AND base_version IS NOT NULL)",
+        name="ck_fact_proposal_operation",
+    ),
     sa.Column("fact", JSONB, nullable=False),
     sa.Column("status", sa.Text, nullable=False, server_default="pending"),
     sa.Column("memory_id", UUID),

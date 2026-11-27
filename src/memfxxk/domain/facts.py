@@ -19,6 +19,8 @@ class FactProposal(BaseModel):
     created_at: AwareDatetime
     memory_id: UUID | None = None
     memory_version: int | None = None
+    operation: Literal["propose", "update", "delete"] = "propose"
+    base_version: int | None = None
 
 
 class FactReview(BaseModel):

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from sqlalchemy import Connection
@@ -26,7 +26,9 @@ def derived_record(
     source_pos: dict[str, Any] | None = None,
     metadata: dict[str, Any] | None = None,
     valid_from: datetime | None = None,
+    valid_to: datetime | None = None,
     confirmed: bool = False,
+    status: Literal["active", "inactive"] = "active",
 ) -> None:
     conn.execute(
         records.update()
@@ -49,9 +51,12 @@ def derived_record(
             confirmed=confirmed,
             event_time=event_time,
             valid_from=valid_from,
+            valid_to=valid_to,
+            status=status,
             lexemes=lexemes(content),
             created_by=ctx.actor.model_dump(),
             metadata=metadata or {},
         )
     )
-    embed_record(conn, record_id, 0)
+    if status == "active":
+        embed_record(conn, record_id, 0)

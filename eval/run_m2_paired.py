@@ -23,7 +23,7 @@ from sqlalchemy import func, select
 from sqlalchemy.engine import make_url
 from sqlalchemy.schema import CreateSchema, DropSchema
 
-from memfxxk.config import M2Settings, Settings
+from memfxxk.config import M2Settings, Settings, StrategiesSettings
 from memfxxk.db import create_engine, llm_calls
 from memfxxk.domain.context import BuildContextRequest, PrepareCompaction, SearchFilters
 from memfxxk.domain.events import IngestEvent
@@ -132,6 +132,7 @@ def _isolated_service(settings: Settings) -> Iterator[MemoryService]:
                 update={
                     "m2": M2Settings(),
                     "llm": LLMSettings(),
+                    "strategies": StrategiesSettings(),
                 }
             ),
         )

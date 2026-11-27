@@ -184,6 +184,56 @@ Each arm missed gold evidence at retrieval for four questions and retrieved it w
 
 The model made 60 compaction calls using 4,125,762 input and 83,614 output tokens. The two compactions per question took p50 / p95 of 16.88 / 23.22 seconds, compared with 0.55 / 0.78 seconds for extractive summary. The table's answer latency excludes this build time. The observed cost per 1,000 turns was about 618,833 input and 12,541 output tokens. Including answering and judging, the formal run used 4,363,623 tokens. Separate gateway diagnostics are outside that total.
 
+## T16 P2 fact write strategies {#t16-fact-strategies}
+
+`MEMFXXK_STRATEGIES__FACTS` selects `off`, `key_proposal`, `mem0_classic`, or `mem0_additive`. Without an explicit setting, `MEMFXXK_M2__EXTRACT_FACTS` still controls the original review workflow, which defaults to off. Apply the same configuration to ingestion and workers. Both Mem0 strategies process closed turns and validate job ownership, source generation, visibility, and the target version before writing.
+
+### Mem0 classic {#mem0-classic}
+
+#### Upstream behavior {#mem0-classic-upstream}
+
+The paper extracts facts using a session summary, ten recent messages, and the newest message pair. For each candidate it retrieves ten similar memories. A second model call decides ADD, UPDATE, DELETE, or NONE. The earlier OSS implementation maps temporary IDs to stored IDs, removes vectors on DELETE, and records old text, new text, operation, and deletion in SQLite history. [Mem0 §2.1](https://arxiv.org/html/2504.19413#S2.SS1) [v0.1.118 writes](https://github.com/mem0ai/mem0/blob/v0.1.118/mem0/memory/main.py) [History table](https://github.com/mem0ai/mem0/blob/v0.1.118/mem0/memory/storage.py)
+
+#### Implementation {#mem0-classic-implementation}
+
+`m2/mem0.py` reads the closed turn, the previous ten messages in the same session, and any earlier committed summary. Configure the `extract` and `reconcile` tasks. A new statement must cite the current turn. Cosine search returns up to ten visible current and valid facts per candidate. Newly written, unindexed facts participate with on-demand embeddings. An UPDATE or DELETE can only use an integer from that candidate's retrieval results. UPDATE checks `old_memory` and the current record version.
+
+#### Differences from upstream {#mem0-classic-differences}
+
+UPDATE adds a version in `records`. DELETE writes an inactive version with a zero-length validity interval under the same memory ID. Valid and recorded time constraints preserve historical reads. Explicitly saved, confirmed, and marked facts get review proposals. Migration `0008` adds `operation` and `base_version` to `fact_proposals` so approvals check the target version. Downgrade preserves those fields and the review status in JSON, temporarily rejecting pending actions. Upgrade restores their status.
+
+#### Example {#mem0-classic-example}
+
+“Atlas uses the Paris hub” yields a candidate and an ADD, which creates version 1. A move to Lyon produces a new extracted statement. The next reconciliation receives Paris at ID `0` and returns an UPDATE with the replacement text and exact Paris text. Automatic facts get version 2. If the user confirmed the Paris fact, version 1 stays in effect until the proposal is approved.
+
+#### Evaluation results {#mem0-classic-evaluation}
+
+Run `uv run python eval/run_t16_facts.py --output eval/results/t16/p2-oracle`. The suite freezes three knowledge-update and three temporal-reasoning questions. All arms use the same LongMemEval Oracle histories, top 8, and a 1,500-token memory budget. The dataset provides the relevant sessions. This test measures changes in fact writes and answers. A subsequent comparison can measure retrieval with the full distractor history.
+
+The final run used `deepseek-flash` for extraction and reconciliation, `gpt-5.4-mini` for answers and judging, and BGE-small-en-v1.5 embeddings. Each arm replayed 51 turns. G3 answered 2/6 and classic 3/6. Knowledge updates improved from 2/3 to 3/3, with both arms at 0/3 for temporal reasoning. Classic loaded a fact with a gold source on three questions. Its 101 write calls used 181,548 input and 10,224 output tokens. Per-question ingest, write, and index p50 / p95 latency was 24.52 / 33.05 seconds, compared with G3 at 1.30 / 2.55 seconds. Classic retrieval and assembly p50 / p95 was 64 / 153 milliseconds, compared with G3 at 190 / 245 milliseconds.
+
+### Mem0 additive {#mem0-additive}
+
+#### Upstream behavior {#mem0-additive-upstream}
+
+OSS v3 retrieves ten existing memories with an embedding of the current messages. One model call sees recent messages, existing memories, and the new turn. The new items are embedded and written in batches. The model attributes statements to users or assistants and can link to existing memories. Duplicates are removed and existing records remain available. [Mem0 prompt](https://github.com/mem0ai/mem0/blob/main/mem0/configs/prompts.py) [Mem0 writes](https://github.com/mem0ai/mem0/blob/main/mem0/memory/main.py)
+
+#### Implementation {#mem0-additive-implementation}
+
+One `extract` call supplies additions. The worker checks speaker attribution and current-turn sources and stores the normalized content hash, entity labels, and `attributed_to` in fact metadata. Valid linked IDs create rows in `memory_relations`. Entity matching normalizes Unicode, case, and whitespace, then checks cosine similarity against retrieved entity labels at a 0.95 threshold. Adopting a canonical alias retains its source dependency so erasure also removes the affected derived record.
+
+#### Differences from upstream {#mem0-additive-differences}
+
+`MEMFXXK_STRATEGIES__MEM0_ADDITIVE_RANKING=true` calculates BM25 over additive facts that the hybrid search retrieved and adds entity and effective-time weights. The original PostgreSQL full-text and vector channels supply the candidates. Both link endpoints are checked again for visibility and active status. Erasing an original source uses existing deletion propagation to remove the affected fact and its links.
+
+#### Example {#mem0-additive-example}
+
+The user first says Atlas uses the Paris hub and later switches to Lyon. The extractor sees Paris with a temporary ID and returns the Lyon statement, user attribution, the link ID, and entity `Atlas`. Both facts remain available. A relevant query favors the more recent effective time, and the link leads back to the Paris sources.
+
+#### Evaluation results {#mem0-additive-evaluation}
+
+Uses the [same frozen suite](#mem0-classic-evaluation) with additive fact weighting enabled. The final run answered 3/6, with 2/3 knowledge updates and 1/3 temporal reasoning. It gained two answers and lost one against G3, and loaded facts with gold sources on all six questions. There were 56 write calls, including five initial validation failures followed by repair. All 51 write jobs finished. Write usage was 174,095 input and 25,331 output tokens. Ingest, write, and index p50 / p95 was 25.92 / 45.41 seconds. Retrieval and assembly p50 / p95 was 70 / 141 milliseconds. Scores varied between the two runs. Both strategies remain opt-in. The final run used 419,464 tokens in total. The manifest and per-question diagnostics are in `eval/results/t16/p2-oracle-validated`.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

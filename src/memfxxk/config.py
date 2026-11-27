@@ -88,6 +88,14 @@ class M2Settings(BaseModel):
     recent_user_tokens: int = Field(default=1024, ge=0)
 
 
+FactStrategy = Literal["off", "key_proposal", "mem0_classic", "mem0_additive"]
+
+
+class StrategiesSettings(BaseModel):
+    facts: FactStrategy | None = None
+    mem0_additive_ranking: bool = False
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="MEMFXXK_", env_nested_delimiter="__", env_file=".env", extra="ignore"
@@ -103,6 +111,7 @@ class Settings(BaseSettings):
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     eval: EvalSettings = Field(default_factory=EvalSettings)
     m2: M2Settings = Field(default_factory=M2Settings)
+    strategies: StrategiesSettings = Field(default_factory=StrategiesSettings)
     llm: LLMSettings = Field(default_factory=LLMSettings)
     mcp_enable_host: bool = False
     mcp_enable_manage: bool = False
@@ -113,8 +122,16 @@ class Settings(BaseSettings):
         legacy = self.m2.model if task in ("compact", "extract") else None
         return self.llm.resolve(task, legacy)
 
+    @property
+    def fact_strategy(self) -> FactStrategy:
+        if self.strategies.facts is not None:
+            return self.strategies.facts
+        return "key_proposal" if self.m2.extract_facts else "off"
+
     @model_validator(mode="after")
     def extraction_requires_model(self) -> "Settings":
-        if self.m2.extract_facts and not self.task_model("extract").model.strip():
+        if self.fact_strategy != "off" and not self.task_model("extract").model.strip():
             raise ValueError("Fact extraction requires a configured extract model")
+        if self.fact_strategy == "mem0_classic" and not self.task_model("reconcile").model.strip():
+            raise ValueError("Mem0 classic requires a configured reconcile model")
         return self

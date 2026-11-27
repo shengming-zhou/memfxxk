@@ -190,6 +190,56 @@ Codex 向模型提交对话历史，在摘要前加固定前缀，并保留最�
 
 模型压缩单独用了 60 次调用、4,125,762 输入和 83,614 输出 token。每题两次压缩合计 p50 / p95 为 16.88 / 23.22 秒，截断摘要为 0.55 / 0.78 秒。这段构建时间不计入表中的答题延时。按本次回放折算，每千轮约 618,833 输入与 12,541 输出 token。总用量含三组答题与评分为 4,363,623 token，单独的网关诊断调用不在本表内。
 
+## T16 P2 事实写入策略 {#t16-fact-strategies}
+
+`MEMFXXK_STRATEGIES__FACTS` 接受 `off`、`key_proposal`、`mem0_classic` 和 `mem0_additive`。未设置时继续由 `MEMFXXK_M2__EXTRACT_FACTS` 控制原有待审模式，默认关闭。切换配置需同时更新写入服务与 worker。两套 Mem0 策略都在轮次结束后处理原文，通过作业代次、租约、可见性与目标版本检查写回。
+
+### Mem0 classic {#mem0-classic}
+
+#### 原版怎么做 {#mem0-classic-upstream}
+
+论文用会话摘要、最近 10 条消息和最新一对消息抽出事实。对每条候选找 10 条相似旧记忆，再调一次模型决定 ADD、UPDATE、DELETE 或 NONE。旧版 OSS 给已有记忆编临时 ID，UPDATE 映射回旧 ID，DELETE 移除向量记录，SQLite 历史表记旧值、新值、操作及删除标记。 [Mem0 §2.1](https://arxiv.org/html/2504.19413#S2.SS1) [v0.1.118 写入](https://github.com/mem0ai/mem0/blob/v0.1.118/mem0/memory/main.py) [历史表](https://github.com/mem0ai/mem0/blob/v0.1.118/mem0/memory/storage.py)
+
+#### 这里怎么做 {#mem0-classic-implementation}
+
+`m2/mem0.py` 从同一会话读取关闭的轮次、前十条消息和能够覆盖更早内容的已提交摘要。配置 `extract` 和 `reconcile` 两个任务模型。新的陈述必须引用这一轮原文。每条陈述用余弦抓取最多 10 条可见、有效的当前事实，刚写入且还没建索引的事实使用现算向量参加比较。更新或删除的整数必须来自这个候选的检索集合。UPDATE 同时核对 `old_memory` 和当前版本。
+
+#### 和原版的差异 {#mem0-classic-differences}
+
+UPDATE 在 `records` 增加版本。DELETE 写入有效期为零的失效版本，使用同一个记忆 ID。有效时间和记录时间的约束让旧版本可以历史回查。用户明确保存、确认或标记的事实生成待审提议。迁移 `0008` 为 `fact_proposals` 加 `operation` 和 `base_version`，防止把提议套在已经更新的版本上。降级会把这两列与状态存进 JSON，并将待审写入暂时标为拒绝，升级时还原。
+
+#### 一个具体例子 {#mem0-classic-example}
+
+原文「Atlas 用巴黎站点」产生候选，第二个模型返回 `ADD`，事实版本为 1。下一轮用户改到里昂时，抽取先产出「Atlas 用里昂站点」。第二次调用把巴黎记忆列为 ID `0`，模型返回 `UPDATE`、替换文本和原始巴黎文本。自动记录写成版本 2。若巴黎已由用户确认，版本 1 在提议获批前仍然生效。
+
+#### 评测结果 {#mem0-classic-evaluation}
+
+用 `uv run python eval/run_t16_facts.py --output eval/results/t16/p2-oracle` 重跑。固定 3 道知识更新和 3 道时间推理题，三组都用同一份 LongMemEval Oracle 历史、top 8 和 1,500 token。Oracle 历史是数据集标好的相关会话，这一设计评测写入和答案变化，完整干扰历史的效果由后续对照验证。
+
+最终实跑使用 `deepseek-flash` 提取和合并、`gpt-5.4-mini` 答题和评分、BGE-small-en-v1.5 嵌入。每组回放 51 轮。G3 答对 2/6，classic 答对 3/6，其中知识更新从 2/3 到 3/3，时间推理均为 0/3。classic 有 3 题装入带标准来源的事实。101 次写入模型调用共用 181,548 输入和 10,224 输出 token。每题导入、写入和索引的 p50 / p95 为 24.52 / 33.05 秒，G3 为 1.30 / 2.55 秒。classic 检索和装载的 p50 / p95 为 64 / 153 毫秒，G3 为 190 / 245 毫秒。
+
+### Mem0 additive {#mem0-additive}
+
+#### 原版怎么做 {#mem0-additive-upstream}
+
+开源 v3 从当前消息向量找 10 条现有记忆，将近期消息、现有记忆和最新对话一道交给模型，再批量写入提取的记忆。模型区分用户陈述和助手建议，输出可带相关旧记忆编号。内容重复时去重，现有记忆继续保留。 [Mem0 提示词](https://github.com/mem0ai/mem0/blob/main/mem0/configs/prompts.py) [Mem0 写入](https://github.com/mem0ai/mem0/blob/main/mem0/memory/main.py)
+
+#### 这里怎么做 {#mem0-additive-implementation}
+
+使用 `extract` 任务的一次模型调用。检查发言人和本轮来源，把去重哈希、标准化后的实体和 `attributed_to` 存在事实的 JSON 元数据里。已有事实的编号校验通过后，关联进入 `memory_relations`。实体以 NFKC、大小写和空白归一化做精确匹配，再和已召回的实体名计算余弦，阈值为 0.95。语义匹配采用旧别名时会保存其来源依赖，删除来源时相关加工结果一并清除。
+
+#### 和原版的差异 {#mem0-additive-differences}
+
+打开 `MEMFXXK_STRATEGIES__MEM0_ADDITIVE_RANKING=true` 后，对混合检索选出的 additive 事实候选计算一轮 BM25，并按实体匹配和有效时间加权。BM25 的语料是本次召回候选，保留现有 PostgreSQL 全文索引和向量通道。关联两端重新检查可见性和活跃状态，删掉任一事实所依赖的原文会通过现有删除传播清掉该端与边。
+
+#### 一个具体例子 {#mem0-additive-example}
+
+用户原先说「Atlas 用巴黎站点」，后来改到里昂。抽取看到带临时编号的巴黎记录，回传里昂陈述、用户来源、关联 ID 和实体 `Atlas`。最终两条事实都存在，里昂相关查询仍会看到生效时间较新的记录；巴黎原文可以从关联回查。
+
+#### 评测结果 {#mem0-additive-evaluation}
+
+沿用 [classic 的固定题集](#mem0-classic-evaluation)，开启事实加权。最终答对 3/6，知识更新 2/3、时间推理 1/3。相对 G3 多对 2 道、少对 1 道，6 题都装入了带标准来源的事实。56 次写入调用含 5 次格式修正前的失败，总计 174,095 输入和 25,331 输出 token，51 个写入作业最终完成。每题导入、写入和索引的 p50 / p95 为 25.92 / 45.41 秒。检索和装载的 p50 / p95 为 70 / 141 毫秒。两次试跑分数有波动，两套策略继续作为可选配置。最终实跑总用量为 419,464 token。逐题结果和清单位于 `eval/results/t16/p2-oracle-validated`。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

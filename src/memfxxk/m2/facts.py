@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime
 from time import perf_counter
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -33,23 +34,31 @@ _facts = TypeAdapter(list[FactCandidate])
 def enqueue_closed_turns(
     conn: Connection, ctx: RequestContext, batch: list[IngestEvent], results: list[IngestResult]
 ) -> None:
-    memory_ids = {
-        memory_id
-        for event, result in zip(batch, results, strict=True)
+    order = {
+        memory_id: index
+        for index, (event, result) in enumerate(zip(batch, results, strict=True))
         if event.kind == "message" and event.role == "assistant" and not result.duplicate
         for memory_id in result.memory_ids_touched
     }
-    if not memory_ids:
+    if not order:
         return
-    for row in conn.execute(
-        select(records.c.id, records.c.generation).where(
-            records.c.memory_id.in_(memory_ids), records.c.is_current, visible_filter(records, ctx)
-        )
-    ):
+    closed = conn.execute(
+        select(
+            records.c.id,
+            records.c.generation,
+            records.c.memory_id,
+            *(records.c[key] for key in Scope.model_fields),
+        ).where(records.c.memory_id.in_(order), records.c.is_current, visible_filter(records, ctx))
+    )
+    for row in sorted(closed, key=lambda row: order[row.memory_id]):
         enqueue(
             conn,
             "extract_facts",
-            {"record_id": str(row.id), "generation": row.generation},
+            {
+                "record_id": str(row.id),
+                "generation": row.generation,
+                "scope": Scope.model_validate(dict(row._mapping)).model_dump(),
+            },
             dedupe_key=f"facts:{row.id}:{row.generation}",
         )
 
@@ -256,46 +265,13 @@ def review(service: "BoundService", proposal_id: UUID, accept: bool) -> FactProp
             source = list(conn.execute(_source_query(scope, fact.source_event_ids)).mappings())
             if len(source) != len(fact.source_event_ids):
                 raise NotFound
-            memory_id = _memory_id(scope, fact.key)
-            versions = (
-                conn.execute(
-                    select(records)
-                    .where(
-                        records.c.memory_id == memory_id,
-                        visible_filter(records, ctx),
-                    )
-                    .order_by(records.c.version.desc())
-                    .limit(1)
-                    .with_for_update()
-                )
-                .mappings()
-                .first()
-            )
-            if versions is not None and versions["status"] == "inactive":
-                raise ManagementError(409, "inactive_fact", "Reactivate the existing fact first")
-            if (
-                versions is not None
-                and versions["content"] == fact.content
-                and (fact.valid_from is None or versions["valid_from"] == fact.valid_from)
-            ):
-                version = versions["version"]
+            timestamp = max(item["event_time"] for item in source)
+            if row["operation"] == "propose":
+                memory_id, version = _accept_key(conn, ctx, scope, fact, timestamp)
             else:
-                version = 1 if versions is None else versions["version"] + 1
-                timestamp = max(item["event_time"] for item in source)
-                derived_record(
-                    conn,
-                    ctx,
-                    scope,
-                    memory_id=memory_id,
-                    version=version,
-                    kind="fact",
-                    content=fact.content,
-                    sources=fact.source_event_ids,
-                    event_time=timestamp,
-                    valid_from=fact.valid_from or timestamp,
-                    confirmed=True,
-                    metadata={"fact_key": fact.key, "entities": fact.entities},
-                )
+                from .mem0 import accept_action
+
+                version = accept_action(conn, ctx, row, fact, timestamp)
         saved = (
             conn.execute(
                 fact_proposals.update()
@@ -319,3 +295,44 @@ def review(service: "BoundService", proposal_id: UUID, accept: bool) -> FactProp
             {"proposal_id": str(proposal_id)},
         )
         return FactProposal.model_validate(dict(saved))
+
+
+def _accept_key(
+    conn: Connection, ctx: RequestContext, scope: Scope, fact: FactCandidate, timestamp: datetime
+) -> tuple[UUID, int]:
+    memory_id = _memory_id(scope, fact.key)
+    versions = (
+        conn.execute(
+            select(records)
+            .where(records.c.memory_id == memory_id, visible_filter(records, ctx))
+            .order_by(records.c.version.desc())
+            .limit(1)
+            .with_for_update()
+        )
+        .mappings()
+        .first()
+    )
+    if versions is not None and versions["status"] == "inactive":
+        raise ManagementError(409, "inactive_fact", "Reactivate the existing fact first")
+    if (
+        versions is not None
+        and versions["content"] == fact.content
+        and (fact.valid_from is None or versions["valid_from"] == fact.valid_from)
+    ):
+        return memory_id, versions["version"]
+    version = 1 if versions is None else versions["version"] + 1
+    derived_record(
+        conn,
+        ctx,
+        scope,
+        memory_id=memory_id,
+        version=version,
+        kind="fact",
+        content=fact.content,
+        sources=fact.source_event_ids,
+        event_time=timestamp,
+        valid_from=fact.valid_from or timestamp,
+        confirmed=True,
+        metadata={"fact_key": fact.key, "entities": fact.entities},
+    )
+    return memory_id, version

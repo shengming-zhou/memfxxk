@@ -66,6 +66,7 @@ def search_filters(ctx: Scope, request: SearchRequest) -> list[ColumnElement[boo
                 newer.c.memory_id == records.c.memory_id,
                 newer.c.is_current,
                 newer.c.status == "inactive",
+                newer.c.metadata["temporal_tombstone"].as_boolean().is_not(True),
                 visible_filter(newer, ctx),
             )
             .correlate(records)

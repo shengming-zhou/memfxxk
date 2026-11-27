@@ -180,7 +180,17 @@ When background fact extraction is enabled, list pending proposals with `GET /v1
 
 ## Configure memory models {#memory-model-configuration}
 
-Compaction and fact extraction can use different models. Set defaults with `MEMFXXK_LLM__DEFAULT__MODEL`, `MEMFXXK_LLM__DEFAULT__BASE_URL`, and `MEMFXXK_LLM__DEFAULT__API_KEY`. Override model names with `MEMFXXK_LLM__TASKS__COMPACT__MODEL` or `MEMFXXK_LLM__TASKS__EXTRACT__MODEL`. Fact extraction also requires `MEMFXXK_M2__EXTRACT_FACTS=true`. Usage depends on history size and task frequency. Operators can summarize `llm_calls` or set a daily token limit by organization or project. [Model task configuration](/en/developer-manual/#t16-llm-routing)
+Compaction and fact extraction can use different models. Set defaults with `MEMFXXK_LLM__DEFAULT__MODEL`, `MEMFXXK_LLM__DEFAULT__BASE_URL`, and `MEMFXXK_LLM__DEFAULT__API_KEY`. Override model names with `MEMFXXK_LLM__TASKS__COMPACT__MODEL` or `MEMFXXK_LLM__TASKS__EXTRACT__MODEL`. Operators can summarize `llm_calls` or set a daily token limit by organization or project. [Model task configuration](/en/developer-manual/#t16-llm-routing)
+
+### Choose how facts are written {#fact-strategy-settings}
+
+- `MEMFXXK_STRATEGIES__FACTS=key_proposal` proposes facts from closed turns for user review. `MEMFXXK_M2__EXTRACT_FACTS=true` also enables this workflow.
+- `MEMFXXK_STRATEGIES__FACTS=mem0_classic` extracts facts and decides whether to update, retire, or keep earlier statements. Facts you confirmed, explicitly saved, or marked still go to review. Configure both the `extract` and `reconcile` tasks.
+- `MEMFXXK_STRATEGIES__FACTS=mem0_additive` makes one extraction call per turn. New statements and earlier accounts remain available with original sources. Set `MEMFXXK_STRATEGIES__MEM0_ADDITIVE_RANKING=true` to boost matching entities and more recent effective times after retrieval.
+
+Use `off` to pause background extraction. Stored facts remain readable after a strategy change. [Fact write implementation](/en/developer-manual/#t16-fact-strategies)
+
+Scaled from a 51-turn replay, classic used about 3.56 million input and 200,000 output tokens per 1,000 turns. Additive used about 3.41 million input and 500,000 output tokens. The cost varies with message length and the amount of existing memory. [Evaluation results](/en/developer-manual/#mem0-classic-evaluation)
 
 ## Check evidence evaluation {#evidence-evaluation}
 
