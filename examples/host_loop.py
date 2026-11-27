@@ -52,8 +52,13 @@ def _input_tokens(
 
 
 def _compact_if_needed(
-    client: MemfxxkClient, session_id: str, window: Window, counter: TokenCounter
-) -> None:
+    client: MemfxxkClient,
+    session_id: str,
+    window: Window,
+    counter: TokenCounter,
+    *,
+    pressured: bool = False,
+) -> bool:
     state = client.get_session(session_id)
     cursor = (state.summary_upto_seq or 0) + 1
     tokens = 0
@@ -67,7 +72,7 @@ def _compact_if_needed(
             tokens += counter.count(event.content or "") + counter.count(json.dumps(event.payload))
             if event.kind == "message" and event.role == "assistant" and event.session_seq:
                 closed.append(event.session_seq)
-        if tokens > window.working and len(closed) >= 2:
+        if (pressured or tokens > window.working) and len(closed) >= 2:
             draft = client.prepare_compaction(
                 PrepareCompaction(
                     session_id=session_id,
@@ -77,7 +82,8 @@ def _compact_if_needed(
                 )
             )
             client.commit_compaction(draft.draft_id)
-            break
+            return True
+    return False
 
 
 def _complete(
@@ -171,15 +177,17 @@ def run_turn(
     available = window.limit - window.output - window.tool_reserve - window.framing_reserve - fixed
     if available < 0:
         raise ValueError("The fixed request exceeds the host context budget")
-    _compact_if_needed(client, session_id, window, counter)
-    bundle = client.build_context(
-        BuildContextRequest(
-            session_id=session_id,
-            query=user,
-            max_tokens=min(window.memory, available),
-            budget={"working": window.working},
-        )
+    request = BuildContextRequest(
+        session_id=session_id,
+        query=user,
+        max_tokens=min(window.memory, available),
+        budget={"working": window.working},
     )
+    bundle = client.build_context(request)
+    if _compact_if_needed(
+        client, session_id, window, counter, pressured=bundle.pressure == "warning"
+    ):
+        bundle = client.build_context(request)
     if model is None:
         answer, events = "Model call skipped. Context built and turn recorded.", []
     else:

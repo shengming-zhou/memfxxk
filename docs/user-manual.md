@@ -170,6 +170,12 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 压缩走两步。先通过 `POST /v1/context/compactions` 提交会话、当前修订、已经结束的轮次截止序号和摘要上限。检查草案后，用 `POST /v1/context/compactions/commit` 提交 `draft_id`。之后还能用摘要里引用的事件 ID 回查原文。仓库里的参考程序是 `examples/host_loop.py`。
 
+配置压缩模型后，草案的 `method` 为 `llm`，检查点保留最新决定、待办、关键标识符、工具结果、用户偏好与更正，以及待核实事项。下一次压缩会接着上一版检查点整理新关闭的轮次。最近的用户原话可随摘要进入上下文，条目会标为 `retained_user`。未配置模型时，`method` 为 `extractive_fallback`，按重要度与最近性保留原文片段。
+
+`context_build` 返回当前记忆包的 `pressure` 和 `pressure_ratio`。默认超过可用记忆额度的 70% 时返回 `warning`。Harness 可视当前轮次状态决定是否提前压缩。此比例只统计 memfxxk 装入的记忆。系统提示、工具定义及答复预留仍由 Harness 分配。 [压缩开发说明](/developer-manual/#t16-structured-compaction)
+
+一次 30 题长对话回放里，DeepSeek Flash 每千轮压缩约用 62 万输入 token、1.25 万输出 token。实际用量取决于消息长度和压缩频率。这个小样本里，加模型摘要答对 8 题，单用混合检索答对 7 题。模型压缩适合需要跨轮接续决定和待办的会话。 [测试条件与结果](/developer-manual/#compaction-live-evaluation)
+
 重要度可通过 `PATCH /v1/memories/{id}` 设置 `priority` 1 到 5，并设置 `tags`。实用做法是把短而稳定的规则固定，把长世界观存成 `on_demand` 文档。写入新修订时会按 Markdown 标题切块，搜索结果会给出章节和修订。已有文档可先按路径读取，并在下次保存时生成可检索的章节。
 
 图检索需要在搜索里传 `graph_hops: 1` 或 `2`，上下文装载则放在 `search_filters`。它先查关键词和向量，再查候选记忆的关联或已审核事实的共享实体。结果包含 `graph_path`，可逐条核对这条路径。

@@ -148,7 +148,9 @@ class MCPHarness:
                 return None
             raise
 
-    async def _compact(self, state: SessionState) -> CommittedCompaction | None:
+    async def _compact(
+        self, state: SessionState, *, pressured: bool = False
+    ) -> CommittedCompaction | None:
         cursor = (state.summary_upto_seq or 0) + 1
         tokens = 0
         closed: list[int] = []
@@ -167,7 +169,7 @@ class MCPHarness:
                 tokens += self.counter.count(json.dumps(event.payload, ensure_ascii=False))
                 if not event.redacted and event.kind == "message" and event.role == "assistant":
                     closed.append(event.session_seq)
-            if tokens > self.window.working and len(closed) >= 2:
+            if (pressured or tokens > self.window.working) and len(closed) >= 2:
                 request = PrepareCompaction(
                     session_id=state.session_id,
                     revision=state.revision,
@@ -306,8 +308,14 @@ class MCPHarness:
     ) -> HarnessTurn:
         available = self._available_context_tokens(user)
         state = await self._session_state(session_id)
-        compaction = await self._compact(state) if state is not None else None
         context = await self._context(session_id if state is not None else None, user, available)
+        compaction = (
+            await self._compact(state, pressured=context.pressure == "warning")
+            if state is not None
+            else None
+        )
+        if compaction is not None:
+            context = await self._context(session_id, user, available)
         answer, tool_events = await self._complete(user, context.rendered)
         events = turn_events(session_id, user, answer, tool_events, turn_id, None)
         stored = await self._host_call(

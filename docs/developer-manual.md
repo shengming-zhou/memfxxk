@@ -154,6 +154,42 @@ Qdrant 恢复后可用 `memfxxk index retry-qdrant` 重试已追踪的镜像。�
 
 `MEMFXXK_LLM__DAILY_LIMITS` 是带作用域和 `tokens` 的 JSON 数组。UTC 日内，匹配的组织级和更细粒度限额都会检查累计使用量及并发预留。超额同步返回 `429 llm_budget_exceeded`，后台作业延后到下一 UTC 日且不扣失败次数。预留用输入估算和输出上限，最终用量以已返回的提供商统计结算。验证命令为 `uv run pytest tests/unit/test_llm_routing.py tests/integration/test_llm_tasks.py`.
 
+## T16 P1 结构化压缩 {#t16-structured-compaction}
+
+### 上游怎么做 {#compaction-upstream}
+
+Codex 向模型提交对话历史，在摘要前加固定前缀，并保留最近的用户消息，额度为 20,000 token。请求超窗时会丢掉最老的消息后重试。Codex 0.172.0 的自动压缩默认上限是模型窗口的 90%，有更低配置时取较小值。MemGPT 把被逐出的消息与上一次摘要合并交给模型，达到软阈值时可以先提醒模型保存重点，逐出的历史仍能通过检索找回。 [Codex 压缩提示词](https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/prompts/templates/compact/prompt.md) [Codex 压缩实现](https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/core/src/compact.rs) [Codex 阈值](https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/protocol/src/openai_models.rs) [MemGPT §2.2](https://arxiv.org/html/2310.08560#S2.SS2)
+
+### 本项目的实现 {#compaction-implementation}
+
+迁移 `0007` 给 `compactions` 加 `method`、`checkpoint` 和 `retained_user_event_ids`。配置了 `compact` 任务模型时，`prepare_compaction` 会调用 `compact-v1`，将上一版检查点与本次新增、已结束的事件一起发给模型，保留事件顺序、角色及显式标记。返回的每条陈述必须带来源 UUID。服务丢掉带有范围外 UUID 的整条陈述，并记录被丢弃的条数。检查点与可读摘要受请求的 `target_tokens` 约束。提交时复核代次和修订后才发布新的工作摘要。
+
+不配置模型时得到 `extractive_fallback`，迁移前的记录标记为 `legacy`。配置了模型时，输出校验失败会请求一次修正。两次失败返回 `llm_invalid_output`。兼容网关可用 `MEMFXXK_LLM__TASKS__COMPACT__RESPONSE_FORMAT=json_object`，较长对话也可能需要提高 `MAX_OUTPUT_TOKENS`。用 `MEMFXXK_M2__RECENT_USER_TOKENS` 限制所选原话，默认 1,024，设为 0 可关闭。实际装载还受 `working` 及总预算约束。
+
+### 与上游实现的差异 {#compaction-differences}
+
+宿主可在 `pressure_ratio` 超过 `MEMFXXK_CONTEXT__PRESSURE_THRESHOLD` 时用 `pressure=warning` 调度压缩。比例的分母是请求与各启用分区的有效预算。参考宿主会先拼装，再压缩符合条件的已关闭前缀，并重建上下文。单次压缩输入超过 `MEMFXXK_M2__COMPACT_INPUT_TOKENS`（默认 128,000）时返回 `compaction_input_too_large`，宿主可缩小待处理的区间。检查点引用和原话保留以完整条目为单位。持久化的 context bundle 只存引用和计数。
+
+### 发布日期改期示例 {#compaction-example}
+
+第一次准备压缩时，输入是空的上一版检查点、已关闭的事件和目标 token 数。模型把「周五发布」和对应事件 UUID 写入 `latest_decisions`。宿主提交草案后，`records` 生成第一版 `summary`。用户改期后，第二次压缩的输入是第一版检查点和包含改期原话的增量。输出是新的 `latest_decisions`，内容为周二发布，来源是更正事件的 UUID。第二次提交后，当前版本为 2，旧版本与原始会话仍可回查。这个例子用 DeepSeek Flash 真实跑过 66 轮对话，两次成功压缩之间重新连接了服务，并检查了装入上下文中的决定和更正引用。
+
+### 真实模型对照 {#compaction-live-evaluation}
+
+在准备好固定数据集、专用 PostgreSQL 测试库、真实嵌入服务和两种模型后，运行 `uv run python eval/run_m2_paired.py all --structured-summary --output eval/results/t16/p1`。用 `--prepare-workers 4` 可在四个独立数据库区域并行准备。对照组共用 30 道题、每题 1,500 token 的记忆预算，以及相同的答题和评分模型。两个摘要组有相同的摘要上限与压缩边界，装入阶段比较摘要正文，原话保留另用流程测试核对。诊断文件把逐字保留的标准证据和摘要引用的标准证据分别计数，指标文件记录答题、评分和压缩用量。
+
+2026-11-27 的实跑采用 BGE-small-en-v1.5 向量、`deepseek-flash` 压缩和 `gpt-5.4-mini` 答题与评分，回放 6,667 轮。压缩用 `json_object` 模式，输出上限 4,000 token。三组都取 top 8，摘要目标 240 token，装载摘要最多 320 token。结果目录为 `eval/results/t16/p1-live`。
+
+| 策略 | 答对 | 装入至少一条完整标准原文 | 答题端到端 p50 / p95 | 答题输入 / 输出 token | 评分输入 / 输出 token |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 混合检索 | 7/30 | 21/30 | 1.23 / 1.79 秒 | 47,594 / 756 | 3,152 / 126 |
+| 混合检索 + 截断摘要 | 7/30 | 18/30 | 1.09 / 1.40 秒 | 47,505 / 622 | 3,018 / 120 |
+| 混合检索 + 模型摘要 | 8/30 | 18/30 | 1.20 / 1.52 秒 | 47,440 / 699 | 3,095 / 120 |
+
+三组各有 4 题没召回标准证据、5 题召回后未装入。加摘要后另有 3 题只装入部分标准原文。模型摘要有 5 题引用了标准来源，逐字保留标准消息为 0 题。模型摘要相对截断答对了 2 道原先错的题，也答错了 1 道原先对的题。时间推理由 2/10 到 3/10，知识更新均为 5/10，多会话均为 0/10。本轮样本支持继续把模型压缩作为可配置的会话能力，默认问答仍用混合检索。
+
+模型压缩单独用了 60 次调用、4,125,762 输入和 83,614 输出 token。每题两次压缩合计 p50 / p95 为 16.88 / 23.22 秒，截断摘要为 0.55 / 0.78 秒。这段构建时间不计入表中的答题延时。按本次回放折算，每千轮约 618,833 输入与 12,541 输出 token。总用量含三组答题与评分为 4,363,623 token，单独的网关诊断调用不在本表内。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

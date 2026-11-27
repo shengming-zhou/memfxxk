@@ -162,6 +162,12 @@ The harness decides when to load memory, compact history, and invoke the model. 
 
 Compaction has two steps. Send the session, current revision, last closed sequence to cover, and summary limit to `POST /v1/context/compactions`. After checking the draft, send its `draft_id` to `POST /v1/context/compactions/commit`. The summary keeps references to the original event IDs. The repository includes a reference loop at `examples/host_loop.py`.
 
+With a compaction model configured, drafts have `method: llm`. Checkpoints preserve current decisions, open tasks, identifiers, tool results, user preferences and corrections, and unresolved claims. The next compaction processes newly closed turns alongside the previous checkpoint. The bundle may carry recent verbatim user messages marked `retained_user`. Without a configured model, the draft uses `method: extractive_fallback` and preserves excerpts by importance and recency.
+
+`context_build` reports the memory bundle's `pressure` and `pressure_ratio`. By default, occupancy above 70% of the available memory budget returns `warning`. The harness can use this signal to compact an eligible closed prefix early. The ratio covers memory assembled by memfxxk. The harness allocates system instructions, tool definitions, and response headroom. [Compaction implementation](/en/developer-manual/#t16-structured-compaction)
+
+In a 30-question replay of long conversations, DeepSeek Flash compaction used about 620,000 input and 12,500 output tokens per 1,000 turns. Usage varies with message length and compaction frequency. The model summary answered 8 questions correctly, and hybrid retrieval alone answered 7. Model compaction can help carry decisions and open tasks across turns. [Evaluation conditions and results](/en/developer-manual/#compaction-live-evaluation)
+
 Use `PATCH /v1/memories/{id}` to set `priority` from 1 to 5 and add `tags`. Pin short, durable rules and store long references as `on_demand` documents. Saving a revision indexes its Markdown sections and returns heading and revision metadata when those sections match a search. Existing documents remain available by path and gain searchable sections on their next save.
 
 Pass `graph_hops: 1` or `2` to search, or put it in `search_filters` when building context. Search starts with keyword and vector matches and follows links or shared entities on reviewed facts. Inspect `graph_path` to see the chain of evidence.

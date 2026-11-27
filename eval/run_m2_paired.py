@@ -24,7 +24,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.schema import CreateSchema, DropSchema
 
 from memfxxk.config import M2Settings, Settings
-from memfxxk.db import create_engine
+from memfxxk.db import create_engine, llm_calls
 from memfxxk.domain.context import BuildContextRequest, PrepareCompaction, SearchFilters
 from memfxxk.domain.events import IngestEvent
 from memfxxk.domain.manage import LinkRequest
@@ -44,10 +44,14 @@ from memfxxk.eval.longmemeval.storage import EVAL_PRINCIPAL, eval_context
 from memfxxk.eval.longmemeval.suite import QuestionSuite, load_suite
 from memfxxk.jobs.worker import drain
 from memfxxk.llm import ChatClient
+from memfxxk.llm.settings import LLMSettings, TaskModel
+from memfxxk.prompts.compact import VERSION as COMPACTION_PROMPT_VERSION
+from memfxxk.scope import visible_filter
 from memfxxk.service import BoundService, MemoryService
 from memfxxk.text import TokenCounter, make_token_counter
 
 ARMS = ("hybrid", "hybrid-summary", "hybrid-graph")
+STRUCTURED_ARM = "hybrid-llm-summary"
 SUITE = Path("eval/suites/longmemeval-s-m2-paired30.json")
 TOP_K = 8
 MEMORY_BUDGET = 1500
@@ -55,6 +59,7 @@ ANSWER_BUDGET = 384
 SUMMARY_BUDGET = 320
 SUMMARY_TARGET = 240
 MODEL = "gpt-5.4-mini"
+_MIGRATION_LOCK = Lock()
 _ENTITY = re.compile(r"\b(?:[A-Z]{2,}[A-Z0-9-]*|[A-Z][a-z]{2,}(?:[-'][A-Za-z]{2,})?)\b")
 _COMMON = set(
     (
@@ -113,14 +118,23 @@ def _isolated_service(settings: Settings) -> Iterator[MemoryService]:
     url = url.update_query_dict({"options": f"{options} -csearch_path={schema},public".strip()})
     engine = create_engine(url.render_as_string(hide_password=False))
     try:
-        with engine.begin() as connection:
+        # Alembic uses a process-global operation proxy while a migration runs.
+        with _MIGRATION_LOCK, engine.begin() as connection:
             config = Config("alembic.ini")
             config.attributes["connection"] = connection
             config.attributes["version_table_schema"] = connection.scalar(
                 select(func.current_schema())
             )
             command.upgrade(config, "head")
-        service = MemoryService(engine, settings.model_copy(update={"m2": M2Settings()}))
+        service = MemoryService(
+            engine,
+            settings.model_copy(
+                update={
+                    "m2": M2Settings(),
+                    "llm": LLMSettings(),
+                }
+            ),
+        )
         service.ensure_index()
         yield service
     finally:
@@ -187,9 +201,15 @@ def _edges(turns: dict[UUID, Turn]) -> Iterator[tuple[UUID, UUID, str]]:
                 break
 
 
-def _summary(bound: BoundService, session_id: str, closes: list[int]) -> str:
+def _summary(
+    bound: BoundService,
+    session_id: str,
+    closes: list[int],
+    *,
+    gold_events: dict[UUID, str] | None = None,
+) -> tuple[str, int]:
     if not closes:
-        return ""
+        return "", 0
     for through in sorted({closes[len(closes) // 2], closes[-1]}):
         state = bound.get_session(session_id)
         draft = bound.prepare_compaction(
@@ -201,7 +221,7 @@ def _summary(bound: BoundService, session_id: str, closes: list[int]) -> str:
             )
         )
         bound.commit_compaction(draft.draft_id)
-    return bound.build_context(
+    bundle = bound.build_context(
         BuildContextRequest(
             session_id=session_id,
             sections=["working"],
@@ -210,7 +230,17 @@ def _summary(bound: BoundService, session_id: str, closes: list[int]) -> str:
             host_history_from_seq=1,
             auto_recall=False,
         )
-    ).rendered
+    )
+    cited_gold = set()
+    if gold_events and draft.checkpoint and _annotated_in(bundle.rendered, draft.summary):
+        cited_gold = {
+            event_id
+            for field in type(draft.checkpoint).model_fields
+            for claim in getattr(draft.checkpoint, field)
+            for event_id in claim.source_event_ids
+            if event_id in gold_events
+        }
+    return bundle.rendered, len(cited_gold)
 
 
 def _annotated_in(text: str, content: str) -> bool:
@@ -301,7 +331,11 @@ def _arm(
 
 
 def _prepare_question(
-    service: MemoryService, query: Question, *, graph_evidence_tokens: int = 0
+    service: MemoryService,
+    query: Question,
+    *,
+    graph_evidence_tokens: int = 0,
+    structured: TaskModel | None = None,
 ) -> dict[str, Any]:
     bound = service.for_request(EVAL_PRINCIPAL, eval_context(query.question_id))
     session_id = f"m2:{query.question_id}"
@@ -326,9 +360,55 @@ def _prepare_question(
     base = _arm(bound, query, ARMS[0], mapped, gold, counter, embedding_ms)
 
     started = perf_counter()
-    summary = _summary(bound, session_id, closes)
+    summary, _ = _summary(bound, session_id, closes)
     summary_ms = _elapsed(started)
     compact = _arm(bound, query, ARMS[1], mapped, gold, counter, embedding_ms, summary)
+    compact["compaction_method"] = "extractive_fallback"
+
+    if structured is not None:
+        llm_settings = service.settings.model_copy(
+            update={
+                "llm": LLMSettings(default=structured),
+            }
+        )
+        llm_service = MemoryService(service.engine, llm_settings)
+        isolated = bound.ctx.model_copy(update={"user_id": "structured-compaction"})
+        llm_bound = llm_service.for_request(EVAL_PRINCIPAL, isolated)
+        llm_session = f"{session_id}:llm"
+        _, llm_gold, llm_closes = _replay(llm_bound, turns, llm_session)
+        started = perf_counter()
+        llm_summary, cited_gold = _summary(llm_bound, llm_session, llm_closes, gold_events=llm_gold)
+        llm_arm = _arm(
+            bound, query, STRUCTURED_ARM, mapped, gold, counter, embedding_ms, llm_summary
+        )
+        with service.engine.connect() as conn:
+            usage = conn.execute(
+                select(
+                    func.count(),
+                    func.sum(llm_calls.c.input_tokens),
+                    func.sum(llm_calls.c.output_tokens),
+                ).where(visible_filter(llm_calls, isolated), llm_calls.c.task == "compact")
+            ).one()
+        llm_arm.update(
+            compaction_method="llm",
+            compaction_ms=_elapsed(started),
+            compaction_calls=usage[0],
+            compaction_input_tokens=usage[1] or 0,
+            compaction_output_tokens=usage[2] or 0,
+            gold_messages_cited_summary=cited_gold,
+        )
+        return {
+            "question_id": query.question_id,
+            "question_type": query.question_type,
+            "turn_count": total,
+            "embedding_ms": embedding_ms,
+            "ingest_ms": ingest_ms,
+            "embed_index_ms": embed_index_ms,
+            "summary_build_ms": summary_ms,
+            "graph_build_ms": 0,
+            "graph_edges": 0,
+            "arms": [base, compact, llm_arm],
+        }
 
     started = perf_counter()
     links = list(_edges(mapped))
@@ -372,6 +452,8 @@ def prepare(
     questions: list[Question],
     *,
     graph_evidence_tokens: int = 0,
+    structured_summary: bool = False,
+    workers: int = 1,
 ) -> None:
     if settings.embedding.provider != "openai_compatible" or settings.token_counter != "tiktoken":
         raise ValueError("Use a real OpenAI-compatible embedding endpoint and the tiktoken counter")
@@ -393,6 +475,21 @@ def prepare(
         "graph_build_uses_question_or_gold": False,
         "arms": list(ARMS),
     }
+    structured = settings.task_model("compact") if structured_summary else None
+    if structured_summary:
+        if structured is None or not structured.model:
+            raise ValueError("Configure the compact task model for a structured summary run")
+        manifest.update(
+            protocol="t16-p1-paired-v1",
+            arms=[*ARMS[:2], STRUCTURED_ARM],
+            compaction_model=structured.model,
+            compaction_prompt=COMPACTION_PROMPT_VERSION,
+            compaction_max_output=structured.max_output_tokens,
+            compaction_response_format=structured.response_format,
+            prepare_workers=workers,
+            answer_model=settings.eval.gen.model or MODEL,
+            judge_model=settings.eval.judge.model or MODEL,
+        )
     if graph_evidence_tokens:
         manifest["graph_evidence_tokens"] = graph_evidence_tokens
     manifest_path = output / "manifest.json"
@@ -403,25 +500,43 @@ def prepare(
     done = {row["question_id"] for row in _read_rows(path)}
     if len(done) == len(questions):
         return
-    with _isolated_service(settings) as service:
-        for question in questions:
-            if question.question_id not in done:
+    remaining = [question for question in questions if question.question_id not in done]
+    checkpoint = Lock()
+
+    def prepare_batch(batch: list[Question]) -> None:
+        with _isolated_service(settings) as service:
+            for question in batch:
                 row = _prepare_question(
-                    service, question, graph_evidence_tokens=graph_evidence_tokens
+                    service,
+                    question,
+                    graph_evidence_tokens=graph_evidence_tokens,
+                    structured=structured,
                 )
-                _append(path, row)
-                done.add(question.question_id)
-                print(
-                    f"Prepared {len(done)}/{len(questions)} · {question.question_id} · "
-                    f"{row['turn_count']} turns, {row['graph_edges']} edges",
-                    flush=True,
-                )
+                with checkpoint:
+                    _append(path, row)
+                    done.add(question.question_id)
+                    print(
+                        f"Prepared {len(done)}/{len(questions)} · {question.question_id} · "
+                        f"{row['turn_count']} turns, {row['graph_edges']} edges",
+                        flush=True,
+                    )
+
+    if workers == 1:
+        prepare_batch(remaining)
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            batches = [
+                remaining[index::workers] for index in range(workers) if index < len(remaining)
+            ]
+            for _ in executor.map(prepare_batch, batches):
+                pass
 
 
 def score(settings: Settings, output: Path, questions: list[Question]) -> None:
     gen = settings.eval.gen
     judge = settings.eval.judge if settings.eval.judge.model else gen
     manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+    arms = manifest["arms"]
     if (gen.model, judge.model) != (manifest["answer_model"], manifest["judge_model"]):
         raise ValueError("Configured answer and judge models must match the run manifest")
     prepared = _read_rows(output / "prepared.jsonl")
@@ -476,7 +591,7 @@ def score(settings: Settings, output: Path, questions: list[Question]) -> None:
                 "judge_output_tokens": grade["llm_call"]["output_tokens"],
             }
 
-        for name in ARMS:
+        for name in arms:
             work = [
                 (row, arm)
                 for row in prepared
@@ -489,7 +604,7 @@ def score(settings: Settings, output: Path, questions: list[Question]) -> None:
             def save(result: dict[str, Any]) -> None:
                 _append(path, result)
                 done.add((result["question_id"], result["arm"]))
-                print(f"Scored {len(done)}/{len(questions) * len(ARMS)} · {name}", flush=True)
+                print(f"Scored {len(done)}/{len(questions) * len(arms)} · {name}", flush=True)
 
             # Validate the live gateway with the first scored case before issuing a batch.
             save(evaluate(*work[0]))
@@ -514,6 +629,12 @@ def _latency(values: Iterable[float]) -> dict[str, float]:
 
 def report(output: Path) -> None:
     prepared = _read_rows(output / "prepared.jsonl")
+    manifest_path = output / "manifest.json"
+    arms = (
+        json.loads(manifest_path.read_text(encoding="utf-8"))["arms"]
+        if manifest_path.exists()
+        else ARMS
+    )
     answers = {
         (row["question_id"], row["arm"]): row for row in _read_rows(output / "answers.jsonl")
     }
@@ -553,7 +674,7 @@ def report(output: Path) -> None:
                     },
                 }
             )
-    for name in ARMS:
+    for name in arms:
         rows = [row for row in diagnostics if row["arm"] == name]
         scored = [row for row in rows if "correct" in row]
         generated = [row for row in rows if "answer_ms" in row]
@@ -610,14 +731,21 @@ def report(output: Path) -> None:
             for kind in ("input", "output"):
                 key = f"{phase}_{kind}_tokens"
                 group[key] = sum(row[key] for row in calls) if calls else None
+        if name == STRUCTURED_ARM:
+            for key in ("compaction_calls", "compaction_input_tokens", "compaction_output_tokens"):
+                group[key] = sum(row[key] for row in rows)
+            group["compaction_ms"] = _latency(row["compaction_ms"] for row in rows)
+            group["gold_message_cited_summary_questions"] = sum(
+                bool(row.get("gold_messages_cited_summary", 0)) for row in rows
+            )
         result["groups"][name] = group
     by_arm = {
         name: {row["question_id"]: row for row in diagnostics if row["arm"] == name}
-        for name in ARMS
+        for name in arms
     }
-    base = by_arm[ARMS[0]]
+    base = by_arm[arms[0]]
     result["paired_vs_hybrid"] = {}
-    for name in ARMS[1:]:
+    for name in arms[1:]:
         candidate = by_arm[name]
         paired = [(row, candidate[key]) for key, row in base.items() if key in candidate]
         graded = [(a, b) for a, b in paired if "correct" in a and "correct" in b]
@@ -638,6 +766,23 @@ def report(output: Path) -> None:
                 bool(a["gold_messages_full"]) and not b["gold_messages_full"] for a, b in paired
             ),
         }
+    if STRUCTURED_ARM in by_arm:
+        structured = by_arm[STRUCTURED_ARM]
+        paired = [
+            (row, structured[key]) for key, row in by_arm[ARMS[1]].items() if key in structured
+        ]
+        graded = [
+            (local, model) for local, model in paired if "correct" in local and "correct" in model
+        ]
+        result["paired_llm_vs_extractive"] = {
+            "scored_pairs": len(graded),
+            "answer_improved": sum(
+                model["correct"] and not local["correct"] for local, model in graded
+            ),
+            "answer_regressed": sum(
+                local["correct"] and not model["correct"] for local, model in graded
+            ),
+        }
     (output / "diagnostics.jsonl").write_text(
         "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in diagnostics),
         encoding="utf-8",
@@ -656,11 +801,30 @@ def main() -> None:
         default=0,
         help="Reserve evidence tokens in the graph arm at preparation time.",
     )
+    parser.add_argument(
+        "--structured-summary",
+        action="store_true",
+        help="Compare model compaction to hybrid and local extractive compaction.",
+    )
+    parser.add_argument(
+        "--prepare-workers",
+        type=int,
+        default=1,
+        help="Replay batches in separate database schemas with structured compaction.",
+    )
     args = parser.parse_args()
     if not 0 <= args.graph_evidence_tokens <= MEMORY_BUDGET:
         parser.error(f"--graph-evidence-tokens must be from 0 to {MEMORY_BUDGET}")
     if args.graph_evidence_tokens and args.phase not in ("prepare", "all"):
         parser.error("--graph-evidence-tokens requires the prepare or all phase")
+    if args.structured_summary and (
+        args.graph_evidence_tokens or args.phase not in ("prepare", "all")
+    ):
+        parser.error(
+            "--structured-summary is a separate preparation experiment without graph tokens"
+        )
+    if args.prepare_workers < 1 or (args.prepare_workers != 1 and not args.structured_summary):
+        parser.error("--prepare-workers must be positive and requires --structured-summary")
     args.output.mkdir(parents=True, exist_ok=True)
     if args.phase == "report":
         report(args.output)
@@ -677,6 +841,8 @@ def main() -> None:
                 suite,
                 questions,
                 graph_evidence_tokens=args.graph_evidence_tokens,
+                structured_summary=args.structured_summary,
+                workers=args.prepare_workers,
             )
         if args.phase in ("score", "all"):
             score(settings, args.output, questions)

@@ -148,6 +148,42 @@ Select `prompt`, `json_object`, or `json_schema` for `RESPONSE_FORMAT`. The clie
 
 Set `MEMFXXK_LLM__DAILY_LIMITS` to a JSON array of scopes and `tokens`. Each matching organization-level or narrower limit considers UTC-day usage and concurrent reservations. Over-budget synchronous calls return `429 llm_budget_exceeded`. Background jobs wait until the next UTC day without consuming a failure attempt. Reservations use estimated input and a bounded output. Reconciliation uses reported provider usage when available. Verify with `uv run pytest tests/unit/test_llm_routing.py tests/integration/test_llm_tasks.py`.
 
+## T16 P1 structured compaction {#t16-structured-compaction}
+
+### Upstream behavior {#compaction-upstream}
+
+Codex submits conversation history to a model, prepends a fixed summary prefix, and keeps recent user messages within a 20,000-token limit. On a context overflow, it removes the oldest entry and retries. Codex 0.172.0 uses 90% of the model window as its default auto-compaction limit and honors lower configured limits. MemGPT asks a model to summarize evicted messages together with the previous summary, can warn the model at a soft threshold, and keeps evicted history searchable. [Codex prompt](https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/prompts/templates/compact/prompt.md) [Codex compactor](https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/core/src/compact.rs) [Codex threshold](https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/protocol/src/openai_models.rs) [MemGPT §2.2](https://arxiv.org/html/2310.08560#S2.SS2)
+
+### Implementation {#compaction-implementation}
+
+Migration `0007` adds `method`, `checkpoint`, and `retained_user_event_ids` to `compactions`. With a `compact` task model configured, `prepare_compaction` sends the previous checkpoint and newly covered closed events to `compact-v1`. The input includes event order, roles, and explicit marks. Every claim must cite source UUIDs. The service drops a claim containing an out-of-range UUID and logs the number of dropped claims. The checkpoint and its rendered summary fit the requested `target_tokens`. Commit rechecks the generation and revision before publishing the new working summary.
+
+Without a configured model, the method is `extractive_fallback`. Pre-migration rows show `legacy`. When validation fails on a configured model, the runner requests one repair. Two failed attempts return `llm_invalid_output`. Compatible gateways can use `MEMFXXK_LLM__TASKS__COMPACT__RESPONSE_FORMAT=json_object`. Long inputs may need a higher `MAX_OUTPUT_TOKENS`. Limit recent verbatim user messages with `MEMFXXK_M2__RECENT_USER_TOKENS`. The default is 1,024 and zero disables retention. Assembly still applies the working and total memory budgets.
+
+### Differences from upstream {#compaction-differences}
+
+Hosts can schedule compaction when `pressure_ratio` exceeds `MEMFXXK_CONTEXT__PRESSURE_THRESHOLD` and `pressure` becomes `warning`. The ratio uses the effective budget of the request and its enabled sections. The reference harnesses build context, compact an eligible closed prefix, and rebuild context. If the input exceeds `MEMFXXK_M2__COMPACT_INPUT_TOKENS` (128,000 by default), the service returns `compaction_input_too_large`. The host can choose a smaller compaction boundary. Checkpoint claims and retained messages are selected as whole entries. Persisted context bundles hold references and counts.
+
+### Release date example {#compaction-example}
+
+The first preparation sends an empty previous checkpoint, the closed events, and a target token count. The model puts “release Friday” and its event UUID in `latest_decisions`. Committing the draft creates the first `summary` version in `records`. After the user changes the date, the second preparation sends the first checkpoint and the new events, including the correction. The latest decision says Tuesday and cites the correction UUID. Committing publishes version 2. The old version and original conversation remain readable. A 66-turn run with DeepSeek Flash reconnected the service between the two compactions and checked both the loaded decision and its source.
+
+### Live model comparison {#compaction-live-evaluation}
+
+With the frozen dataset, a dedicated PostgreSQL test database, a semantic embedding server, and both models ready, run `uv run python eval/run_m2_paired.py all --structured-summary --output eval/results/t16/p1`. Add `--prepare-workers 4` to use four independent database schemas. All arms share the same 30 questions, 1,500-token memory budget, answer model, and judge. The two summary arms share a summary cap and compaction boundaries. They compare the loaded summary text, with verbatim recent-message retention covered by a separate workflow test. The diagnostics count verbatim gold evidence and gold citations from the checkpoint separately. The metrics include answer, judge, and compaction usage.
+
+The 2026-11-27 run replayed 6,667 turns with BGE-small-en-v1.5 embeddings, `deepseek-flash` compaction, and `gpt-5.4-mini` answering and judging. Compaction used `json_object` mode and a 4,000-token output cap. Each arm retrieved top 8. Both summary arms targeted 240 tokens and allocated up to 320 tokens to load the summary. The run directory is `eval/results/t16/p1-live`.
+
+| Strategy | Correct | Loaded at least one complete gold message | Answer end-to-end p50 / p95 | Answer input / output tokens | Judge input / output tokens |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Hybrid retrieval | 7/30 | 21/30 | 1.23 / 1.79 s | 47,594 / 756 | 3,152 / 126 |
+| Hybrid + extractive summary | 7/30 | 18/30 | 1.09 / 1.40 s | 47,505 / 622 | 3,018 / 120 |
+| Hybrid + model summary | 8/30 | 18/30 | 1.20 / 1.52 s | 47,440 / 699 | 3,095 / 120 |
+
+Each arm missed gold evidence at retrieval for four questions and retrieved it without loading it for five. Both summary arms loaded only partial gold messages for three more questions. The model summary cited a gold source on five questions and reproduced zero gold messages verbatim. It gained two answers and lost one compared with the extractive summary. Temporal reasoning went from 2/10 to 3/10. Knowledge updates stayed at 5/10 and multi-session questions at 0/10. Compaction remains opt-in through a model setting, with hybrid retrieval the default for question answering.
+
+The model made 60 compaction calls using 4,125,762 input and 83,614 output tokens. The two compactions per question took p50 / p95 of 16.88 / 23.22 seconds, compared with 0.55 / 0.78 seconds for extractive summary. The table's answer latency excludes this build time. The observed cost per 1,000 turns was about 618,833 input and 12,541 output tokens. Including answering and judging, the formal run used 4,363,623 tokens. Separate gateway diagnostics are outside that total.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

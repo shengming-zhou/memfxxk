@@ -9,7 +9,7 @@ from html import escape
 from typing import TYPE_CHECKING, get_args
 from uuid import UUID
 
-from sqlalchemy import Connection, and_, select, tuple_
+from sqlalchemy import Connection, and_, or_, select, tuple_
 from sqlalchemy.engine import RowMapping
 
 from memfxxk.db import context_bundles, events, memory_marks, records, transaction
@@ -281,6 +281,9 @@ def _memory(
             score=score,
             related=links,
             truncated=excerpt is not None and excerpt != row["content"],
+            compaction_method=row["metadata"].get("compaction_method", "legacy")
+            if row["type"] == "summary"
+            else None,
         ),
         heading,
         row["content"] if excerpt is None else excerpt,
@@ -346,11 +349,15 @@ def _working(
             )
         )
     summary = _current(connection, service, session_id) if state.summary_upto_seq else None
+    retained = set()
     cutoff = state.summary_upto_seq or 0
     cutoff_filter = events.c.session_seq > cutoff
     if summary is not None and not state.summary and summary["source_pos"]["seq_to"] == cutoff:
         candidates.append(_memory(summary, heading, "rolling_summary"))
         cutoff_filter = events.c.id.not_in(summary["source_event_ids"])
+        retained = {UUID(item) for item in summary["metadata"].get("retained_user_event_ids", [])}
+        if retained:
+            cutoff_filter = or_(cutoff_filter, events.c.id.in_(retained))
     elif not state.summary:
         cutoff_filter = events.c.session_seq > 0
     host_filter = (
@@ -374,9 +381,13 @@ def _working(
         sequences[event_id] = row["session_seq"]
         candidates.append(
             _Candidate(
-                ContextReference(kind="event", ref_id=event_id, reason="session_recent"),
+                ContextReference(
+                    kind="event",
+                    ref_id=event_id,
+                    reason="retained_user" if row["id"] in retained else "session_recent",
+                ),
                 heading,
-                _turn_part(row),
+                f"[user] {row['content'] or ''}" if row["id"] in retained else _turn_part(row),
                 escape,
             )
         )
@@ -509,12 +520,19 @@ def build_context(service: BoundService, request: BuildContextRequest) -> Contex
             )
             pack("evidence", evidence)
         rendered = "\n\n".join(section.rendered for section in sections if section.rendered)
+        used = counter.count(rendered)
+        capacity = sum(section.budget for section in sections)
+        if request.max_tokens is not None:
+            capacity = min(capacity, request.max_tokens)
+        ratio = used / capacity if capacity else 0.0
         bundle = ContextBundle(
             bundle_id=new_id(),
             sections=sections,
             rendered=rendered,
-            total_tokens=counter.count(rendered),
+            total_tokens=used,
             retrieval_timings_ms=retrieval_timings,
+            pressure="warning" if ratio > service.settings.context.pressure_threshold else "normal",
+            pressure_ratio=ratio,
         )
         connection.execute(
             context_bundles.insert().values(
@@ -525,6 +543,8 @@ def build_context(service: BoundService, request: BuildContextRequest) -> Contex
                 budget={
                     **budget,
                     "max_tokens": request.max_tokens,
+                    "pressure": bundle.pressure,
+                    "pressure_ratio": bundle.pressure_ratio,
                     **(
                         {"graph_evidence_tokens": request.graph_evidence_tokens}
                         if request.graph_evidence_tokens
@@ -561,4 +581,6 @@ def get_bundle(service: BoundService, bundle_id: UUID) -> BundleMetadata:
         sections=row["items"],
         total_tokens=row["total_tokens"],
         created_at=row["created_at"],
+        pressure=row["budget"].get("pressure", "normal"),
+        pressure_ratio=row["budget"].get("pressure_ratio", 0.0),
     )

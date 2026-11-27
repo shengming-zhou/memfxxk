@@ -58,6 +58,7 @@ class ContextBudget(BaseModel):
 
 class ContextSettings(BaseModel):
     budget: ContextBudget = Field(default_factory=ContextBudget)
+    pressure_threshold: float = Field(default=0.7, gt=0, le=1)
 
 
 class WorkerSettings(BaseModel):
@@ -83,6 +84,8 @@ class M2Settings(BaseModel):
     model: EvalModelSettings = Field(default_factory=EvalModelSettings)
     extract_facts: bool = False
     draft_retention_hours: int = Field(default=24, gt=0)
+    compact_input_tokens: int = Field(default=128000, gt=0)
+    recent_user_tokens: int = Field(default=1024, ge=0)
 
 
 class Settings(BaseSettings):

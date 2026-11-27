@@ -4,8 +4,11 @@ from uuid import UUID
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from memfxxk.domain.retrieval import MemoryType, SearchChannel, SearchTimings
+from memfxxk.prompts.compact import Checkpoint
 
 SectionName = Literal["documents", "pinned", "working", "evidence"]
+CompactionMethod = Literal["legacy", "llm", "extractive_fallback"]
+Pressure = Literal["normal", "warning"]
 SectionKind = Literal["document", "index", "memory", "event", "summary"]
 
 
@@ -76,6 +79,9 @@ class CompactionDraft(BaseModel):
     summary: str
     tokens: int
     source_event_ids: list[UUID]
+    method: CompactionMethod = "legacy"
+    checkpoint: Checkpoint | None = None
+    retained_user_event_ids: list[UUID] = Field(default_factory=list)
 
 
 class CommitCompaction(BaseModel):
@@ -89,6 +95,7 @@ class CommittedCompaction(BaseModel):
     version: int
     session_revision: int
     through_seq: int
+    method: CompactionMethod = "legacy"
 
 
 class ContextReference(BaseModel):
@@ -101,6 +108,7 @@ class ContextReference(BaseModel):
     reason: str
     score: float | None = None
     related: list[UUID] = Field(default_factory=list)
+    compaction_method: CompactionMethod | None = None
 
 
 class ContextSection(BaseModel):
@@ -118,6 +126,8 @@ class ContextBundle(BaseModel):
     rendered: str
     total_tokens: int
     retrieval_timings_ms: SearchTimings | None = None
+    pressure: Pressure = "normal"
+    pressure_ratio: float = 0.0
 
 
 class BundleMetadata(BaseModel):
@@ -125,3 +135,5 @@ class BundleMetadata(BaseModel):
     sections: list[ContextSection]
     total_tokens: int
     created_at: AwareDatetime
+    pressure: Pressure = "normal"
+    pressure_ratio: float = 0.0

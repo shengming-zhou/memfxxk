@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from collections import Counter
 from time import perf_counter
@@ -19,7 +20,12 @@ from memfxxk.db import (
     transaction,
 )
 from memfxxk.domain import Scope
-from memfxxk.domain.context import CommittedCompaction, CompactionDraft, PrepareCompaction
+from memfxxk.domain.context import (
+    CommittedCompaction,
+    CompactionDraft,
+    CompactionMethod,
+    PrepareCompaction,
+)
 from memfxxk.domain.errors import ServiceError
 from memfxxk.domain.sessions import SessionState
 from memfxxk.embedding import _truncate
@@ -27,12 +33,12 @@ from memfxxk.ids import derived_id
 from memfxxk.ingest import NotFound, _turn_part
 from memfxxk.llm.runner import TaskRunner
 from memfxxk.manage.common import lock_user_operations
+from memfxxk.prompts.compact import PROMPT, SCHEMA, VERSION, Checkpoint
 from memfxxk.scope import visible_filter
 from memfxxk.sessions import read_session
 from memfxxk.text import make_token_counter
 
 from .preferences import preferences_for
-from .prompts import COMPACT
 from .storage import derived_record
 
 if TYPE_CHECKING:
@@ -173,42 +179,80 @@ def _render(
     protected: set[UUID],
     source_ids: list[UUID],
     request_id: UUID,
-) -> str:
+    prior_checkpoint: dict | None,
+) -> tuple[str, CompactionMethod, Checkpoint | None]:
     counter = make_token_counter(service.settings.token_counter)
     runner = TaskRunner.for_service(service, "compact")
-    lines = [
-        f"[{'important ' if row['id'] in protected else ''}{row['id']}] {_turn_part(row)}"
-        for row in rows
-    ]
     if runner.config.model or runner.fake is not None:
-        messages = [
-            {"role": "system", "content": COMPACT},
+        payload = json.dumps(
             {
-                "role": "user",
-                "content": f"Previous summary:\n{previous}\nNew evidence:\n" + "\n".join(lines),
+                "target_tokens": request.target_tokens,
+                "previous_checkpoint": prior_checkpoint
+                if prior_checkpoint is not None
+                else previous,
+                "events": [
+                    {
+                        "id": str(row["id"]),
+                        "seq": row["session_seq"],
+                        "role": row["role"],
+                        "kind": row["kind"],
+                        "content": row["content"],
+                        "payload": row["payload"],
+                        "event_time": row["event_time"].isoformat(),
+                        "important": row["id"] in protected,
+                    }
+                    for row in rows
+                ],
             },
+            ensure_ascii=False,
+        )
+        if counter.count(PROMPT + payload) > service.settings.m2.compact_input_tokens:
+            raise ServiceError(422, "compaction_input_too_large", "Choose a smaller closed range")
+        messages = [
+            {"role": "system", "content": PROMPT},
+            {"role": "user", "content": payload},
         ]
         result = runner.complete(
             "compact",
             service.ctx,
             messages,
-            prompt_version="m2-compact-v1",
+            schema=SCHEMA,
+            prompt_version=VERSION,
             request_id=request_id,
             source_event_ids=source_ids,
-            max_tokens=request.target_tokens,
-        ).response
-        logger.info(
-            "summary model input_tokens=%d output_tokens=%d ms=%.1f",
-            result.input_tokens,
-            result.output_tokens,
-            result.latency_ms,
         )
-        text = result.message.get("content")
-        if not isinstance(text, str) or not text.strip():
-            raise ServiceError(502, "summary_model_failed", "The model returned an empty summary")
-        return _truncate(text.strip(), request.target_tokens, counter)
+        assert result.parsed is not None
+        allowed = set(source_ids)
+        fields = {}
+        dropped = 0
+        rendered = []
+        for field in Checkpoint.model_fields:
+            claims = []
+            for claim in getattr(result.parsed, field):
+                if not set(claim.source_event_ids) <= allowed or not claim.text.strip():
+                    dropped += 1
+                    continue
+                line = f"{field.replace('_', ' ')}: {claim.text.strip()}"
+                if counter.count("\n".join([*rendered, line])) > request.target_tokens:
+                    continue
+                rendered.append(line)
+                claims.append(claim)
+            fields[field] = claims
+        if dropped:
+            logger.warning(
+                "compaction discarded invalid claims count=%d draft=%s", dropped, request_id
+            )
+        checkpoint = Checkpoint.model_validate(fields)
+        summary = "\n".join(rendered) or _truncate(
+            "No durable checkpoint entries.", request.target_tokens, counter
+        )
+        return summary, "llm", checkpoint
 
     # Local extractive fallback. Favor explicitly important sources, then recent exchanges.
+    lines = [
+        f"[{'important ' if row['id'] in protected else ''}{row['id']}] {_turn_part(row)}"
+        for row in rows
+    ]
     ranked = sorted(
         range(len(rows)),
         key=lambda i: (
@@ -228,9 +272,35 @@ def _render(
             break
         retained[index] = _truncate(lines[index], room, counter)
     fresh = "\n".join(retained[k] for k in sorted(retained))
-    return _truncate(
+    summary = _truncate(
         "\n".join(item for item in (carry, fresh) if item), request.target_tokens, counter
     )
+    return summary, "extractive_fallback", None
+
+
+def _recent_users(conn: Connection, service: BoundService, ids: list[UUID]) -> list[UUID]:
+    remaining = service.settings.m2.recent_user_tokens
+    if not remaining:
+        return []
+    counter = make_token_counter(service.settings.token_counter)
+    retained = []
+    for row in conn.execute(
+        select(events.c.id, events.c.content)
+        .where(
+            events.c.id.in_(ids),
+            events.c.kind == "message",
+            events.c.role == "user",
+            ~events.c.redacted,
+            visible_filter(events, service.ctx),
+        )
+        .order_by(events.c.session_seq.desc())
+    ):
+        cost = counter.count(f"[user] {row.content or ''}")
+        if cost > remaining:
+            break
+        retained.append(row.id)
+        remaining -= cost
+    return list(reversed(retained))
 
 
 def prepare(service: BoundService, request: PrepareCompaction) -> CompactionDraft:
@@ -266,6 +336,7 @@ def prepare(service: BoundService, request: PrepareCompaction) -> CompactionDraf
         new_ids = [row["id"] for row in rows]
         all_ids = [*prior["source_event_ids"], *new_ids] if prior is not None else new_ids
         previous = prior["content"] if prior is not None else ""
+        prior_checkpoint = prior["metadata"].get("checkpoint") if prior is not None else None
         protected = _protected(conn, service, all_ids)
         if prior is not None:
             recall_ids = protected.intersection(prior["source_event_ids"])
@@ -280,7 +351,16 @@ def prepare(service: BoundService, request: PrepareCompaction) -> CompactionDraf
                     .order_by(events.c.session_seq)
                 ).mappings()
                 rows = [*retained, *rows]
-    summary = _render(service, request, rows, previous, protected, all_ids, draft_id)
+    summary, method, checkpoint = _render(
+        service,
+        request,
+        rows,
+        previous,
+        protected,
+        all_ids,
+        draft_id,
+        prior_checkpoint,
+    )
     tokens = make_token_counter(service.settings.token_counter).count(summary)
     if not summary or not 0 < tokens <= request.target_tokens:
         raise ServiceError(422, "compaction_budget_exhausted", "Summary does not fit the budget")
@@ -301,6 +381,11 @@ def prepare(service: BoundService, request: PrepareCompaction) -> CompactionDraf
                 source_event_ids=all_ids,
                 summary=summary,
                 tokens=tokens,
+                method=method,
+                checkpoint=checkpoint.model_dump(mode="json") if checkpoint else None,
+                retained_user_event_ids=_recent_users(conn, service, all_ids)
+                if method == "llm"
+                else [],
             )
             .on_conflict_do_nothing()
         )
@@ -356,6 +441,11 @@ def commit(service: BoundService, draft_id: UUID) -> CommittedCompaction:
                 "seq_from": 1,
                 "seq_to": row["through_seq"],
             },
+            metadata={
+                "compaction_method": row["method"],
+                "checkpoint": row["checkpoint"],
+                "retained_user_event_ids": [str(item) for item in row["retained_user_event_ids"]],
+            },
         )
         revision = state.revision + 1
         conn.execute(
@@ -398,4 +488,5 @@ def _committed(row: RowMapping) -> CommittedCompaction:
         version=row["committed_version"],
         session_revision=row["committed_revision"],
         through_seq=row["through_seq"],
+        method=row["method"],
     )

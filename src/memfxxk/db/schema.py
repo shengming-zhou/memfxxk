@@ -299,6 +299,11 @@ compactions = sa.Table(
     sa.Column("memory_id", UUID),
     sa.Column("committed_version", sa.Integer),
     sa.Column("committed_revision", sa.Integer),
+    sa.Column("method", sa.Text, nullable=False, server_default="legacy"),
+    sa.Column("checkpoint", JSONB),
+    sa.Column(
+        "retained_user_event_ids", ARRAY(UUID), nullable=False, server_default=sa.text("'{}'")
+    ),
     timestamp("created_at"),
 )
 index_scope(compactions)
