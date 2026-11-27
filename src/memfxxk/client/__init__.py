@@ -43,6 +43,7 @@ from memfxxk.domain.context import (
 from memfxxk.domain.documents import Document, DocumentInfo, DocumentRevision, PutDocumentRequest
 from memfxxk.domain.events import Event, IngestEvent, IngestResult
 from memfxxk.domain.facts import FactProposal, FactReview
+from memfxxk.domain.feedback import AllocationChange, AllocationState, FeedbackReport
 from memfxxk.domain.lessons import FinishedTask, FinishTask, LessonProposal, ReviewLesson
 from memfxxk.domain.manage import (
     ForgetMode,
@@ -333,6 +334,23 @@ class MemfxxkClient(ClientContext):
 
     def reflect(self, request: ReflectRequest) -> ReflectResult:
         return self._request("POST", "reflect", ReflectResult, body=request)
+
+    def get_allocation_state(self) -> AllocationState:
+        return self._request("GET", "context/allocation", AllocationState)
+
+    def get_allocation_history(self, after: int = 0, limit: int = 50) -> list[AllocationChange]:
+        return self._request(
+            "GET",
+            "context/allocation/history",
+            list[AllocationChange],
+            params={"after": after, "limit": limit},
+        )
+
+    def reset_allocation_state(self) -> AllocationState:
+        return self._request("POST", "context/allocation/reset", AllocationState)
+
+    def report_feedback(self, request: FeedbackReport) -> AllocationState:
+        return self._request("POST", "context/allocation/feedback", AllocationState, body=request)
 
     def build_context(
         self,
@@ -635,6 +653,27 @@ class AsyncMemfxxkClient(ClientContext):
 
     async def reflect(self, request: ReflectRequest) -> ReflectResult:
         return await self._request("POST", "reflect", ReflectResult, body=request)
+
+    async def get_allocation_state(self) -> AllocationState:
+        return await self._request("GET", "context/allocation", AllocationState)
+
+    async def get_allocation_history(
+        self, after: int = 0, limit: int = 50
+    ) -> list[AllocationChange]:
+        return await self._request(
+            "GET",
+            "context/allocation/history",
+            list[AllocationChange],
+            params={"after": after, "limit": limit},
+        )
+
+    async def reset_allocation_state(self) -> AllocationState:
+        return await self._request("POST", "context/allocation/reset", AllocationState)
+
+    async def report_feedback(self, request: FeedbackReport) -> AllocationState:
+        return await self._request(
+            "POST", "context/allocation/feedback", AllocationState, body=request
+        )
 
     async def build_context(
         self,

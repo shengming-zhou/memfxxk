@@ -13,6 +13,7 @@ from memfxxk.client import ClientError
 from memfxxk.domain.blocks import EditBlock
 from memfxxk.domain.context import BuildContextRequest, CommitCompaction, PrepareCompaction
 from memfxxk.domain.events import IngestEvent
+from memfxxk.domain.feedback import FeedbackReport
 from memfxxk.domain.lessons import FinishTask
 from memfxxk.domain.manage import LinkRequest, Mark, PatchRequest, SaveLessonRequest
 from memfxxk.domain.priorities import ClearPriority, PriorityTarget, SetPriority
@@ -144,6 +145,11 @@ def make_server(
                 "Build memory within a host budget.",
                 BuildContextRequest,
                 lambda req: client.build_context(req).model_dump(mode="json"),
+            ),
+            "context_report_feedback": (
+                "Report observed references or a saved turn for allocation feedback.",
+                FeedbackReport,
+                lambda req: client.report_feedback(req).model_dump(mode="json"),
             ),
             "context_prepare_compaction": (
                 "Prepare a bounded summary of closed turns.",

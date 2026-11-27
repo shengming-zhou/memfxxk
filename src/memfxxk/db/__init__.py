@@ -5,6 +5,8 @@ from sqlalchemy import create_engine as sqlalchemy_create_engine
 from sqlalchemy.engine import Connection, Engine
 
 from .schema import (
+    allocation_changes,
+    allocation_states,
     amem_links,
     amem_revisions,
     api_keys,
@@ -39,6 +41,8 @@ from .schema import (
 )
 
 __all__ = [
+    "allocation_changes",
+    "allocation_states",
     "amem_links",
     "amem_revisions",
     "api_keys",

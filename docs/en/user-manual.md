@@ -188,6 +188,12 @@ Send `{"allocator":"adaptive","max_tokens":1200,"query":"Write a storm scene in 
 
 Send the response's `rendered` to the model. Use `GET /v1/context/bundles/{id}` to inspect what was loaded. See `resolution` and `decision_reason` in `sections[].items` and check `sections[].dropped`. For documents, `ref_id`, `revision`, and `section_index` identify the exact version and section. Open the source through search or the document index to check a rule. The default allocator is `fixed`. [Allocation, thresholds, and traces](/en/developer-manual/#t17-adaptive-context)
 
+### Adjust allocation from writing feedback {#allocator-feedback-usage}
+
+Select the project and pass `allocator="adaptive"` with `learn_from_feedback=true`. Suppose the assistant writes about a storm in the north harbor and calls `memory_get` to look up a ferry rule that was shortened or omitted. The host saves the turn and sends its bundle and reply event IDs to `context_report_feedback`. The allocator gradually raises that layer's weight. The example host reports this feedback with `--learn-feedback`. You can also name the rule involved in a correction.
+
+Use `memfxxk --project novel allocation show` for the current state, `allocation history` for changes, and `allocation reset` to restore defaults. Use the same user and agent settings as the writing session. Feedback adjusts budget weights. Your priorities, tags, and text stay under your control. [Feedback API and replay](/en/developer-manual/#t17-allocation-feedback)
+
 Pass `graph_hops: 1` or `2` to search, or put it in `search_filters` when building context. Search starts with keyword and vector matches and follows links or shared entities on reviewed facts. Inspect `graph_path` to see the chain of evidence.
 
 To reserve room for graph evidence, set `graph_evidence_tokens` on `context_build`. A 1,500-token total budget can reserve up to 300 tokens for graph evidence, for example. Ordinary evidence can use any unused capacity.

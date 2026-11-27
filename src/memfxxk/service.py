@@ -58,6 +58,7 @@ from memfxxk.jobs import enqueue
 from memfxxk.scope import ScopeError
 
 if TYPE_CHECKING:
+    from memfxxk.domain.feedback import AllocationChange, AllocationState, FeedbackReport
     from memfxxk.eval.longmemeval.dataset import Dataset, Question
     from memfxxk.llm.runner import FakeLLM
 
@@ -397,6 +398,26 @@ class BoundService:
 
     def get_bundle(self, bundle_id: UUID) -> BundleMetadata:
         return context.get_bundle(self, bundle_id)
+
+    def get_allocation_state(self) -> "AllocationState":
+        from memfxxk.context.feedback import read_state
+
+        return read_state(self)
+
+    def get_allocation_history(self, after: int = 0, limit: int = 50) -> "list[AllocationChange]":
+        from memfxxk.context.feedback import history
+
+        return history(self, after, limit)
+
+    def reset_allocation_state(self) -> "AllocationState":
+        from memfxxk.context.feedback import reset
+
+        return reset(self)
+
+    def report_feedback(self, request: "FeedbackReport") -> "AllocationState":
+        from memfxxk.context.feedback import report
+
+        return report(self, request)
 
     def eval_ingest(self, question: "Question", dataset: "Dataset", sha256: str) -> bool:
         from memfxxk.eval.longmemeval.storage import ingest_question

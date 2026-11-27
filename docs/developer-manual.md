@@ -482,6 +482,20 @@ T17 的优先级由用户写入。所有候选按生效整数从高到低分层�
 
 `uv run pytest -q tests/unit/test_adaptive_allocation.py tests/integration/test_adaptive_context.py` 验证各修补路径、预算、压力、跨层保护、作用域隔离和模型失败回退。`uv run python eval/run_t17_allocator_smoke.py --output eval/results/t17/p12-smoke` 试跑六条请求。网关可用时加 `--live` 核验模型微调。
 
+## T17 P13 分配反馈 {#t17-allocation-feedback}
+
+### 接口和信号 {#allocator-feedback-api}
+
+`GET /v1/context/allocation` 看状态，`GET /v1/context/allocation/history?after=0&limit=50` 按版本取历史，`POST /v1/context/allocation/reset` 重置。两个 SDK 分别有 `get_allocation_state`、`get_allocation_history`、`reset_allocation_state` 与 `report_feedback`。发送反馈使用 `POST /v1/context/allocation/feedback` 或 MCP 宿主工具 `context_report_feedback`。传 `bundle_id` 与可选的 `assistant_event_id`。显式反馈用 `observations` 中的对象，包含 `signal` 和 `target`，目标必须匹配 bundle 中的 `kind`、`ref_id`，文档章节还需 `section_index`。
+
+自动路径读取同轮已记录的成功 `memory_get` 或 `memory_search` 工具结果，给本轮被舍弃或缩短的来源记 `retrieved`。对已经带入的摘要及原文，回复引用其 ID 或包含原文连续三个词项就视为有用，否则可记 `unused`。后者是弱信号，改写或隐性使用仍可能被误判。宿主可以另报 `correction`，一致性检查可以报 `conflict`。冲突必须指向本轮缩短或舍弃的候选。相同 bundle、信号类型与引用去重。报告新的事件或更正前先保存同轮原始事件。
+
+### 更新、隔离和回放 {#allocator-feedback-state}
+
+迁移 `0017` 新增 `allocation_states` 和 `allocation_changes`。以项目和具体用户、Agent 范围维护状态，避免把私有候选的反馈传到其他作者。状态保留版本、各层乘数及分配时采用的衰减和展开上限，学习只更新乘数。按同层信号目标取均值，再向目标移动 8%，单次最多 0.035，限制在 0.65–1.5。历史记录版本、基准参数及引用，不保存回复原文。重置也是一条历史记录。
+
+`context.feedback.replay` 按版本回放历史。用 `uv run pytest -q tests/unit/test_allocation_learning.py tests/integration/test_allocation_feedback.py` 检验四类信号、多次更新的收敛、同轮检测、去重、隔离和重置。此阶段的六个接口样例无需外部模型。
+
 ## 重跑基线 {#run-evaluation}
 
 使用独立 PostgreSQL 数据库。在 `.env.example` 查看嵌入、生成和评分的配置。检索跑分记录数据 SHA、模型、各类问题的指标和延时。QA 还记录各组 token、工具调用与模型延时。

@@ -255,7 +255,7 @@ def allocate(
     settings: AdaptiveSettings,
     counter: TokenCounter,
     *,
-    weights: dict[int, float] | None = None,
+    multipliers: dict[int, float] | None = None,
     plan: Callable[[list[Layer]], dict[int, float]] | None = None,
 ) -> Result:
     order = sorted(
@@ -272,7 +272,7 @@ def allocate(
             for position, index in enumerate(items[: settings.expand_items])
         )
         floor = items[: settings.floor_items]
-        weight = (weights or {}).get(priority, max(1e-10, settings.decay**rank))
+        weight = max(1e-10, settings.decay**rank) * (multipliers or {}).get(priority, 1.0)
         layers.append(Layer(priority, weight, items, floor, demand, sum(line_costs[: len(floor)])))
     original_weights = {layer.priority: layer.weight for layer in layers}
     coefficients = plan(layers) if plan is not None and layers and budget else {}

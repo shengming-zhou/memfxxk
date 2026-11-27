@@ -12,6 +12,7 @@ from sqlalchemy import Connection
 
 from memfxxk.context import _Candidate, _document_index, _wrap_document
 from memfxxk.context.adaptive import Candidate, Layer, Variant, allocate
+from memfxxk.context.feedback import state
 from memfxxk.context.priorities import ContentTarget, effective
 from memfxxk.context.resolutions import fallback, read_pairs
 from memfxxk.documents import document_contents, list_resolved
@@ -236,8 +237,6 @@ def assemble(
     sources: dict[SectionName, list[_Candidate]],
     counter: TokenCounter,
     budget: int,
-    *,
-    weights: dict[int, float] | None = None,
 ) -> tuple[list[ContextSection], str, AllocationTrace]:
     tokenizer = MixedTokenizer()
     terms = set(tokenizer.tokenize(request.query or ""))
@@ -306,16 +305,28 @@ def assemble(
                 )
             )
     call_ids: list[UUID] = []
+    learned = (
+        state(conn, service)
+        if request.learn_from_feedback and service.ctx.project_id is not None
+        else None
+    )
+    settings = service.settings.context.adaptive
+    if learned is not None:
+        settings = settings.model_copy(
+            update={"decay": learned.decay, "expand_items": learned.expand_items}
+        )
     packing = allocate(
         pool,
         budget,
-        service.settings.context.adaptive,
+        settings,
         counter,
-        weights=weights,
+        multipliers=learned.multipliers if learned else None,
         plan=partial(_plan, service, request, pool, call_ids) if request.plan_with_llm else None,
     )
     if call_ids:
         packing.trace.plan_call_id = call_ids[0]
+    if learned is not None:
+        packing.trace.feedback_version = learned.version
     items_by_section = defaultdict(list)
     text_by_section = defaultdict(list)
     dropped = defaultdict(list)

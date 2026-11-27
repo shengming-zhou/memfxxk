@@ -24,12 +24,37 @@ from memfxxk.domain.retrieval import SearchRequest
 commands = typer.Typer()
 docs = typer.Typer(no_args_is_help=True)
 session = typer.Typer(no_args_is_help=True)
+allocation = typer.Typer(no_args_is_help=True)
 commands.add_typer(docs, name="doc")
 commands.add_typer(session, name="session")
+commands.add_typer(allocation, name="allocation")
 
 
 def _show(model: BaseModel, pretty: bool = True) -> None:
     typer.echo(model.model_dump_json(indent=2 if pretty else None))
+
+
+@allocation.command("show")
+def allocation_show(ctx: typer.Context) -> None:
+    with open_client(ctx) as client:
+        _show(client.get_allocation_state())
+
+
+@allocation.command("history")
+def allocation_history(
+    ctx: typer.Context,
+    after: Annotated[int, typer.Option(min=0)] = 0,
+    limit: Annotated[int, typer.Option(min=1, max=100)] = 50,
+) -> None:
+    with open_client(ctx) as client:
+        for entry in client.get_allocation_history(after, limit):
+            _show(entry, pretty=False)
+
+
+@allocation.command("reset")
+def allocation_reset(ctx: typer.Context) -> None:
+    with open_client(ctx) as client:
+        _show(client.reset_allocation_state())
 
 
 def _scope_drop(ctx: typer.Context, user_level: bool) -> set[str]:

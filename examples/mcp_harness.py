@@ -105,10 +105,13 @@ class MCPHarness:
         *,
         model: ChatModel | None = None,
         allow_management: bool = False,
+        learn_feedback: bool = False,
         window: Window = Window(),
         counter: TokenCounter | None = None,
     ) -> None:
         missing = set(_HOST_TOOLS) - {tool.name for tool in tools}
+        if learn_feedback and not any(tool.name == "context_report_feedback" for tool in tools):
+            missing.add("context_report_feedback")
         if missing:
             raise ValueError(f"MCP server needs host tools enabled: {', '.join(sorted(missing))}")
         if (
@@ -134,6 +137,7 @@ class MCPHarness:
         ]
         self.client = client
         self.model = model
+        self.learn_feedback = learn_feedback
         self.window = window
         self.counter = counter or make_token_counter("tiktoken")
 
@@ -246,6 +250,8 @@ class MCPHarness:
                 query=user,
                 max_tokens=available,
                 budget={"working": self.window.working},
+                allocator="adaptive" if self.learn_feedback else None,
+                learn_from_feedback=self.learn_feedback,
             )
             context = ContextBundle.model_validate(
                 await self._host_call(
@@ -343,10 +349,19 @@ class MCPHarness:
             "events_append",
             {"events": [event.model_dump(mode="json", exclude_unset=True) for event in events]},
         )
+        results = _INGEST_RESULTS.validate_python(stored["results"])
+        if self.learn_feedback and self.model is not None:
+            await self._host_call(
+                "context_report_feedback",
+                {
+                    "bundle_id": str(context.bundle_id),
+                    "assistant_event_id": str(results[-1].event_id),
+                },
+            )
         return HarnessTurn(
             answer=answer,
             context=context,
-            events=_INGEST_RESULTS.validate_python(stored["results"]),
+            events=results,
             compaction=compaction,
         )
 
@@ -357,6 +372,7 @@ async def open_harness(
     *,
     model: ChatModel | None = None,
     allow_management: bool = False,
+    learn_feedback: bool = False,
     window: Window = Window(),
     counter: TokenCounter | None = None,
 ) -> AsyncIterator[MCPHarness]:
@@ -370,6 +386,7 @@ async def open_harness(
             await _discover(client),
             model=model,
             allow_management=allow_management,
+            learn_feedback=learn_feedback,
             window=window,
             counter=counter,
         )
@@ -399,6 +416,7 @@ async def _run(args: argparse.Namespace, model: ChatModel | None) -> None:
         _stdio(args.manage),
         model=model,
         allow_management=args.manage,
+        learn_feedback=args.learn_feedback,
         window=Window(
             limit=args.window_tokens,
             output=args.output_tokens,
@@ -418,6 +436,7 @@ def main() -> None:
     parser.add_argument("message")
     parser.add_argument("--session", default="mcp-harness-demo")
     parser.add_argument("--manage", action="store_true", help="Offer optional management tools")
+    parser.add_argument("--learn-feedback", action="store_true", help="Use adaptive feedback")
     parser.add_argument("--window-tokens", type=int, default=default.limit)
     parser.add_argument("--output-tokens", type=int, default=default.output)
     parser.add_argument("--memory-tokens", type=int, default=default.memory)

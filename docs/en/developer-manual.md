@@ -476,6 +476,20 @@ Set `plan_with_llm=true` on a request and configure the explicit `context_plan` 
 
 Run `uv run pytest -q tests/unit/test_adaptive_allocation.py tests/integration/test_adaptive_context.py` for repairs, budgets, pressure, cross-layer relevance, scope, and plan fallback. Run `uv run python eval/run_t17_allocator_smoke.py --output eval/results/t17/p12-smoke` for six requests. Add `--live` when the gateway is available.
 
+## T17 P13 Allocation feedback {#t17-allocation-feedback}
+
+### API and signals {#allocator-feedback-api}
+
+Use `GET /v1/context/allocation` for state, `GET /v1/context/allocation/history?after=0&limit=50` for versioned history, and `POST /v1/context/allocation/reset` to restore defaults. Both SDKs expose `get_allocation_state`, `get_allocation_history`, `reset_allocation_state`, and `report_feedback`. Send feedback to `POST /v1/context/allocation/feedback` or the MCP host tool `context_report_feedback`. Pass a `bundle_id` and optionally an `assistant_event_id`. An explicit item in `observations` has a `signal` and `target`. Its `kind`, `ref_id`, and, for sections, `section_index` must match a bundle reference.
+
+The automatic path checks saved successful `memory_get` and `memory_search` results from the same turn for sources that were dropped or shortened. Loaded summaries and originals count as used if the answer cites their ID or shares a contiguous sequence of three terms. Otherwise an `unused` signal can apply. Paraphrase and indirect use can evade this heuristic. The host can also report `correction`, and consistency checks can supply `conflict`. Conflicts apply to shortened or omitted candidates. Signals are deduplicated by bundle, type, and reference. Save the raw turn before reporting it.
+
+### Updates, scope, and replay {#allocator-feedback-state}
+
+Migration `0017` adds `allocation_states` and `allocation_changes`. State is keyed by project and the exact user and agent scope, so private candidates do not affect other authors. It stores the version, layer multipliers, decay, and expansion limit used by the allocator. Learning changes multipliers. The update moves 8% toward the average target of the layer's signals, caps each step at 0.035, and bounds multipliers to 0.65–1.5. History contains versioned parameters and references. Reset is itself a history entry.
+
+`context.feedback.replay` applies history in version order. Run `uv run pytest -q tests/unit/test_allocation_learning.py tests/integration/test_allocation_feedback.py` to check the four signals, convergence, same-turn detection, retries, scope, and reset. The six endpoint cases use no external model.
+
 ## Reproduce the baseline {#run-evaluation}
 
 Use a dedicated PostgreSQL database. See `.env.example` for embedding, generation, and judge configuration. Retrieval runs record the dataset SHA, model, metrics by question type, and latency. QA runs also record tokens, tool calls, and model latency by group.

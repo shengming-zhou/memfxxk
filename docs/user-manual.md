@@ -196,6 +196,12 @@ Harness 决定什么时候取记忆、压缩旧消息和调用模型。每轮先
 
 宿主把响应的 `rendered` 放进模型请求，然后可以用 `GET /v1/context/bundles/{id}` 查这次的取舍。看 `sections[].items` 中的 `resolution` 和 `decision_reason`，以及 `sections[].dropped`。文档的 `ref_id`、`revision`、`section_index` 指向具体版本和章节。需要核实一条设定时，根据搜索和文档索引打开原文。默认分配方式为 `fixed`。[分配、阈值与追踪](/developer-manual/#t17-adaptive-context)
 
+### 让分配器根据写作反馈微调 {#allocator-feedback-usage}
+
+在选定项目里传 `allocator="adaptive"` 和 `learn_from_feedback=true`。比如你让助手写北港的暴雨，助手随后用 `memory_get` 补查了刚才被压缩或省掉的渡船设定。宿主保存该轮后把 bundle ID 和回复事件 ID 交给 `context_report_feedback`，分配器会缓慢提高对应层的权重。示例宿主加 `--learn-feedback` 就会提交这类同轮反馈。你也可以明确标出哪个设定与你的更正有关。
+
+用 `memfxxk --project novel allocation show` 看当前状态，`allocation history` 查历史，`allocation reset` 恢复该范围的默认权重。保持与写作时相同的用户和 Agent 标识。反馈只改变预算权重，原始优先级、标签和正文仍由你控制。[反馈接口与回放](/developer-manual/#t17-allocation-feedback)
+
 图检索需要在搜索里传 `graph_hops: 1` 或 `2`，上下文装载则放在 `search_filters`。它先查关键词和向量，再查候选记忆的关联或已审核事实的共享实体。结果包含 `graph_path`，可逐条核对这条路径。
 
 如需把沿图找到的证据装进本轮上下文，可在 `context_build` 传 `graph_evidence_tokens`。例如总额度 1,500 token 时给图保留最多 300 token，图证据用不完的额度会回给普通证据。

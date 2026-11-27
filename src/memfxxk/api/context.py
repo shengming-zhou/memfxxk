@@ -14,6 +14,7 @@ from memfxxk.domain.context import (
     PrepareCompaction,
 )
 from memfxxk.domain.documents import Document, DocumentInfo, DocumentRevision, PutDocumentRequest
+from memfxxk.domain.feedback import AllocationChange, AllocationState, FeedbackReport
 from memfxxk.domain.lessons import FinishedTask, FinishTask
 from memfxxk.domain.priorities import ClearPriority, PriorityResult, PriorityTarget, SetPriority
 from memfxxk.domain.reflect import ReflectRequest, ReflectResult
@@ -87,6 +88,30 @@ def put_state(session_id: str, request: PutSessionState, service: RequestService
 @router.post("/context/build")
 def build_context(request: BuildContextRequest, service: RequestService) -> ContextBundle:
     return service.build_context(request)
+
+
+@router.get("/context/allocation")
+def allocation_state(service: RequestService) -> AllocationState:
+    return service.get_allocation_state()
+
+
+@router.get("/context/allocation/history")
+def allocation_history(
+    service: RequestService,
+    after: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> list[AllocationChange]:
+    return service.get_allocation_history(after, limit)
+
+
+@router.post("/context/allocation/reset")
+def reset_allocation_state(service: RequestService) -> AllocationState:
+    return service.reset_allocation_state()
+
+
+@router.post("/context/allocation/feedback")
+def report_feedback(request: FeedbackReport, service: RequestService) -> AllocationState:
+    return service.report_feedback(request)
 
 
 @router.post("/priorities/resolve")

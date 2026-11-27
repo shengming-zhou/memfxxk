@@ -325,6 +325,38 @@ context_bundles = sa.Table(
 )
 index_scope(context_bundles)
 
+allocation_states = sa.Table(
+    "allocation_states",
+    metadata,
+    sa.Column("id", UUID, primary_key=True),
+    *scope_columns(),
+    sa.Column("version", sa.BigInteger, nullable=False),
+    sa.Column("settings", JSONB, nullable=False),
+)
+index_scope(allocation_states)
+
+allocation_changes = sa.Table(
+    "allocation_changes",
+    metadata,
+    *scope_columns(),
+    sa.Column(
+        "state_id",
+        UUID,
+        sa.ForeignKey("allocation_states.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    sa.Column("version", sa.BigInteger, primary_key=True),
+    sa.Column("bundle_id", UUID),
+    sa.Column("signals", JSONB, nullable=False),
+    sa.Column("reset", sa.Boolean, nullable=False),
+    sa.Column("base_decay", sa.Float, nullable=False),
+    sa.Column("base_expand_items", sa.Integer, nullable=False),
+    timestamp("created_at"),
+)
+sa.Index(
+    "ix_allocation_changes_bundle", allocation_changes.c.state_id, allocation_changes.c.bundle_id
+)
+
 compactions = sa.Table(
     "compactions",
     metadata,

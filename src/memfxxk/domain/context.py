@@ -50,6 +50,7 @@ class AllocationTrace(BaseModel):
     plan_input_weights: dict[int, float] = Field(default_factory=dict)
     plan_coefficients: dict[int, float] = Field(default_factory=dict)
     plan_call_id: UUID | None = None
+    feedback_version: int | None = None
 
 
 class SearchFilters(BaseModel):
@@ -86,6 +87,7 @@ class BuildContextRequest(BaseModel):
     max_tokens: int | None = Field(default=None, ge=0)
     allocator: Allocator | None = None
     plan_with_llm: bool = False
+    learn_from_feedback: bool = False
     graph_evidence_tokens: int = Field(
         default=0,
         ge=0,
